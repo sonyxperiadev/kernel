@@ -15,6 +15,7 @@ kona-edo-pdx206_generic-overlay.dtbo-base := ../qcom/kona.dtb ../qcom/kona-v2.dt
 endif
 ifeq ($(CONFIG_MACH_SONY_PDX213),y)
 lagoon-lena-pdx213_generic-overlay.dtbo-base := ../qcom/lagoon.dtb
+endif
 
 else
 dtb-$(CONFIG_MACH_SONY_PDX203) += \
