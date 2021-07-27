@@ -13,7 +13,8 @@
 #define _UNIPRO_H_
 
 #if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
-    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO)
+    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO) || \
+    defined(CONFIG_ARCH_SONY_LENA)
  #ifndef UFS_TARGET_SONY_PLATFORM
   #define UFS_TARGET_SONY_PLATFORM
  #endif
