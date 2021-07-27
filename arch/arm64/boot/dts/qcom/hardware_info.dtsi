@@ -1,0 +1,83 @@
+/ {
+	hwinfo:HardwareInfo {
+		compatible = "huaqin,hardware_info";
+	};
+};
+
+&hwinfo {
+
+/*
+	sim1_card_slot = <&pio 47 0>;
+	sim2_card_slot = <&pio 46 0>;
+	pcb_stage_gpios0 = <&pio 58 0>;
+	pcb_stage_gpios1 = <&pio 98 0>;
+	pcb_stage_gpios2 = <&tlmm 92 0>;
+*/
+
+	pcb_type_gpios0 = <&tlmm 72 0>;
+	pcb_type_gpios1 = <&tlmm 73 0>;
+	pcb_type_gpios2 = <&tlmm 74 0>;
+	pcb_type_gpios3 = <&tlmm 93 0>;
+	gpio_94 = <&tlmm 94 0>;
+
+
+	pinctrl-names = "default";
+//	pinctrl-0 = <&hwinfo_gpios_default>;
+
+	status = "okay";
+};
+
+//&pio {
+//	hwinfo_gpios_default: gpios_default {
+    /*
+		pins_cmd0_dat {
+			pinmux = <PINMUX_GPIO58__FUNC_GPIO58>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+		pins_cmd1_dat {
+			pinmux = <PINMUX_GPIO98__FUNC_GPIO98>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+		pins_cmd2_dat {
+			pinmux = <PINMUX_GPIO92__FUNC_GPIO92>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+
+		pins_cmd3_dat {
+			pinmux = <PINMUX_GPIO173__FUNC_GPIO173>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+		pins_cmd4_dat {
+			pinmux = <PINMUX_GPIO174__FUNC_GPIO174>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+		pins_cmd5_dat {
+			pinmux = <PINMUX_GPIO175__FUNC_GPIO175>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+		pins_cmd6_dat {
+			pinmux = <PINMUX_GPIO176__FUNC_GPIO176>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+#if 0
+		pins_cmd7_dat {
+			pinmux = <PINMUX_GPIO152__FUNC_GPIO152>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+#endif
+		pins_cmd7_dat {
+			pinmux = <PINMUX_GPIO26__FUNC_GPIO26>;
+			slew-rate = <1>;
+			output-high;
+		};
+*/
+//	};
+//};
