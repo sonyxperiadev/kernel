@@ -1,7 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 /*
  * linux/sound/cs35l41.h -- Platform data for CS35L41
  *
- * Copyright (c) 2018 Cirrus Logic Inc.
+ * Copyright (c) 2017-2020 Cirrus Logic Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -11,7 +13,7 @@
 #ifndef __CS35L41_H
 #define __CS35L41_H
 
-struct classh_cfg {
+struct cs35l41_classh_cfg {
 	bool classh_bst_override;
 	bool classh_algo_enable;
 	int classh_bst_max_limit;
@@ -22,7 +24,7 @@ struct classh_cfg {
 	int classh_wk_fet_thld;
 };
 
-struct irq_cfg {
+struct cs35l41_irq_cfg {
 	bool is_present;
 	bool irq_pol_inv;
 	bool irq_out_en;
@@ -34,8 +36,7 @@ struct cs35l41_platform_data {
 	bool lrclk_frc;
 	bool right_channel;
 	bool amp_gain_zc;
-	bool ng_enable;
-	bool tuning_has_prefix;
+	bool dsp_ng_enable;
 	bool invert_pcm;
 	bool hibernate_enable;
 	bool fwname_use_revid;
@@ -44,12 +45,15 @@ struct cs35l41_platform_data {
 	int bst_ipk;
 	int bst_cap;
 	int temp_warn_thld;
-	int ng_pcm_thld;
-	int ng_delay;
+	int dsp_ng_pcm_thld;
+	int dsp_ng_delay;
+	unsigned int hw_ng_sel;
+	unsigned int hw_ng_delay;
+	unsigned int hw_ng_thld;
 	int dout_hiz;
-	struct irq_cfg irq_config1;
-	struct irq_cfg irq_config2;
-	struct classh_cfg classh_config;
+	struct cs35l41_irq_cfg irq_config1;
+	struct cs35l41_irq_cfg irq_config2;
+	struct cs35l41_classh_cfg classh_config;
 };
 
 struct cs35l41_rst_cache {
@@ -59,7 +63,7 @@ struct cs35l41_rst_cache {
 	int asp_fmt;
 	int lrclk_fmt;
 	int sclk_fmt;
-	int slave_mode;
+	int clock_mode;
 	int fs_cfg;
 };
 
@@ -122,6 +126,8 @@ struct cs35l41_private {
 	struct mutex force_int_lock;
 	struct cs35l41_vol_ctl vol_ctl;
 	unsigned int ctl_cache[CS35L41_CTRL_CACHE_SIZE];
+	u32 trim_cache[CS35L41_TRIM_CACHE_SIZE];
+	const char *dt_name;
 };
 
 int cs35l41_probe(struct cs35l41_private *cs35l41,

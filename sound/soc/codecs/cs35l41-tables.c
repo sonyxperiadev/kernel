@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
+
 /*
  * cs35l41-tables.c -- CS35L41 ALSA SoC audio driver
  *
- * Copyright 2018 Cirrus Logic, Inc.
+ * Copyright 2017-2020 Cirrus Logic, Inc.
  *
  * Author: Brian Austin <brian.austin@cirrus.com>
  *         David Rhodes <david.rhodes@cirrus.com>
@@ -936,6 +938,13 @@ const struct cs35l41_otp_map_element_t
 		.word_offset = 2,
 	},
 	{
+		.id = 0x03,
+		.map = otp_map_2,
+		.num_elements = CS35L41_NUM_OTP_ELEM,
+		.bit_offset = 16,
+		.word_offset = 2,
+	},
+	{
 		.id = 0x06,
 		.map = otp_map_2,
 		.num_elements = CS35L41_NUM_OTP_ELEM,
@@ -967,4 +976,25 @@ const unsigned int cs35l41_ctl_cache_regs[CS35L41_CTRL_CACHE_SIZE] = {
 	CS35L41_PWR_CTRL2,
 	CS35L41_BSTCVRT_VCTRL1,
 	CS35L41_BSTCVRT_VCTRL2,
+};
+
+const struct cs35l41_otp_trim_region_t
+			cs35l41_trim_cache_regs[CS35L41_TRIM_CACHE_REGIONS] = {
+	{0x00002030, 1},
+	{0x0000208c, 2},
+	{0x0000300C, 1},
+	{0x0000394C, 5},
+	{0x0000416C, 1},
+	{0x00004160, 1},
+	{0x00004170, 1},
+	{0x00004360, 1},
+	{0x00004448, 2},
+	{0x00006E30, 14},
+	{0x00007418, 2},
+	{0x00007434, 1},
+	{0x00007068, 1},
+	{0x0000410C, 1},
+	{0x0000400C, 1},
+	{0x00004000, 1},
+	{0x00017040, 2},
 };

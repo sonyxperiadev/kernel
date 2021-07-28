@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
+
 /*
  * cs35l41-i2c.c -- CS35l41 I2C driver
  *
- * Copyright 2017 Cirrus Logic, Inc.
+ * Copyright 2017-2020 Cirrus Logic, Inc.
  *
  * Author:	David Rhodes	<david.rhodes@cirrus.com>
  *
@@ -69,8 +71,6 @@ static int cs35l41_i2c_probe(struct i2c_client *client,
 	if (cs35l41 == NULL)
 		return -ENOMEM;
 
-	mutex_init(&cs35l41->rate_lock);
-
 	cs35l41->dev = dev;
 	cs35l41->irq = client->irq;
 	cs35l41->bus_spi = false;
@@ -83,8 +83,12 @@ static int cs35l41_i2c_probe(struct i2c_client *client,
 			ret);
 		return ret;
 	}
-
-	return cs35l41_probe(cs35l41, pdata);
+	ret = cs35l41_probe(cs35l41, pdata);
+	if ((ret != 0 ) && (ret != -ENODEV) && (ret != -ENOMEM)) {
+		dev_err(dev, "I2C bus IO error. Try to defer probe\n");
+		ret = -EPROBE_DEFER;
+	}
+	return ret;
 }
 
 static int cs35l41_i2c_remove(struct i2c_client *client)

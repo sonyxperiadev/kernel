@@ -1,13 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * wm_adsp.h  --  Wolfson ADSP support
  *
  * Copyright 2012 Wolfson Microelectronics plc
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
  */
 
 #ifndef __WM_ADSP_H
@@ -92,7 +89,6 @@ struct wm_adsp {
 	bool booted;
 	bool running;
 	bool fatal_error;
-	bool tuning_has_prefix;
 
 	struct list_head ctl_list;
 
@@ -119,6 +115,8 @@ struct wm_adsp {
 #endif
 	unsigned int data_word_mask;
 	int data_word_size;
+
+	void (*fwevent_cb)(struct wm_adsp *dsp, int eventid);
 };
 
 struct wm_adsp_ops {
@@ -182,7 +180,6 @@ int wm_adsp2_init(struct wm_adsp *dsp);
 void wm_adsp2_remove(struct wm_adsp *dsp);
 int wm_adsp2_component_probe(struct wm_adsp *dsp, struct snd_soc_component *component);
 int wm_adsp2_component_remove(struct wm_adsp *dsp, struct snd_soc_component *component);
-void wm_adsp_queue_boot_work(struct wm_adsp *dsp);
 int wm_vpu_init(struct wm_adsp *vpu);
 int wm_halo_init(struct wm_adsp *dsp, struct mutex *rate_lock);
 
@@ -192,14 +189,12 @@ int wm_adsp1_event(struct snd_soc_dapm_widget *w,
 int wm_adsp_early_event(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *kcontrol, int event);
 
-irqreturn_t wm_adsp2_bus_error(struct wm_adsp *adsp);
-irqreturn_t wm_halo_bus_error(struct wm_adsp *dsp);
+irqreturn_t wm_adsp2_bus_error(int irq, void *data);
+irqreturn_t wm_halo_bus_error(int irq, void *data);
 irqreturn_t wm_halo_wdt_expire(int irq, void *data);
 
 int wm_adsp_event(struct snd_soc_dapm_widget *w,
 		  struct snd_kcontrol *kcontrol, int event);
-int wm_vpu_event(struct snd_soc_dapm_widget *w,
-		 struct snd_kcontrol *kcontrol, int event);
 
 int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq);
 
@@ -224,9 +219,11 @@ int wm_adsp_compr_pointer(struct snd_compr_stream *stream,
 			  struct snd_compr_tstamp *tstamp);
 int wm_adsp_compr_copy(struct snd_compr_stream *stream,
 		       char __user *buf, size_t count);
-int wm_adsp_write_ctl(struct wm_adsp *dsp, const char *name, const void *buf,
-		      size_t len);
-int wm_adsp_read_ctl(struct wm_adsp *dsp, const char *name, void *buf,
-		     size_t len);
+int wm_adsp_write_ctl(struct wm_adsp *dsp, const char *name,  int type,
+		      unsigned int alg, void *buf, size_t len);
+int wm_adsp_read_ctl(struct wm_adsp *dsp, const char *name,  int type,
+		      unsigned int alg, void *buf, size_t len);
+
+extern int wm_adsp_handle_fw_event(struct wm_adsp *dsp);
 
 #endif

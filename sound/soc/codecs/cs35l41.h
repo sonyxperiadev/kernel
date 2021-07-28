@@ -1,7 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 /*
  * cs35l41.h -- CS35L41 ALSA SoC audio driver
  *
- * Copyright 2018 Cirrus Logic, Inc.
+ * Copyright 2017-2020 Cirrus Logic, Inc.
  *
  * Author: Brian Austin <brian.austin@cirrus.com>
  *         David Rhodes <david.rhodes@cirrus.com>
@@ -542,7 +544,7 @@
 #define CS35L41_MAX_CACHE_REG		0x0000006B
 #define CS35L41_OTP_SIZE_WORDS		32
 #define CS35L41_NUM_OTP_ELEM		100
-#define CS35L41_NUM_OTP_MAPS		4
+#define CS35L41_NUM_OTP_MAPS		5
 
 #define CS35L41_VALID_PDATA		0x80000000
 
@@ -595,12 +597,19 @@
 #define CS35L41_CH_WKFET_THLD_MASK	0x0F00
 #define CS35L41_CH_WKFET_THLD_SHIFT	8
 
-#define CS35L41_NG_ENABLE_MASK		0x00010000
-#define CS35L41_NG_ENABLE_SHIFT		16
-#define CS35L41_NG_THLD_MASK		0x7
-#define CS35L41_NG_THLD_SHIFT		0
-#define CS35L41_NG_DELAY_MASK		0x0F00
-#define CS35L41_NG_DELAY_SHIFT		8
+#define CS35L41_HW_NG_SEL_MASK		0x3F00
+#define CS35L41_HW_NG_SEL_SHIFT		8
+#define CS35L41_HW_NG_DLY_MASK		0x0070
+#define CS35L41_HW_NG_DLY_SHIFT		4
+#define CS35L41_HW_NG_THLD_MASK		0x0007
+#define CS35L41_HW_NG_THLD_SHIFT	0
+
+#define CS35L41_DSP_NG_ENABLE_MASK	0x00010000
+#define CS35L41_DSP_NG_ENABLE_SHIFT	16
+#define CS35L41_DSP_NG_THLD_MASK	0x7
+#define CS35L41_DSP_NG_THLD_SHIFT	0
+#define CS35L41_DSP_NG_DELAY_MASK	0x0F00
+#define CS35L41_DSP_NG_DELAY_SHIFT	8
 
 #define CS35L41_ASP_FMT_MASK		0x0700
 #define CS35L41_ASP_FMT_SHIFT		8
@@ -753,6 +762,11 @@ struct cs35l41_otp_map_element_t {
 	u32 word_offset;
 };
 
+struct cs35l41_otp_trim_region_t {
+	u32 reg;
+	u8 size;
+};
+
 extern const struct reg_default cs35l41_reg[CS35L41_MAX_CACHE_REG];
 extern const struct cs35l41_otp_map_element_t
 				cs35l41_otp_map_map[CS35L41_NUM_OTP_MAPS];
@@ -771,8 +785,12 @@ extern const struct cs35l41_otp_map_element_t
 #define CS35L41_CSPL_MBOX_CMD_DRV_SHIFT		CS35L41_DSP_VIRT1_MBOX_SHIFT
 
 #define CS35L41_CTRL_CACHE_SIZE 14
+#define CS35L41_TRIM_CACHE_REGIONS 18
+#define CS35L41_TRIM_CACHE_SIZE 38
 
 extern const unsigned int cs35l41_ctl_cache_regs[CS35L41_CTRL_CACHE_SIZE];
+extern const struct cs35l41_otp_trim_region_t
+			cs35l41_trim_cache_regs[CS35L41_TRIM_CACHE_REGIONS];
 
 enum cs35l41_cspl_mboxstate {
 	CSPL_MBOX_STS_RUNNING = 0,
