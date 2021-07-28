@@ -253,6 +253,12 @@ config MFD_MADERA_SPI
 	  Support for the Cirrus Logic Madera platform audio SoC
 	  core functionality controlled via SPI.
 
+config MFD_CS40L25
+	bool "Cirrus Logic CS40L25"
+	select MFD_CORE
+	help
+	  Support for Cirrus Logic CS40L25 Smart Codec
+
 config MFD_CS47L15
 	bool "Cirrus Logic CS47L15"
 	select PINCTRL_CS47L15
