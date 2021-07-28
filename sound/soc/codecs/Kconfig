@@ -520,6 +520,12 @@ config SND_SOC_CS35L41_I2C
 	select SND_SOC_CS35L41
 	select REGMAP_I2C
 
+config SND_SOC_CS40L25
+	tristate "Cirrus Logic CS40L25 CODEC"
+	depends on I2C
+	select REGMAP_I2C
+	select MFD_CS40L25
+
 config SND_SOC_CS42L42
 	tristate "Cirrus Logic CS42L42 CODEC"
 	depends on I2C
