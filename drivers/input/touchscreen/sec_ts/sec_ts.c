@@ -1329,15 +1329,11 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 	}
 
 ts_rst_found:
-	if (of_property_read_u32_array(np, "somc,expected-device-id",
-				       pdata->expected_device_id, 3))
-	{
-		if (of_property_read_u32_array(np, "sec,device_id",
-					 pdata->expected_device_id, 3) == 0)
-			goto end;
+	ret = of_property_read_u8_array(np, "sec,device_id", pdata->expected_device_id, 3);
+	if (ret) {
 		input_err(true, &client->dev, "%s: No expected device id "
-			  "specified in DT. Using Kumano defaults.\n",
-			  __func__);
+				"specified in DT. Using Kumano defaults. Err: %d\n",
+				__func__, ret);
 		pdata->expected_device_id[0] = 0xAC;
 		pdata->expected_device_id[1] = 0x37;
 		pdata->expected_device_id[2] = 0x71;
@@ -1348,7 +1344,7 @@ end:
 		__func__, pdata->i2c_burstmax, lcdtype, pdata->bringup, pdata->firmware_name,
 			count, pdata->tsp_id, pdata->tsp_icid, pdata->mis_cal_check,
 			pdata->support_dex);
-	return ret;
+	return 0;
 }
 
 static int sec_ts_parse_dt_feature(struct i2c_client *client)
@@ -1737,6 +1733,8 @@ static void sec_ts_watchdog_func(struct work_struct *work_watchdog)
 	    deviceId[1] != ts->plat_data->expected_device_id[1] ||
 	    deviceId[2] != ts->plat_data->expected_device_id[2]) {
 		input_err(true, &ts->client->dev, "improper device id\n");
+		pr_err("Expected ID: %x %x %x", ts->plat_data->expected_device_id[0], ts->plat_data->expected_device_id[1], ts->plat_data->expected_device_id[2]);
+		pr_err("Instead got: %x %x %x", deviceId[0], deviceId[1], deviceId[2]);
 		gpio_set_value(ts->plat_data->touch_rst_gpio, 0);
 		mdelay(5);
 		gpio_set_value(ts->plat_data->touch_rst_gpio, 1);
