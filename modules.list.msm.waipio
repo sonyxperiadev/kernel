@@ -59,7 +59,7 @@ pinctrl-msm.ko
 proxy-consumer.ko
 qcom-dcvs.ko
 qcom-dload-mode.ko
-qcom-msm-pinctrl.ko
+pinctrl-waipio.ko
 qcom-pmu-lib.ko
 qcom-reboot-reason.ko
 qcom-scm.ko
