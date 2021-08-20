@@ -1,0 +1,35 @@
+&soc {
+	qcom,ion {
+		compatible = "qcom,msm-ion";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		system_heap: qcom,ion-heap@25 {
+			reg = <25>;
+			qcom,ion-heap-type = "SYSTEM";
+		};
+
+		qcom,ion-heap@22 { /* ADSP HEAP */
+			reg = <22>;
+			memory-region = <&adsp_mem>;
+			qcom,ion-heap-type = "DMA";
+		};
+
+		qcom,ion-heap@27 { /* QSEECOM HEAP */
+			reg = <27>;
+			memory-region = <&qseecom_mem>;
+			qcom,ion-heap-type = "DMA";
+		};
+
+		qcom,ion-heap@10 { /* SECURE DISPLAY HEAP */
+			reg = <10>;
+			memory-region = <&secure_display_memory>;
+			qcom,ion-heap-type = "HYP_CMA";
+		};
+
+		qcom,ion-heap@9 {
+			reg = <9>;
+			qcom,ion-heap-type = "SYSTEM_SECURE";
+		};
+	};
+};
