@@ -676,8 +676,6 @@ static const struct rpm_smd_clk_desc rpm_clk_msm8996 = {
 	.num_clks = ARRAY_SIZE(msm8996_clks),
 };
 
-
-
 /* bengal */
 DEFINE_CLK_SMD_RPM_BRANCH(bengal, bi_tcxo, bi_tcxo_ao,
 					QCOM_SMD_RPM_MISC_CLK, 0, 19200000);
@@ -898,11 +896,11 @@ static struct clk_hw *trinket_clks[] = {
 	[RPM_SMD_RF_CLK2] = &trinket_rf_clk2.hw,
 	[RPM_SMD_RF_CLK2_A] = &trinket_rf_clk2_a.hw,
 	[RPM_SMD_LN_BB_CLK1] = &trinket_ln_bb_clk1.hw,
-	[RPM_SMD_LN_BB_CLK1_AO] = &trinket_ln_bb_clk1_a.hw,
+	[RPM_SMD_LN_BB_CLK1_A] = &trinket_ln_bb_clk1_a.hw,
 	[RPM_SMD_LN_BB_CLK2] = &trinket_ln_bb_clk2.hw,
-	[RPM_SMD_LN_BB_CLK2_AO] = &trinket_ln_bb_clk2_a.hw,
+	[RPM_SMD_LN_BB_CLK2_A] = &trinket_ln_bb_clk2_a.hw,
 	[RPM_SMD_LN_BB_CLK3] = &trinket_ln_bb_clk3.hw,
-	[RPM_SMD_LN_BB_CLK3_AO] = &trinket_ln_bb_clk3_a.hw,
+	[RPM_SMD_LN_BB_CLK3_A] = &trinket_ln_bb_clk3_a.hw,
 	[RPM_SMD_CNOC_CLK] = &trinket_cnoc_clk.hw,
 	[RPM_SMD_CNOC_A_CLK] = &trinket_cnoc_a_clk.hw,
 	[RPM_SMD_CE1_CLK] = &trinket_ce1_clk.hw,
@@ -975,7 +973,7 @@ static struct clk_hw *trinket_clks[] = {
 
 static const struct rpm_smd_clk_desc rpm_clk_trinket = {
 	.clks = trinket_clks,
-	.num_rpm_clks = RPM_SMD_LN_BB_CLK3_AO,
+	.num_rpm_clks = RPM_SMD_LN_BB_CLK3_A,
 	.num_clks = ARRAY_SIZE(trinket_clks),
 };
 
@@ -1220,7 +1218,7 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct rpm_cc *rcc;
 	struct clk_onecell_data *data;
-	int ret, is_bengal, is_scuba, is_sdm660;
+	int ret, is_bengal, is_scuba, is_trinket, is_sdm660;
 	size_t num_clks, i;
 	struct clk_hw **hw_clks;
 	const struct rpm_smd_clk_desc *desc;
@@ -1230,6 +1228,9 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 
 	is_scuba = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,rpmcc-scuba");
+
+	is_trinket = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,rpmcc-trinket");
 	if (is_bengal || is_scuba) {
 		ret = clk_vote_bimc(&bengal_bimc_clk.hw, INT_MAX);
 		if (ret < 0)
