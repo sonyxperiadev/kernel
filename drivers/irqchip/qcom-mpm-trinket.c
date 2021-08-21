@@ -11,7 +11,7 @@
  *
  */
 
-#include "mpm.h"
+#include <soc/qcom/mpm.h>
 
 const struct mpm_pin mpm_trinket_gic_chip_data[] = {
 	{2, 222},
