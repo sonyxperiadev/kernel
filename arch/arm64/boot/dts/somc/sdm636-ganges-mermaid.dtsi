@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm630-ganges-common.dtsi"
+#include "sdm630-ganges-common-display.dtsi"
+#include "sdm636-ganges-mermaid-camera.dtsi"
+#include "sdm636-ganges-mermaid-display.dtsi"
+#include "sdm636-ganges-mermaid-touch.dtsi"
+
+/ {
+	mermaid_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-mermaid-byd-4245mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4297mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4335mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4380mv.dtsi"
+	};
+};
+
+&soc {
+	/delete-node/ qcom,qbt1000;
+
+	pinctrl@03000000 {
+		disabled-pins = <8 9 10 11>;
+
+		sdc2_clk_on: sdc2_clk_on {
+			config {
+				pins = "sdc2_clk";
+				drive-strength = <14>; /* default 16 MA */
+				bias-disable; /* NO pull */
+			};
+		};
+	};
+
+	somc_pinctrl: somc_pinctrl {
+		/* If product common default setting is needed,
+		fill pinctrl-1 value in <product>_common.dtsi */
+		pinctrl-1 = <>;
+	};
+};
+
+&pm660_charger {
+	somc,thermal-fcc-ua =  <2930000 2930000 2930000
+				2930000 2930000 2930000
+				2930000 2930000 2930000
+				2930000 2500000 2930000
+				2930000       0       0>;
+};
+
+&pm660_fg {
+	qcom,battery-data = <&mermaid_batterydata>;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 54 0x0>;
+};

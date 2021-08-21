@@ -18,6 +18,9 @@ lagoon-lena-pdx213_generic-overlay.dtbo-base := ../qcom/lagoon.dtb
 endif
 
 else
+dtb-$(CONFIG_MACH_SONY_MERMAID) += \
+	sdm636-ganges-mermaid.dtb
+
 dtb-$(CONFIG_MACH_SONY_PDX203) += \
 	kona-edo-pdx203_generic.dtb \
 	kona-v2-edo-pdx203_generic.dtb \

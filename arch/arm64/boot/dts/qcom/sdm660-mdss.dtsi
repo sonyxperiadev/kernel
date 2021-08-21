@@ -457,7 +457,7 @@
 		};
 	};
 
-	qcom,mdss_wb_panel {
+	mdss_wb: qcom,mdss_wb_panel {
 		compatible = "qcom,mdss_wb";
 		qcom,mdss_pan_res = <640 480>;
 		qcom,mdss_pan_bpp = <24>;

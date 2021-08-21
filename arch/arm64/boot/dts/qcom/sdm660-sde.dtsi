@@ -6,14 +6,12 @@
 &soc {
 	mdss_mdp: qcom,mdss_mdp@c900000 {
 		compatible = "qcom,sde-kms";
-		reg = <0x0c900000 0x84208>,
-		      <0x0c9b0000 0x2008>,
-		      <0x0c9ac000 0x214>,
-			  <0x0c98f000 0x02c>;
+		reg = <0x0c900000 0x90000>,
+		      <0x0c9b0000 0x1040>,
+		      <0x0c9ac000 0x214>;
 		reg-names = "mdp_phys",
 			"vbif_phys",
-			"regdma_phys",
-			"sid_phys";
+			"regdma_phys";
 
 		/* clock and supply entries */
 		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
@@ -50,8 +48,9 @@
 		interrupt-controller;
 		#interrupt-cells = <1>;
 
-		#power-domain-cells = <0>;
+		#list-cells = <1>;
 
+		#power-domain-cells = <0>;
 
 		/* hw blocks */
 		qcom,sde-off = <0x1000>;
@@ -452,9 +451,6 @@
 
 		#list-cells = <1>;
 
-		qcom,mdss-wb-count = <1>;
-		qcom,mdss-wb-id = <0>;
-		qcom,mdss-ctl-id = <4>;
 		qcom,mdss-rot-mode = <1>;
 		qcom,mdss-highest-bank-bit = <0x1>;
 
@@ -482,13 +478,26 @@
 		interrupt-parent = <&mdss_mdp>;
 		interrupts = <2 0>;
 
-		power-domains = <&mdss_mdp>;
+		qcom,mdss-rot-parent = <&mdss_mdp 0>;
 		/* VBIF QoS remapper settings*/
 		qcom,mdss-rot-vbif-qos-setting = <1 1 1 1>;
 		qcom,mdss-rot-xin-id = <14 15>;
 
 		qcom,mdss-default-ot-rd-limit = <32>;
 		qcom,mdss-default-ot-wr-limit = <32>;
+
+		qcom,sde-reg-bus {
+			/* Reg Bus Scale Settings */
+			qcom,msm-bus,name = "mdss_rot_reg";
+			qcom,msm-bus,num-cases = <4>;
+			qcom,msm-bus,num-paths = <1>;
+			qcom,msm-bus,active-only;
+			qcom,msm-bus,vectors-KBps =
+				<1 590 0 0>,
+				<1 590 0 76800>,
+				<1 590 0 160000>,
+				<1 590 0 320000>;
+		};
 	};
 
 	ext_disp: qcom,msm-ext-disp {

@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ */
+
+#include "dsi-panel-nt36672a-tianma-fhdplus-video.dtsi"
+
+/ {
+	chosen {
+		bootargs = "msm_drm.dsi_display0=qcom,mdss_dsi_nt36672a_tianma_fhdplus_video:config0";
+	};
+};
+
+&dsi_nt36672a_tianma_fhdplus_video {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-ctrl-num = <0>;
+	qcom,dsi-phy-num = <0>;
+
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_nt36672a>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_nt36672a>;
+
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	somc,lcd-id-adc = <801000 917000>;
+	somc,pw-on-rst-seq = "after_power_on";
+	somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
+	somc,pw-off-rst-b-seq = <0 1>;
+	somc,pw-wait-after-on-vdd = <0>;
+	somc,pw-wait-after-on-vddio = <1>;
+	somc,pw-wait-after-on-vsp = <0>;
+	somc,pw-wait-after-on-vsn = <0>;
+	somc,pw-wait-after-off-vdd = <0>;
+	somc,pw-wait-after-off-vddio = <1>;
+	somc,pw-wait-after-off-vsp = <0>;
+	somc,pw-wait-after-off-vsn = <0>;
+	somc,pw-wait-after-on-touch-vddio = <0>;
+	somc,pw-wait-after-on-touch-reset = <0>;
+	somc,pw-wait-after-on-touch-int-n = <0>;
+	somc,pw-wait-after-off-touch-vddio = <0>;
+	somc,pw-wait-after-off-touch-reset = <0>;
+	somc,pw-wait-after-off-touch-int-n = <0>;
+	somc,pw-down-period = <300>;
+
+	somc,lab-output-voltage = <5500000>;
+	somc,ibb-output-voltage = <5500000>;
+	somc,qpnp-lab-limit-maximum-current = <200>;
+	somc,qpnp-ibb-limit-maximum-current = <800>;
+	somc,qpnp-lab-max-precharge-time = <500>;
+	somc,qpnp-lab-soft-start = <800>;
+	somc,qpnp-ibb-discharge-resistor = <300>;
+	somc,qpnp-lab-pull-down-enable;
+	somc,qpnp-lab-full-pull-down;
+	somc,qpnp-ibb-pull-down-enable;
+	somc,qpnp-ibb-full-pull-down;
+
+	somc,dsi-panel-type = "lcd";
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [
+				27 21 0A 0B 07 03 04 a0
+				27 21 0A 0B 07 03 04 a0
+				27 21 0A 0B 07 03 04 a0
+				27 21 0A 0B 07 03 04 a0
+				27 21 0A 0B 07 03 04 a0
+			];
+		};
+	};
+};

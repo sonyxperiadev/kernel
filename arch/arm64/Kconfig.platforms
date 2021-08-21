@@ -359,6 +359,24 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config ARCH_SONY_GANGES
+	bool "Sony Mobile Ganges platform"
+	depends on ARCH_SDM660
+	help
+	  Support for the SONY Mobile Ganges platform
+	  which is based on QCOM SDM630 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_MERMAID
+	bool "Sony Mobile Mermaid"
+	depends on ARCH_SONY_GANGES
+	help
+	  Support for the SONY Mobile Mermaid device
+	  which is based on SONY Ganges platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_SONY_EDO
 	bool "Sony Mobile Edo platform"
 	depends on ARCH_KONA
