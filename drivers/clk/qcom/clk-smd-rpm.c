@@ -1089,7 +1089,7 @@ static const struct rpm_smd_clk_desc rpm_clk_scuba = {
 };
 
 /* sdm660 */
-DEFINE_CLK_SMD_RPM_BRANCH(sdm660, cxo, cxo_a, QCOM_SMD_RPM_MISC_CLK, 0,
+DEFINE_CLK_SMD_RPM_BRANCH(sdm660, bi_tcxo, bi_tcxo_ao, QCOM_SMD_RPM_MISC_CLK, 0,
 								19200000);
 DEFINE_CLK_SMD_RPM(sdm660, snoc_clk, snoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 1);
 DEFINE_CLK_SMD_RPM(sdm660, cnoc_clk, cnoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 2);
@@ -1123,16 +1123,12 @@ static DEFINE_CLK_VOTER(aggre2_noc_msmbus_clk, aggre2_noc_clk, LONG_MAX);
 static DEFINE_CLK_VOTER(aggre2_noc_msmbus_a_clk, aggre2_noc_a_clk, LONG_MAX);
 static DEFINE_CLK_VOTER(aggre2_noc_usb_clk, aggre2_noc_clk, 19200000);
 static DEFINE_CLK_VOTER(aggre2_noc_smmu_clk, aggre2_noc_clk, 1000);
-static DEFINE_CLK_BRANCH_VOTER(cxo_dwc3_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_lpm_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_otg_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_pil_lpass_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_pil_cdsp_clk, cxo);
-
+static DEFINE_CLK_BRANCH_VOTER(bi_tcxo_dwc3_clk, bi_tcxo);
+static DEFINE_CLK_BRANCH_VOTER(bi_tcxo_lpm_clk, bi_tcxo);
 
 static struct clk_hw *sdm660_clks[] = {
-	[RPM_SMD_XO_CLK_SRC]        = &sdm660_cxo.hw,
-	[RPM_SMD_XO_A_CLK_SRC]      = &sdm660_cxo_a.hw,
+	[RPM_SMD_XO_CLK_SRC]        = &sdm660_bi_tcxo.hw,
+	[RPM_SMD_XO_A_CLK_SRC]      = &sdm660_bi_tcxo_ao.hw,
 	[RPM_SMD_SNOC_CLK]          = &sdm660_snoc_clk.hw,
 	[RPM_SMD_SNOC_A_CLK]        = &sdm660_snoc_a_clk.hw,
 	[RPM_SMD_BIMC_CLK]          = &sdm660_bimc_clk.hw,
@@ -1182,11 +1178,11 @@ static struct clk_hw *sdm660_clks[] = {
 	[SCM_CE1_CLK]           = &scm_ce1_clk.hw,
 	[SNOC_MSMBUS_CLK]       = &snoc_msmbus_clk.hw,
 	[SNOC_MSMBUS_A_CLK]     = &snoc_msmbus_a_clk.hw,
-	[CXO_DWC3_CLK]          = &cxo_dwc3_clk.hw,
-	[CXO_SMD_LPM_CLK]           = &cxo_lpm_clk.hw,
-	[CXO_SMD_OTG_CLK]           = &cxo_otg_clk.hw,
-	[CXO_SMD_PIL_LPASS_CLK]     = &cxo_pil_lpass_clk.hw,
-	[CXO_SMD_PIL_CDSP_CLK]      = &cxo_pil_cdsp_clk.hw,
+	[CXO_DWC3_CLK]          = &bi_tcxo_dwc3_clk.hw,
+	[CXO_SMD_LPM_CLK]           = &bi_tcxo_lpm_clk.hw,
+	[CXO_SMD_OTG_CLK]           = &bi_tcxo_otg_clk.hw,
+	[CXO_SMD_PIL_LPASS_CLK]     = &bi_tcxo_pil_lpass_clk.hw,
+	[CXO_SMD_PIL_CDSP_CLK]      = &bi_tcxo_pil_cdsp_clk.hw,
 	[CNOC_KEEPALIVE_A_CLK] = &cnoc_periph_keepalive_a_clk.hw,
 	[AGGR2_NOC_MSMBUS_CLK]  = &aggre2_noc_msmbus_clk.hw,
 	[AGGR2_NOC_MSMBUS_A_CLK] = &aggre2_noc_msmbus_a_clk.hw,
@@ -1341,7 +1337,7 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 		clk_set_rate(snoc_keepalive_a_clk.hw.clk, 19200000);
 		clk_prepare_enable(snoc_keepalive_a_clk.hw.clk);
 	} else if (is_sdm660) {
-		clk_prepare_enable(sdm660_cxo_a.hw.clk);
+		clk_prepare_enable(sdm660_bi_tcxo_ao.hw.clk);
 
 		/* Hold an active set vote for the cnoc_periph resource */
 		clk_set_rate(cnoc_periph_keepalive_a_clk.hw.clk, 19200000);
