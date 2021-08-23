@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm630-ganges-common.dtsi"
+#include "sdm630-ganges-common-display.dtsi"
+#include "sdm630-ganges-kirin-camera.dtsi"
+#include "sdm630-ganges-kirin-display.dtsi"
+#include "sdm630-ganges-kirin-touch.dtsi"
+
+/ {
+	kirin_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-kirin-send-4245mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-send-4297mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-send-4335mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-send-4380mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-tdk-4250mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-tdk-4297mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-tdk-4335mv.dtsi"
+		#include "fg-gen3-batterydata-kirin-tdk-4380mv.dtsi"
+	};
+};
+
+&soc {
+	pinctrl@03000000 {
+		disabled-pins = <8 9 10 11>;
+	};
+
+	somc_pinctrl: somc_pinctrl {
+		/* If variant specific default setting is needed,
+		fill pinctrl-2 value in <product>_common.dtsi */
+		pinctrl-2 = <>;
+	};
+};
+
+&pm660_charger {
+	somc,thermal-fcc-ua =  <2484000 2484000 2484000
+				2484000 2484000 2484000
+				2484000 2484000 2484000
+				2484000 2484000 2484000
+				2484000       0       0>;
+};
+
+&pm660_fg {
+	qcom,battery-data = <&kirin_batterydata>;
+};

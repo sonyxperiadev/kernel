@@ -18,6 +18,8 @@ lagoon-lena-pdx213_generic-overlay.dtbo-base := ../qcom/lagoon.dtb
 endif
 
 else
+dtb-$(CONFIG_MACH_SONY_KIRIN) += \
+	sdm630-ganges-kirin.dtb
 dtb-$(CONFIG_MACH_SONY_MERMAID) += \
 	sdm636-ganges-mermaid.dtb
 
