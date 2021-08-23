@@ -93,6 +93,8 @@ extern const uint16_t gesture_key_array[];
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
 
+#define NVT_BUFFER_SIZE 1025
+
 struct nvt_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
@@ -123,7 +125,7 @@ struct nvt_ts_data {
 	const struct nvt_ts_mem_map *mmap;
 	uint8_t carrier_system;
 	uint16_t nvt_pid;
-	uint8_t xbuf[1025];
+	uint8_t xbuf[NVT_BUFFER_SIZE];
 	struct mutex xbuf_lock;
 	bool irq_enabled;
 };

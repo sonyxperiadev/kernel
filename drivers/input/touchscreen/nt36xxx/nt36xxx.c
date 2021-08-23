@@ -144,15 +144,24 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf,
 		uint16_t len)
 {
 	struct i2c_msg msgs[2];
+	uint8_t *xbuf;
 	int32_t ret = -1;
 	int32_t retries = 0;
 
+	xbuf = kcalloc(NVT_BUFFER_SIZE, sizeof(uint8_t), GFP_KERNEL);
+	if (!xbuf) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
 	mutex_lock(&ts->xbuf_lock);
+
+	memcpy(xbuf, buf, len);
 
 	msgs[0].flags = !I2C_M_RD;
 	msgs[0].addr  = address;
 	msgs[0].len   = 1;
-	msgs[0].buf   = &buf[0];
+	msgs[0].buf   = &xbuf[0];
 
 	msgs[1].flags = I2C_M_RD;
 	msgs[1].addr  = address;
@@ -174,6 +183,8 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf,
 
 	mutex_unlock(&ts->xbuf_lock);
 
+exit:
+	kfree(xbuf);
 	return ret;
 }
 
@@ -188,15 +199,24 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 		uint16_t len)
 {
 	struct i2c_msg msg;
+	uint8_t *xbuf;
 	int32_t ret = -1;
 	int32_t retries = 0;
 
+	xbuf = kcalloc(NVT_BUFFER_SIZE, sizeof(uint8_t), GFP_KERNEL);
+	if (!xbuf) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
 	mutex_lock(&ts->xbuf_lock);
+
+	memcpy(xbuf, buf, len);
 
 	msg.flags = !I2C_M_RD;
 	msg.addr  = address;
 	msg.len   = len;
-	memcpy(ts->xbuf, buf, len);
+	memcpy(ts->xbuf, xbuf, len);
 	msg.buf   = ts->xbuf;
 
 	while (retries < 5) {
@@ -212,6 +232,8 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 
 	mutex_unlock(&ts->xbuf_lock);
 
+exit:
+	kfree(xbuf);
 	return ret;
 }
 
