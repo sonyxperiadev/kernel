@@ -21,6 +21,8 @@
 		/* MP */
 		novatek,mp-support-dt;
 
+		panel = <&dsi_nt36672a_truly_fhdplus_video_withotp>;
+
 		novatek-mp-criteria-default@0 {
 			#address-cells = <1>;
 			#size-cells = <0>;
