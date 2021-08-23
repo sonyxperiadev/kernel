@@ -7,7 +7,7 @@
 		reg = <0x0c900000 0x90000>,
 		      <0x0c9b0000 0x1040>;
 		reg-names = "mdp_phys", "vbif_phys";
-		interrupts = <0 83 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
 

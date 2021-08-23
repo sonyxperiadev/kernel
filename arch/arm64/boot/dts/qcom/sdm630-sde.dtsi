@@ -43,7 +43,7 @@
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
-		interrupts = <0 83 0>;
+		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
 

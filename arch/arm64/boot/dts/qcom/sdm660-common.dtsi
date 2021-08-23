@@ -62,7 +62,7 @@
 		compatible = "qcom,ufshc";
 		reg = <0x1da4000 0x3000>, <0x1db0000 0x8000>;
 		reg-names = "ufs_mem", "ufs_ice";
-		interrupts = <0 265 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>;
 		phys = <&ufsphy1>;
 		phy-names = "ufsphy";
 
@@ -139,7 +139,9 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <0 347 IRQ_TYPE_LEVEL_HIGH>, <0 243 IRQ_TYPE_LEVEL_HIGH>, <0 180 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 347 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "hs_phy_irq", "ss_phy_irq", "pwr_event_irq";
 
 		USB3_GDSC-supply = <&gdsc_usb30>;
@@ -179,7 +181,7 @@
 			compatible = "snps,dwc3";
 			reg = <0x0a800000 0xc8d0>;
 			interrupt-parent = <&intc>;
-			interrupts = <0 131 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&qusb_phy0>, <&ssphy>;
 			tx-fifo-resize;
 			snps,usb3-u1u2-disable;
@@ -200,7 +202,7 @@
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x0a904000 0x17000>;
 			interrupt-parent = <&intc>;
-			interrupts = <0 132 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>;
 
 			qcom,bam-type = <0>;
 			qcom,usb-bam-fifo-baseaddr = <0x146bb000>;
@@ -460,7 +462,8 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <0 348 IRQ_TYPE_LEVEL_HIGH>, <0 144 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "hs_phy_irq", "pwr_event_irq";
 
 		qcom,msm-bus,name = "usb-hs";
@@ -488,7 +491,7 @@
 			compatible = "snps,dwc3";
 			reg = <0x0c200000 0xc8d0>;
 			interrupt-parent = <&intc>;
-			interrupts = <0 143 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&qusb_phy1>, <&usb_nop_phy>;
 			maximum-speed = "high-speed";
 			snps,is-utmi-l1-suspend;
@@ -545,7 +548,8 @@
 				<0xc0c8000 0x8000>;
 		reg-names = "hc_mem", "cqhci_mem", "cqhci_ice";
 
-		interrupts = <0 110 IRQ_TYPE_LEVEL_HIGH>, <0 112 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <8>;
@@ -615,7 +619,8 @@
 		reg = <0xc084000 0x1000>;
 		reg-names = "hc_mem";
 
-		interrupts = <0 125 IRQ_TYPE_LEVEL_HIGH>, <0 221 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <4>;
