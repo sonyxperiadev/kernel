@@ -134,6 +134,7 @@
 		reg = <0x5040000 0x10000>;
 		#iommu-cells = <1>;
 		qcom,dynamic;
+		qcom,skip-init;
 		qcom,use-3-lvl-tables;
 		qcom,disable-atos;
 		qcom,regulator-names = "vdd";
