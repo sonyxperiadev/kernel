@@ -71,7 +71,11 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #define TOUCH_FORCE_NUM 1000
 
 /* Enable only when module have tp reset pin and connected to host */
+#ifdef CONFIG_ARCH_SONY_GANGES
+#define NVT_TOUCH_SUPPORT_HW_RST 0
+#else
 #define NVT_TOUCH_SUPPORT_HW_RST 1
+#endif
 
 //---Customerized func.---
 #define NVT_TOUCH_PROC 1
