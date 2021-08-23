@@ -5,6 +5,7 @@
 
 &i2c_1 {
 	status = "okay";
+	qcom,i2c-touch-active = "novatek,NVT-ts";
 
 	novatek@62 {
 		compatible = "novatek,NVT-ts";
