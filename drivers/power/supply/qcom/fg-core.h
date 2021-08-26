@@ -96,11 +96,11 @@
 #define FULL_SOC_RAW			255
 
 #define DEBUG_BATT_SOC			67
-#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
-#define BATT_MISS_SOC			50
-#endif
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && \
+	!defined(CONFIG_QPNP_FG_GEN3)
 #define BATT_MISS_SOC			20
+#else
+#define BATT_MISS_SOC			50
 #endif
 #define ESR_SOH_SOC			50
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
@@ -261,6 +261,10 @@ enum fg_sram_param_id {
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	FG_SRAM_CUTOFF_SOC,
 	FG_SRAM_SYSTEM_SOC,
+	FG_SRAM_SOC_SYSTEM,
+	FG_SRAM_SOC_MONOTONIC,
+	FG_SRAM_SOC_CUTOFF,
+	FG_SRAM_SOC_FULL,
 #endif
 	FG_SRAM_MAX,
 };
@@ -377,6 +381,18 @@ struct fg_cap_learning {
 	int64_t		final_cc_uah;
 	int64_t		learned_cc_uah;
 	struct mutex	lock;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int64_t		charge_full_raw;
+	int		learning_counter;
+	int		batt_soc_drop;
+	int		cc_soc_drop;
+	int		max_bsoc_during_active;
+	int		max_ccsoc_during_active;
+	s64		max_bsoc_time_ms;
+	s64		start_time_ms;
+	s64		hold_time;
+	s64		total_time;
+#endif
 };
 
 struct fg_irq_info {
@@ -489,6 +505,12 @@ struct fg_memif {
 #define NO_REQUESTED_LEVEL      -1
 #define BATT_AGING_LEVEL_NONE   -1
 #define MAX_BATT_NODE_NAME_SIZE 32
+
+#define ORG_BATT_TYPE_SIZE	9
+#define BATT_TYPE_SIZE		(ORG_BATT_TYPE_SIZE + 2)
+#define BATT_TYPE_FIRST_HYPHEN	4
+#define BATT_TYPE_SECOND_HYPHEN	9
+#define BATT_TYPE_AGING_LEVEL	10
 #endif
 struct fg_dev {
 	struct thermal_zone_device	*tz_dev;
@@ -622,6 +644,15 @@ struct fg_dev {
 	/* etc */
 	s64			last_update_batt_temp_ktime_ms;
 	int			last_update_batt_temp;
+
+	bool			real_temp_restriction_cool;
+	int			real_temp_restriction_cool_thresh;
+	bool			recharge_starting;
+	char			org_batt_type_str[ORG_BATT_TYPE_SIZE + 1];
+	bool			full_delay;
+	int			recharge_voltage_mv;
+	int			saved_batt_aging_level;
+	struct delayed_work	full_delay_work;
 #endif
 };
 
