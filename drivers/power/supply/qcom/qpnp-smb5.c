@@ -112,6 +112,98 @@ static struct smb_params smb5_pmi632_params = {
 	},
 };
 
+static struct smb_params smb5_pm6150_lena_params = {
+	.fcc			= {
+		.name   = "fast charge current",
+		.reg    = CHGR_FAST_CHARGE_CURRENT_CFG_REG,
+		.min_u  = 0,
+		.max_u  = 8000000,
+		.step_u = 50000,
+	},
+	.fv			= {
+		.name   = "float voltage",
+		.reg    = CHGR_FLOAT_VOLTAGE_CFG_REG,
+		.min_u  = 3600000,
+		.max_u  = 4790000,
+		.step_u = 10000,
+	},
+	.usb_icl		= {
+		.name   = "usb input current limit",
+		.reg    = USBIN_CURRENT_LIMIT_CFG_REG,
+		.min_u  = 0,
+		.max_u  = 3000000,
+		.step_u = 50000,
+	},
+	.icl_max_stat		= {
+		.name   = "dcdc icl max status",
+		.reg    = ICL_MAX_STATUS_REG,
+		.min_u  = 0,
+		.max_u  = 3000000,
+		.step_u = 50000,
+	},
+	.icl_stat		= {
+		.name   = "aicl icl status",
+		.reg    = AICL_ICL_STATUS_REG,
+		.min_u  = 0,
+		.max_u  = 3000000,
+		.step_u = 50000,
+	},
+	.otg_cl			= {
+		.name	= "usb otg current limit",
+		.reg	= DCDC_OTG_CURRENT_LIMIT_CFG_REG,
+		.min_u	= 500000,
+		.max_u	= 3000000,
+		.step_u	= 500000,
+	},
+	.dc_icl		= {
+		.name   = "DC input current limit",
+		.reg    = DCDC_CFG_REF_MAX_PSNS_REG,
+		.min_u  = 0,
+		.max_u  = DCIN_ICL_MAX_UA,
+		.step_u = 50000,
+	},
+	.jeita_cc_comp_hot	= {
+		.name	= "jeita fcc reduction",
+		.reg	= JEITA_CCCOMP_CFG_HOT_REG,
+		.min_u	= 0,
+		.max_u	= 8000000,
+		.step_u	= 25000,
+		.set_proc = NULL,
+	},
+	.jeita_cc_comp_cold	= {
+		.name	= "jeita fcc reduction",
+		.reg	= JEITA_CCCOMP_CFG_COLD_REG,
+		.min_u	= 0,
+		.max_u	= 8000000,
+		.step_u	= 25000,
+		.set_proc = NULL,
+	},
+	.freq_switcher		= {
+		.name	= "switching frequency",
+		.reg	= DCDC_FSW_SEL_REG,
+		.min_u	= 600,
+		.max_u	= 1200,
+		.step_u	= 400,
+		.set_proc = smblib_set_chg_freq,
+	},
+	.aicl_5v_threshold		= {
+		.name   = "AICL 5V threshold",
+		.reg    = USBIN_5V_AICL_THRESHOLD_REG,
+		.min_u  = 4000,
+		.max_u  = 4700,
+		.step_u = 100,
+	},
+	.aicl_cont_threshold		= {
+		.name   = "AICL CONT threshold",
+		.reg    = USBIN_CONT_AICL_THRESHOLD_REG,
+		.min_u  = 4000,
+		.max_u  = 11800,
+		.step_u = 100,
+		.get_proc = smblib_get_aicl_cont_threshold,
+		.set_proc = smblib_set_aicl_cont_threshold,
+	},
+};
+
 static struct smb_params smb5_pm8150b_params = {
 	.fcc			= {
 		.name   = "fast charge current",
@@ -355,7 +447,11 @@ static int smb5_chg_config_init(struct smb5 *chip)
 		break;
 	case PM6150_SUBTYPE:
 		chip->chg.chg_param.smb_version = PM6150_SUBTYPE;
+#if defined(CONFIG_ARCH_SONY_LENA)
+		chg->param = smb5_pm6150_lena_params;
+#else
 		chg->param = smb5_pm8150b_params;
+#endif
 		chg->name = "pm6150_charger";
 		chg->wa_flags |= SW_THERM_REGULATION_WA | CHG_TERMINATION_WA;
 		if (pmic_rev_id->rev4 >= 2)
@@ -515,6 +611,25 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 		}
 	}
 
+	if (of_find_property(node, "qcom,thermal-mitigation-sleep", &byte_len)) {
+		chg->thermal_mitigation_sleep = devm_kzalloc(chg->dev, byte_len,
+			GFP_KERNEL);
+
+		if (chg->thermal_mitigation_sleep == NULL)
+			return -ENOMEM;
+
+		chg->thermal_levels = byte_len / sizeof(u32);
+		rc = of_property_read_u32_array(node,
+				"qcom,thermal-mitigation-sleep",
+				chg->thermal_mitigation_sleep,
+				chg->thermal_levels);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read screen off threm limits rc = %d\n", rc);
+			return rc;
+		}
+	}
+
 	rc = of_property_read_u32(node, "qcom,charger-temp-max",
 			&chg->charger_temp_max);
 	if (rc < 0)
@@ -626,6 +741,21 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 					&chg->chg_param.qc4_max_icl_ua);
 	if (chg->chg_param.qc4_max_icl_ua <= 0)
 		chg->chg_param.qc4_max_icl_ua = MICRO_4PA;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = of_property_read_u32(node, "somc,product-max-icl-ua",
+					&chip->dt.somc_product_max_icl_ua);
+	if (rc < 0)
+		chip->dt.somc_product_max_icl_ua = -EINVAL;
+
+	rc = of_property_read_u32_array(node, "somc,jeita-hard-thresholds",
+				chip->dt.somc_jeita_hard_thresholds, 2);
+	if (rc < 0) {
+		chip->dt.somc_jeita_hard_thresholds[0] = -EINVAL;
+		chip->dt.somc_jeita_hard_thresholds[1] = -EINVAL;
+	}
+
+#endif
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	rc = of_property_read_u32(node, "somc,product-max-icl-ua",
@@ -1847,6 +1977,8 @@ static enum power_supply_property smb5_batt_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
 	POWER_SUPPLY_PROP_FCC_STEPPER_ENABLE,
+	POWER_SUPPLY_PROP_FCC_MAH,
+	POWER_SUPPLY_PROP_RESET_MISCTA,
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	POWER_SUPPLY_PROP_SMART_CHARGING_STATUS,
 	POWER_SUPPLY_PROP_LRC_ENABLE,
@@ -1870,6 +2002,8 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 {
 	struct smb_charger *chg = power_supply_get_drvdata(psy);
 	int rc = 0;
+	static int first_count = 0;
+	int i;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -2022,6 +2156,26 @@ static int smb5_batt_get_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_FCC_STEPPER_ENABLE:
 		val->intval = chg->fcc_stepper_enable;
+		break;
+	case POWER_SUPPLY_PROP_FCC_MAH:
+		smblib_get_prop_from_bms(chg,
+				POWER_SUPPLY_PROP_CHARGE_FULL, val);
+		chg->fcc_mah[0] = val->intval / 1000;
+		if (first_count == 0) {
+			chg->fcc_mah[4]=chg->fcc_mah[3]=chg->fcc_mah[2]=chg->fcc_mah[1]=chg->fcc_mah[0];
+			first_count = 1;
+		} else {
+			for (i = 4; i > 0; i--) {
+				chg->fcc_mah[i] = chg->fcc_mah[(i - 1)];
+			}
+		}
+		memcpy(val->fcc_val, chg->fcc_mah, sizeof(val->fcc_val));
+		pr_debug("ZJJ get smb5_chg->fcc_val%d=%d,%d,%d,%d,%d\n",
+			val->fcc_val, val->fcc_val[4], val->fcc_val[3], val->fcc_val[2],
+			val->fcc_val[1], val->fcc_val[0]);
+		break;
+	case POWER_SUPPLY_PROP_RESET_MISCTA:
+		val->intval = chg->reset_miscta_state;
 		break;
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	case POWER_SUPPLY_PROP_SMART_CHARGING_STATUS:
@@ -2177,6 +2331,9 @@ static int smb5_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_FCC_STEPPER_ENABLE:
 		chg->fcc_stepper_enable = val->intval;
 		break;
+	case POWER_SUPPLY_PROP_RESET_MISCTA:
+		chg->reset_miscta_state = val->intval;
+		break;
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	case POWER_SUPPLY_PROP_LRC_ENABLE:
 		chg->lrc_enabled = val->intval;
@@ -2229,6 +2386,7 @@ static int smb5_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
 	case POWER_SUPPLY_PROP_STEP_CHARGING_ENABLED:
 	case POWER_SUPPLY_PROP_DIE_HEALTH:
+	case POWER_SUPPLY_PROP_RESET_MISCTA:
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	case POWER_SUPPLY_PROP_LRC_ENABLE:
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
@@ -2555,11 +2713,17 @@ static int smb5_init_vconn_regulator(struct smb5 *chip)
 /***************************
  * HARDWARE INITIALIZATION *
  ***************************/
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define DELAY_ENABLE_TYPEC_MS 250
+#endif
 static int smb5_configure_typec(struct smb_charger *chg)
 {
 	union power_supply_propval pval = {0, };
 	int rc;
 	u8 val = 0;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	u8 apsd_stat, apst_result;
+#endif
 
 	rc = smblib_read(chg, LEGACY_CABLE_STATUS_REG, &val);
 	if (rc < 0) {
@@ -2576,6 +2740,7 @@ static int smb5_configure_typec(struct smb_charger *chg)
 	 * reset legacy cable detection by disabling/enabling typeC mode.
 	 */
 	if (chg->pd_not_supported && (val & TYPEC_LEGACY_CABLE_STATUS_BIT)) {
+#if !defined(CONFIG_ARCH_SONY_LENA)
 		pval.intval = POWER_SUPPLY_TYPEC_PR_NONE;
 		smblib_set_prop_typec_power_role(chg, &pval);
 		if (rc < 0) {
@@ -2592,6 +2757,59 @@ static int smb5_configure_typec(struct smb_charger *chg)
 			dev_err(chg->dev, "Couldn't enable TYPEC rc=%d\n", rc);
 			return rc;
 		}
+#else
+		rc = smblib_read(chg, APSD_STATUS_REG, &apsd_stat);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't read APSD_STATUS rc=%d\n", rc);
+			return rc;
+		}
+		if (apsd_stat & APSD_DTC_STATUS_DONE_BIT) {
+			rc = smblib_read(chg, APSD_RESULT_STATUS_REG,
+								&apst_result);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't read APSD_RESULT_STATUS rc=%d\n",
+					rc);
+				return rc;
+			}
+			apst_result &= APSD_RESULT_STATUS_MASK;
+		} else {
+			apst_result = 0x00;
+		}
+
+		if (apst_result & DCP_CHARGER_BIT) {
+			dev_info(chg->dev,
+					"Legacy DCP is detected, try CC reconnection\n");
+
+			rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				TYPEC_DISABLE_CMD_BIT);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't disable TYPEC rc=%d\n", rc);
+				return rc;
+			}
+
+			/* delay before enabling typeC */
+			msleep(DELAY_ENABLE_TYPEC_MS);
+
+			rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				EN_SNK_ONLY_BIT);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't enable TYPEC rc=%d\n", rc);
+				return rc;
+			}
+		}
+		rc = smblib_get_prop_typec_power_role(chg, &pval);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't get TYPEC POWER ROLE rc=%d\n", rc);
+			return rc;
+		}
+#endif
 	}
 
 	smblib_apsd_enable(chg, true);
@@ -2695,10 +2913,24 @@ static int smb5_configure_typec(struct smb_charger *chg)
 		}
 	}
 
+#if defined(CONFIG_ARCH_SONY_LENA)
+	rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG,
+		USBIN_IN_COLLAPSE_GF_SEL_MASK | USBIN_AICL_STEP_TIMING_SEL_MASK,
+		USBIN_AICL_STEP_TIMING_SEL_30MS);
+	if (rc < 0)
+		dev_err(chg->dev,
+			"Couldn't set USBIN_LOAD_CFG_REG rc=%d\n",
+			rc);
+#endif
+
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	rc = smblib_masked_write(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG,
 					USBIN_5V_AICL_THRESHOLD_CFG_MASK,
+#if defined(CONFIG_ARCH_SONY_LENA)
+					USBIN_5V_AICL_THRESHOLD_4P0V);
+#else
 					USBIN_5V_AICL_THRESHOLD_4P5V);
+#endif
 	if (rc < 0)
 		dev_err(chg->dev,
 			"Couldn't set USBIN_5V_AICL_THRESHOLD_CFG_REG rc=%d\n",
@@ -2706,7 +2938,11 @@ static int smb5_configure_typec(struct smb_charger *chg)
 
 	rc = smblib_masked_write(chg, USBIN_CONT_AICL_THRESHOLD_CFG_REG,
 					USBIN_CONT_AICL_THRESHOLD_CFG_MASK,
-					USBIN_CONT_AICL_THRESHOLD_4P5V);
+#if defined(CONFIG_ARCH_SONY_LENA)
+					USBIN_5V_AICL_THRESHOLD_4P0V);
+#else
+					USBIN_5V_AICL_THRESHOLD_4P5V);
+#endif
 	if (rc < 0)
 		dev_err(chg->dev,
 			"Couldn't set USBIN_CONT_AICL_THRESHOLD_CFG_REG rc=%d\n",
@@ -3148,9 +3384,11 @@ static int smb5_init_hw(struct smb5 *chip)
 
 	smblib_get_charge_param(chg, &chg->param.usb_icl,
 				&chg->default_icl_ua);
+#if !defined(CONFIG_ARCH_SONY_LENA)
 	smblib_get_charge_param(chg, &chg->param.aicl_5v_threshold,
 				&chg->default_aicl_5v_threshold_mv);
 	chg->aicl_5v_threshold_mv = chg->default_aicl_5v_threshold_mv;
+#endif
 	smblib_get_charge_param(chg, &chg->param.aicl_cont_threshold,
 				&chg->default_aicl_cont_threshold_mv);
 	chg->aicl_cont_threshold_mv = chg->default_aicl_cont_threshold_mv;
@@ -4131,6 +4369,7 @@ enum smb5_somc_sysfs {
 	ATTR_DC_H_VOLT_ICL_CFG,
 	ATTR_DC_L_VOLT_ICL_CFG,
 	ATTR_DCIN_AICL_SKIP,
+	ATTR_REG_USBIN_5V_AICL_THRESHOLD_CFG,
 };
 
 static ssize_t smb5_somc_param_show(struct device *dev,
@@ -4142,12 +4381,6 @@ static ssize_t smb5_somc_param_store(struct device *dev,
 static struct device_attribute smb5_somc_attrs[] = {
 	__ATTR(somc_usb_icl_voter, 0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_usb_icl_voter_effective,
-				0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dc_icl_voter, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dc_icl_voter_effective,
-				0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dc_suspend_voter, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dc_suspend_voter_effective,
 				0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_fcc_voter, 0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_fcc_voter_effective, 0444, smb5_somc_param_show, NULL),
@@ -4197,22 +4430,8 @@ static struct device_attribute smb5_somc_attrs[] = {
 	__ATTR(somc_reg_usbin_current_limit_cfg,
 				0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_reg_misc_int_rt_sts, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_reg_usbin_adapter_allow_override,
+	__ATTR(somc_reg_usbin_5v_aicl_threshold_cfg,
 				0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_reg_usbin_adapter_allow_cfg,
-				0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dcin_uv_count, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_target_dc_icl, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_settled_dc_icl, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_settled_dc_icl_adjustment, 0444, smb5_somc_param_show,
-								NULL),
-	__ATTR(somc_dcusbex_status, 0444, smb5_somc_param_show, NULL),
-	__ATTR(somc_dc_h_volt_icl_cfg, 0644,
-			smb5_somc_param_show, smb5_somc_param_store),
-	__ATTR(somc_dc_l_volt_icl_cfg, 0644,
-			smb5_somc_param_show, smb5_somc_param_store),
-	__ATTR(somc_dcin_aicl_skip, 0644,
-			smb5_somc_param_show, smb5_somc_param_store),
 };
 
 static ssize_t smb5_somc_param_show(struct device *dev,
@@ -4234,22 +4453,6 @@ static ssize_t smb5_somc_param_show(struct device *dev,
 	case ATTR_USB_ICL_VOTER_EFFECTIVE:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 				get_effective_result(chg->usb_icl_votable));
-		break;
-	case ATTR_DC_ICL_VOTER:
-		size = somc_output_voter_param(chg->dc_icl_votable, buf,
-								PAGE_SIZE);
-		break;
-	case ATTR_DC_ICL_VOTER_EFFECTIVE:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-				get_effective_result(chg->dc_icl_votable));
-		break;
-	case ATTR_DC_SUSPEND_VOTER:
-		size = somc_output_voter_param(chg->dc_suspend_votable, buf,
-								PAGE_SIZE);
-		break;
-	case ATTR_DC_SUSPEND_VOTER_EFFECTIVE:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-				get_effective_result(chg->dc_suspend_votable));
 		break;
 	case ATTR_FCC_VOTER:
 		size = somc_output_voter_param(chg->fcc_votable, buf,
@@ -4528,50 +4731,15 @@ static ssize_t smb5_somc_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
-	case ATTR_REG_USBIN_ADAPTER_ALLOW_OVERRIDE:
-		ret = smblib_read(chg, USBIN_ADAPTER_ALLOW_OVERRIDE_REG, &reg);
+	case ATTR_REG_USBIN_5V_AICL_THRESHOLD_CFG:
+		ret = smblib_read(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG, &reg);
 		if (ret)
-			dev_err(dev, "Can't read USBIN_ADAPTER_ALLOW_OVERRIDE_REG: %d\n",
+			dev_err(dev,
+				"Can't read USBIN_5V_AICL_THRESHOLD_CFG_REG: %d\n",
 									ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
-		break;
-	case ATTR_REG_USBIN_ADAPTER_ALLOW_CFG:
-		ret = smblib_read(chg, USBIN_ADAPTER_ALLOW_CFG_REG, &reg);
-		if (ret)
-			dev_err(dev, "Can't read USBIN_ADAPTER_ALLOW_CFG_REG: %d\n",
-									ret);
-		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
-		break;
-	case ATTR_DCIN_UV_COUNT:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-						chg->somc_dcin_uv_count);
-		break;
-	case ATTR_DCIN_AICL_TARGET:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-						chg->somc_target_dc_icl);
-		break;
-	case ATTR_DCIN_AICL_SETTLED:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-						chg->somc_settled_dc_icl);
-		break;
-	case ATTR_DCIN_AICL_ADJUSTMENT:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					chg->somc_settled_dc_icl_adjustment);
-		break;
-	case ATTR_DCUSBEX_STATUS:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dcusbex_status);
-		break;
-	case ATTR_DC_H_VOLT_ICL_CFG:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_h_volt_icl_ua);
-		break;
-	case ATTR_DC_L_VOLT_ICL_CFG:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_l_volt_icl_ua);
-		break;
-	case ATTR_DCIN_AICL_SKIP:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-						chg->debug_dcin_aicl_skip);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
+					reg & USBIN_5V_AICL_THRESHOLD_CFG_MASK);
 		break;
 	default:
 		size = 0;

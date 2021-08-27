@@ -424,6 +424,8 @@ enum power_supply_property {
 	 * MODEL_NAME and SERIAL_NUMBER. Don't add below SERIAL_NUMBER.
 	 */
 	POWER_SUPPLY_PROP_SERIAL_NUMBER,
+	POWER_SUPPLY_PROP_FCC_MAH,
+	POWER_SUPPLY_PROP_RESET_MISCTA,
 };
 
 enum power_supply_type {
@@ -505,6 +507,7 @@ union power_supply_propval {
 	int intval;
 	const char *strval;
 	int64_t int64val;
+	int fcc_val[5];
 };
 
 struct device_node;

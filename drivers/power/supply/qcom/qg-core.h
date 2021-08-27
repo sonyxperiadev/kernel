@@ -86,6 +86,30 @@ struct qg_esr_data {
 	bool			valid;
 };
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define STEP_DATA_MAX_CFG_NUM	30
+#define STEP_DATA_RAW		7
+#define STEP_DATA_DT_MAX_NUM	(STEP_DATA_MAX_CFG_NUM * STEP_DATA_RAW)
+struct qg_dt_step_data {
+	int	data_num;
+	int	temp_low[STEP_DATA_MAX_CFG_NUM];
+	int	temp_high[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_low[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_high[STEP_DATA_MAX_CFG_NUM];
+	int	target_current[STEP_DATA_MAX_CFG_NUM];
+	int	target_voltage[STEP_DATA_MAX_CFG_NUM];
+	int	condition[STEP_DATA_MAX_CFG_NUM];
+};
+
+#define STEP_INPUT_BUF_NUM 3
+struct qg_step_input {
+	int	temp;
+	int	current_now;
+	int	voltage_now;
+	s64	stored_ktime_ms;
+};
+
+#endif
 struct qpnp_qg {
 	struct device		*dev;
 	struct pmic_revid_data	*pmic_rev_id;
@@ -205,6 +229,40 @@ struct qpnp_qg {
 	struct cycle_counter	*counter;
 	/* ttf */
 	struct ttf		*ttf;
+
+	#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	/* JEITA/Step charge */
+	int			prev_charge_status;
+	struct delayed_work	somc_jeita_step_charge_work;
+	struct wakeup_source	*step_ws;
+	struct mutex		step_lock;
+	bool			step_lock_en;
+	bool			step_en;
+	struct qg_dt_step_data	step_data;
+	int			cell_impedance_mohm;
+	int			vcell_max_mv;
+	struct qg_step_input	step_input_data[STEP_INPUT_BUF_NUM];
+	int			target_idx;
+	bool			use_real_temp;
+	bool			real_temp_use_aux;
+	int			batt_temp_correctton;
+	int			aux_temp_correctton;
+	int			real_temp_debug;
+
+	/* Misc */
+	struct iio_channel	*aux_temp_chan;
+	int			full_counter;
+	int			recharge_counter;
+
+	/* Battery aging */
+	struct alarm		psy_chg_alarm_timer;
+	struct work_struct	psy_chg_work;
+	bool			psy_chg_awake;
+	int			psy_chg_counter;
+
+	/* Capacity learning */
+	int			initial_capacity;
+#endif
 };
 
 struct ocv_all {
@@ -241,6 +299,10 @@ enum debug_mask {
 	QG_DEBUG_BUS_WRITE	= BIT(9),
 	QG_DEBUG_ALG_CL		= BIT(10),
 	QG_DEBUG_ESR		= BIT(11),
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	QG_DEBUG_SOMC_STEP	= BIT(14),
+	QG_DEBUG_SOMC		= BIT(15),
+#endif
 };
 
 enum qg_irq {

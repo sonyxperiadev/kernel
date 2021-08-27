@@ -224,6 +224,11 @@ static ssize_t power_supply_show_property(struct device *dev,
 	case POWER_SUPPLY_PROP_MODEL_NAME ... POWER_SUPPLY_PROP_SERIAL_NUMBER:
 		ret = sprintf(buf, "%s\n", value.strval);
 		break;
+	case POWER_SUPPLY_PROP_FCC_MAH:
+		ret = sprintf(buf, "%d,%d,%d,%d,%d\n",
+			value.fcc_val[0], value.fcc_val[1],
+			value.fcc_val[2], value.fcc_val[3], value.fcc_val[4]);
+		break;
 	default:
 		ret = sprintf(buf, "%d\n", value.intval);
 	}
@@ -546,6 +551,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(wireless_status),
 #endif
 	POWER_SUPPLY_ATTR(serial_number),
+	POWER_SUPPLY_ATTR(fcc_mah),
+	POWER_SUPPLY_ATTR(reset_miscta),
 };
 
 static struct attribute *
