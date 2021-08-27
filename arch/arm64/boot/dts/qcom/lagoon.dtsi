@@ -3854,7 +3854,6 @@
 #include "lagoon-pinctrl.dtsi"
 #include "lagoon-pm.dtsi"
 #include "lagoon-regulators.dtsi"
-#include "lagoon-coresight.dtsi"
 #include "pm6350.dtsi"
 #include "pm7250b.dtsi"
 #include "pm6150l.dtsi"
