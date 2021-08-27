@@ -172,6 +172,11 @@ config INPUT_EVBUG
 	  To compile this driver as a module, choose M here: the
 	  module will be called evbug.
 
+config FP_ET613
+        tristate "et613 fingerprint driver support"
+        help
+          Say Y here to enable et613 fingerprint driver support!
+
 config INPUT_APMPOWER
 	tristate "Input Power Event -> APM Bridge" if EXPERT
 	depends on INPUT && APM_EMULATION
