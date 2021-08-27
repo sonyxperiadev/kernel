@@ -28,6 +28,8 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 #include "schgm-flash.h"
+#include <linux/gpio.h>
+#include <drm/drm_panel.h>
 
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
@@ -53,6 +55,8 @@ static int smblib_get_prop_typec_mode(struct smb_charger *chg);
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 static int smblib_somc_handle_dcusbex_event(struct smb_charger *chg, int event);
 #endif
+static struct drm_panel *active_panel;
+static int screen_state;
 
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val)
 {
@@ -1269,6 +1273,78 @@ static int smblib_register_notifier(struct smb_charger *chg)
 	}
 
 	return 0;
+}
+
+static int screen_on_chg_notifier_call(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	struct drm_panel_notifier *evdata = data;
+	unsigned int blank;
+
+	if (!(event == DRM_PANEL_EARLY_EVENT_BLANK ||
+		event == DRM_PANEL_EVENT_BLANK)) {
+		pr_err("event(%lu) do not need process\n", event);
+		return NOTIFY_OK;
+	}
+
+	blank = *(int*)evdata->data;
+
+	switch (blank) {
+		case DRM_PANEL_BLANK_UNBLANK:
+			screen_state = 0;
+			break;
+
+		case DRM_PANEL_BLANK_POWERDOWN:
+			screen_state = 1;
+			break;
+
+		default:
+			pr_err("no screen_state.\n");
+			break;
+	}
+	return NOTIFY_OK;
+}
+
+static int screen_on_check_dt(struct device_node *np)
+{
+	int i;
+	int count;
+	struct device_node *node;
+	struct drm_panel *panel;
+
+	count = of_count_phandle_with_args(np, "qcom,panel", NULL);
+	if (count <= 0) {
+		return 0;
+	}
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "qcom,panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			active_panel = panel;
+			pr_err("find active_panel succ\n");
+			return 0;
+		}
+	}
+	return -ENODEV;
+}
+
+static int screen_on_chg_register_notifier(struct smb_charger *chg)
+{
+    int rc = -1;
+
+    screen_on_check_dt(chg->dev->of_node);
+    chg->nbc.notifier_call = screen_on_chg_notifier_call;
+    //rc = atomic_notifier_chain_register(&chg->np);
+	if (active_panel) {
+		drm_panel_notifier_register(active_panel, &chg->nbc);
+	} else {
+		pr_err("no active_panel rc = %d\n", rc);
+        return rc;
+	}
+
+    return 0;
 }
 
 int smblib_mapping_soc_from_field_value(struct smb_chg_param *param,
@@ -2699,12 +2775,27 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		return vote(chg->chg_disable_votable,
 			THERMAL_DAEMON_VOTER, true, 0);
 
+#if !defined(CONFIG_ARCH_SONY_LENA)
 	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
 	if (chg->system_temp_level == 0)
+#endif
 		return vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
 
 	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
+
+	if (screen_state == 0) {
+		vote(chg->usb_icl_votable, THERMAL_DAEMON_VOTER, true,
+			chg->thermal_mitigation[chg->system_temp_level]);
+		smblib_dbg(chg, PR_INTERRUPT, "screen_on state=%d,thermal_mitigation=%d\n",
+			screen_state, chg->thermal_mitigation[chg->system_temp_level]);
+	} else {
+		vote(chg->usb_icl_votable, THERMAL_DAEMON_VOTER, true,
+			chg->thermal_mitigation_sleep[chg->system_temp_level]);
+		smblib_dbg(chg, PR_INTERRUPT, "screen_off state=%d,thermal_mitigation_sleep=%d\n",
+			screen_state, chg->thermal_mitigation_sleep[chg->system_temp_level]);
+	}
+
 	return 0;
 }
 
@@ -3875,6 +3966,9 @@ int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
 static int smblib_estimate_adaptor_voltage(struct smb_charger *chg,
 					  union power_supply_propval *val)
 {
+#if defined(CONFIG_ARCH_SONY_LENA)
+	val->intval = 10000000;
+#else
 	int step_uv = HVDCP3_STEP_UV;
 
 	switch (chg->real_charger_type) {
@@ -3895,7 +3989,7 @@ static int smblib_estimate_adaptor_voltage(struct smb_charger *chg,
 		val->intval = MICRO_5V;
 		break;
 	}
-
+#endif
 	return 0;
 }
 
@@ -5072,6 +5166,62 @@ int smblib_set_prop_typec_power_role_for_wdet(struct smb_charger *chg,
 	int rc = 0;
 	int typec_mode;
 
+#if defined(CONFIG_ARCH_SONY_LENA)
+	u8 power_role;
+
+	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
+		return 0;
+
+	if (chg->cc_reconnection_running) {
+		smblib_dbg(chg, PR_SOMC,
+			"CC reconnection is running, ignore PR setting for wdet\n");
+		return 0;
+	}
+
+	switch (val->intval) {
+	case POWER_SUPPLY_TYPEC_PR_NONE:
+		power_role = TYPEC_DISABLE_CMD_BIT;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_DUAL:
+		power_role = chg->typec_try_mode;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_SINK:
+		power_role = EN_SNK_ONLY_BIT;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_SOURCE:
+		power_role = EN_SRC_ONLY_BIT;
+		break;
+	default:
+		smblib_err(chg, "power role %d not supported\n", val->intval);
+		return -EINVAL;
+	}
+
+	typec_mode = smblib_get_prop_typec_mode(chg);
+	switch (typec_mode) {
+	case POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER:
+	case POWER_SUPPLY_TYPEC_SINK_POWERED_CABLE:
+	case POWER_SUPPLY_TYPEC_SINK:
+	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
+	case POWER_SUPPLY_TYPEC_SOURCE_MEDIUM:
+	case POWER_SUPPLY_TYPEC_SOURCE_HIGH:
+	case POWER_SUPPLY_TYPEC_NON_COMPLIANT:
+		smblib_dbg(chg, PR_SOMC,
+			"Typec mode is %d, Skip power role setting.\n",
+			typec_mode);
+		break;
+	default:
+		rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				power_role);
+		if (rc < 0) {
+			smblib_err(chg,
+				"Couldn't write 0x%02x to TYPE_C_INTRPT_ENB_SOFTWARE_CTRL rc=%d\n",
+				power_role, rc);
+			return rc;
+		}
+		break;
+	}
+#else
 	typec_mode = smblib_get_prop_typec_mode(chg);
 	if ((typec_mode == POWER_SUPPLY_TYPEC_NONE) ||
 		(typec_mode == POWER_SUPPLY_TYPEC_SINK_DEBUG_ACCESSORY)) {
@@ -5080,7 +5230,7 @@ int smblib_set_prop_typec_power_role_for_wdet(struct smb_charger *chg,
 			smblib_err(chg, "Couldn't set power role to %d. rc=%d\n",
 				val->intval, rc);
 	}
-
+#endif
 	return rc;
 }
 #endif /*CONFIG_SOMC_CHARGER_EXTENSION*/
@@ -5771,7 +5921,11 @@ irqreturn_t batt_psy_changed_irq_handler(int irq, void *data)
 }
 
 #define AICL_STEP_MV		200
+#if defined(CONFIG_ARCH_SONY_LENA)
+#define MAX_AICL_THRESHOLD_MV	4700
+#else
 #define MAX_AICL_THRESHOLD_MV	4800
+#endif
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #define USBIN_UV_MASKING_TIME_MS	100
 #endif
@@ -7206,6 +7360,14 @@ irqreturn_t typec_state_change_irq_handler(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	int typec_mode;
+#if defined(CONFIG_ARCH_SONY_LENA)
+	int dp_aux_en_gpio = 1208;
+
+	if(gpio_is_valid(dp_aux_en_gpio)) {
+		gpio_direction_output(dp_aux_en_gpio, 0);
+		smblib_err(chg, "typec_state_change_irq_handler in gpio84 set 0\n");
+	}
+#endif
 
 	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB) {
 		smblib_dbg(chg, PR_INTERRUPT,
@@ -7222,6 +7384,13 @@ irqreturn_t typec_state_change_irq_handler(int irq, void *data)
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: cc-state-change; Type-C %s detected\n",
 				smblib_typec_mode_name[chg->typec_mode]);
 
+#if defined(CONFIG_ARCH_SONY_LENA)
+	if (chg->typec_mode == 0) {
+		gpio_direction_output(dp_aux_en_gpio, 1);
+		smblib_err(chg, "typec_mode:%d,Type-C %s detected gpio84 set 1\n",
+			chg->typec_mode, smblib_typec_mode_name[chg->typec_mode]);
+	}
+#endif
 	power_supply_changed(chg->usb_psy);
 
 	return IRQ_HANDLED;
@@ -8504,6 +8673,9 @@ static void smblib_chg_termination_work(struct work_struct *work)
 						chg_termination_work);
 	int rc, input_present, delay = CHG_TERM_WA_ENTRY_DELAY_MS;
 	int vbat_now_uv, max_fv_uv;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int cc_soc_to_entry, cc_soc_to_exit;
+#endif
 
 	/*
 	 * Hold awake votable to prevent pm_relax being called prior to
@@ -8625,6 +8797,23 @@ static void smblib_chg_termination_work(struct work_struct *work)
 			pval.intval, chg->cc_soc_ref, delay, vbat_now_uv,
 			chg->term_vbat_uv);
 #else
+
+#if defined(CONFIG_ARCH_SONY_LENA)
+	cc_soc_to_entry = div64_s64((int64_t)chg->cc_soc_ref * 10075, 10000);
+	cc_soc_to_exit = div64_s64((int64_t)chg->cc_soc_ref * 10050, 10000);
+
+	if (pval.intval > cc_soc_to_entry) {
+		smblib_dbg(chg, PR_SOMC, "Enable Termination WA due to dececting over current !!\n");
+		vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER, true, 0);
+		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, true, 0);
+		delay = CHG_TERM_WA_EXIT_DELAY_MS;
+	} else if (pval.intval < cc_soc_to_exit) {
+		smblib_dbg(chg, PR_SOMC, "Disable Termination WA\n");
+		vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER, false, 0);
+		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
+		delay = CHG_TERM_WA_ENTRY_DELAY_MS;
+	}
+#else
 	smblib_dbg(chg, PR_SOMC, "cc_soc: %d, cc_soc_ref: %d\n",
 						pval.intval, chg->cc_soc_ref);
 	if (pval.intval > chg->cc_soc_ref + CC_SOC_TO_ENTRY_CP) {
@@ -8638,6 +8827,7 @@ static void smblib_chg_termination_work(struct work_struct *work)
 		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
 		delay = CHG_TERM_WA_ENTRY_DELAY_MS;
 	}
+#endif
 #endif
 	alarm_start_relative(&chg->chg_termination_alarm, ms_to_ktime(delay));
 out:
@@ -9535,6 +9725,13 @@ int smblib_init(struct smb_charger *chg)
 				"Couldn't register notifier rc=%d\n", rc);
 			return rc;
 		}
+
+		rc = screen_on_chg_register_notifier(chg);
+		if (rc < 0) {
+			smblib_err(chg,
+				"Couldn't register screen on notifier rc=%d\n", rc);
+			return rc;
+		}
 		break;
 	case PARALLEL_SLAVE:
 		break;
@@ -9576,6 +9773,7 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->role_reversal_check);
 		cancel_delayed_work_sync(&chg->pr_swap_detach_work);
 		power_supply_unreg_notifier(&chg->nb);
+		power_supply_unreg_notifier(&chg->nbc);
 		smblib_destroy_votables(chg);
 		qcom_step_chg_deinit();
 		qcom_batt_deinit();

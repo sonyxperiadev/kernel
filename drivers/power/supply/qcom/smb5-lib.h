@@ -118,10 +118,15 @@ enum print_reason {
 #define SDP_CURRENT_UA			500000
 #define CDP_CURRENT_UA			1500000
 #define DCP_CURRENT_UA			1500000
+#if defined(CONFIG_ARCH_SONY_LENA)
+#define HVDCP_CURRENT_UA		2500000
+#define TYPEC_HIGH_CURRENT_UA		2500000
+#else
 #define HVDCP_CURRENT_UA		3000000
+#define TYPEC_HIGH_CURRENT_UA		3000000
+#endif
 #define TYPEC_DEFAULT_CURRENT_UA	900000
 #define TYPEC_MEDIUM_CURRENT_UA		1500000
-#define TYPEC_HIGH_CURRENT_UA		3000000
 #define DCIN_ICL_MIN_UA			100000
 #define DCIN_ICL_MAX_UA			1500000
 #define DCIN_ICL_STEP_UA		100000
@@ -479,6 +484,7 @@ struct smb_charger {
 
 	/* notifiers */
 	struct notifier_block	nb;
+	struct notifier_block	nbc;
 
 	/* parallel charging */
 	struct parallel_params	pl;
@@ -578,6 +584,7 @@ struct smb_charger {
 	int			system_temp_level;
 	int			thermal_levels;
 	int			*thermal_mitigation;
+	int			*thermal_mitigation_sleep;
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	int			fake_batt_status;
@@ -675,6 +682,8 @@ struct smb_charger {
 
 	int			die_health;
 	int			connector_health;
+	int			fcc_mah[5];
+	bool		reset_miscta_state;
 
 	/* flash */
 	u32			flash_derating_soc;
