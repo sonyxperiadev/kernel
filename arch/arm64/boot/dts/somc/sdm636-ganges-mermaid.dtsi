@@ -9,7 +9,7 @@
 #include "sdm636-ganges-mermaid-display.dtsi"
 #include "sdm636-ganges-mermaid-touch.dtsi"
 
-/ {
+&vendor {
 	mermaid_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <17>;
 		#include "fg-gen3-batterydata-mermaid-byd-4245mv.dtsi"

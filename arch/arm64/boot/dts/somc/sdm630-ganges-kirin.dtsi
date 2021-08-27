@@ -9,7 +9,7 @@
 #include "sdm630-ganges-kirin-display.dtsi"
 #include "sdm630-ganges-kirin-touch.dtsi"
 
-/ {
+&vendor {
 	kirin_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <17>;
 		#include "fg-gen3-batterydata-kirin-send-4245mv.dtsi"
