@@ -298,6 +298,7 @@
 					<&mmss_bimc_smmu 0xc01>,
 					<&mmss_bimc_smmu 0xc02>,
 					<&mmss_bimc_smmu 0xc03>;
+			iommu-cells = <1>;
 			label = "vfe";
 			qcom,scratch-buf-support;
 		};
@@ -305,18 +306,21 @@
 		msm_cam_smmu_cb2 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&mmss_bimc_smmu 0xa00>;
+			iommu-cells = <1>;
 			label = "cpp";
 		};
 
 		msm_cam_smmu_cb4 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&mmss_bimc_smmu 0x800>;
+			iommu-cells = <1>;
 			label = "jpeg_enc0";
 		};
 
 		msm_cam_smmu_cb5 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&mmss_bimc_smmu 0x801>;
+			iommu-cells = <1>;
 			label = "jpeg_dma";
 		};
 	};
