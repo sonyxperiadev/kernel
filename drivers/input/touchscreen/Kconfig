@@ -1187,6 +1187,17 @@ config TOUCHSCREEN_SAMSUNG_INCELL
 
 	  If unsure, say N.
 
+config TOUCHSCREEN_SAMSUNG_INCELL_LENA
+	tristate "SEC Incell Touchscreen for SoMC Lena devices"
+	depends on !TOUCHSCREEN_SAMSUNG_INCELL || (TOUCHSCREEN_SAMSUNG_INCELL && COMPILE_TEST)
+	depends on I2C
+	help
+	  Say Y here if you have a Samsung Electronics OLED panel in your
+	  SoMC Lena device, which features touch support. You will most
+	  likely have an incell touchscreen as well.
+
+	  If unsure, say N.
+
 config TOUCHSCREEN_SILEAD
 	tristate "Silead I2C touchscreen"
 	depends on I2C
