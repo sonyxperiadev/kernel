@@ -540,6 +540,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(reset_dcin_en),
 	POWER_SUPPLY_ATTR(skin_temp),
 	POWER_SUPPLY_ATTR(monotonic_soc),
+	POWER_SUPPLY_ATTR(max_charge_current),
+	POWER_SUPPLY_ATTR(int_cld),
+	POWER_SUPPLY_ATTR(running_status),
 #endif
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),

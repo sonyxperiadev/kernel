@@ -894,4 +894,15 @@ ssize_t somc_output_voter_param(struct votable *votable,
 						size - stored_size, "\n");
 	return stored_size;
 }
+
+int somc_get_vote_clients(struct votable *votable, char *clients[])
+{
+	int i;
+	int num_clients = 0;
+	for (i = 0; i < votable->num_clients; i++) {
+		if (votable->client_strs[i])
+			clients[num_clients++] = votable->client_strs[i];
+	}
+	return num_clients;
+}
 #endif
