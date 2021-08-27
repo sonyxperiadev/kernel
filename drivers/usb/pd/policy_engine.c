@@ -874,6 +874,15 @@ static int pd_select_pdo(struct usbpd *pd, int pdo_pos, int uv, int ua)
 		pd->rdo = PD_RDO_FIXED(pdo_pos, 0, mismatch, 1, 1, curr / 10,
 				max_current / 10);
 	} else if (type == PD_SRC_PDO_TYPE_AUGMENTED) {
+#if defined(CONFIG_ARCH_SONY_LENA)
+		/* Limit voltage 9.5V for preventing OVP */
+		if (uv > 9500000) {
+			usbpd_warn(&pd->dev,
+				"selected uv (%d) ua (%d). Limit Voltage to 9.5V\n",
+				uv, ua);
+			uv = 9500000;
+		}
+#endif
 		if ((uv / 100000) > PD_APDO_MAX_VOLT(pdo) ||
 			(uv / 100000) < PD_APDO_MIN_VOLT(pdo) ||
 			(ua / 50000) > PD_APDO_MAX_CURR(pdo) || (ua < 0)) {
