@@ -133,11 +133,22 @@
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active &cam_sensor_rear_active>;
 		pinctrl-1 = <&cam_sensor_mclk0_suspend &cam_sensor_rear_suspend>;
-		gpios = <&tlmm 32 0>, <&tlmm 46 0>;
+		gpios = <&tlmm 32 0>,
+			<&tlmm 46 0>,
+			<&tlmm 40 0>,
+			<&tlmm 13 0>,
+			<&tlmm 50 0>;
 		qcom,gpio-reset = <1>;
-		qcom,gpio-req-tbl-num   = <0 1>;
-		qcom,gpio-req-tbl-flags = <1 0>;
-		qcom,gpio-req-tbl-label = "CAMIF_MCLK0", "CAM_RESET0";
+		qcom,gpio-vdig = <2>;
+		qcom,gpio-vio = <3>;
+		qcom,gpio-vana = <4>;
+		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
+		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK0",
+					"CAM_RESET0",
+					"CAM_VDIG",
+					"CAM_VIO",
+					"CAM_VANA";
 		qcom,sensor-position = <0>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <0>;
@@ -179,8 +190,8 @@
 		qcom,gpio-vio = <4>;
 		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
 		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
-		qcom,gpio-req-tbl-label = "CAMIF_MCLK3",
-					  "CAM_RESET1",
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK",
+					  "CAM_RESET",
 					  "CAM_VDIG",
 					  "CAM_VANA",
 					  "CAM_VIO";
@@ -212,11 +223,22 @@
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk1_active &cam_sensor_front_active>;
 		pinctrl-1 = <&cam_sensor_mclk1_suspend &cam_sensor_front_suspend>;
-		gpios = <&tlmm 33 0>, <&tlmm 47 0>;
+		gpios = <&tlmm 33 0>,
+			<&tlmm 47 0>,
+			<&tlmm 52 0>,
+			<&tlmm 51 0>,
+			<&tlmm 13 0>;
 		qcom,gpio-reset = <1>;
-		qcom,gpio-req-tbl-num   = <0 1>;
-		qcom,gpio-req-tbl-flags = <1 0>;
-		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET2";
+		qcom,gpio-vdig = <2>;
+		qcom,gpio-vana = <3>;
+		qcom,gpio-vio = <4>;
+		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
+		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK1",
+					"CAM_RESET1",
+					"CAM_VDIG1",
+					"CAM_VANA1",
+					"CAM_VIO1";
 		qcom,sensor-position = <1>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <0>;
