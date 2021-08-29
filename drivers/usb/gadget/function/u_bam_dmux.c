@@ -26,7 +26,6 @@
 
 #include <soc/qcom/bam_dmux.h>
 
-#include <linux/usb/msm_hsusb.h>
 #include <linux/usb/usb_ctrl_qti.h>
 #include <linux/usb_bam.h>
 
