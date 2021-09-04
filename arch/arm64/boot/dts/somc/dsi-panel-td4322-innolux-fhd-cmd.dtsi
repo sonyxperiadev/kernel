@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ */ 
+
+&mdss_mdp {
+	dsi_td4322_innolux_fhd_cmd: qcom,mdss_dsi_td4322_innolux_fhd_cmd {
+		qcom,mdss-dsi-panel-name = "td4322 innolux fhd command mode dsi panel";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-pan-physical-width-dimension = <74>;
+		qcom,mdss-pan-physical-height-dimension = <132>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-dsi-reset-sequence = <0 30>, <1 150>;
+		qcom,mdss-dsi-post-init-delay = <1>;
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+
+		qcom,mdss-dsi-display-timings {
+			timing@0 {
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <1920>;
+				qcom,mdss-dsi-h-back-porch = <48>;
+				qcom,mdss-dsi-h-front-porch = <96>;
+				qcom,mdss-dsi-h-pulse-width = <20>;
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <3>;
+				qcom,mdss-dsi-v-front-porch = <5>;
+				qcom,mdss-dsi-v-pulse-width = <2>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-on-command = [05 01 00 00 00 00 02 29 00
+					05 01 00 00 46 00 02 11 00
+				];
+				qcom,mdss-dsi-off-command = [05 01 00 00 14 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+			};
+		};
+	};
+};

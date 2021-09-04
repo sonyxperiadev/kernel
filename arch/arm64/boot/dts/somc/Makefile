@@ -18,6 +18,13 @@ lagoon-lena-pdx213_generic-overlay.dtbo-base := ../qcom/lagoon.dtb
 endif
 
 else
+dtb-$(CONFIG_MACH_SONY_PIONEER) += \
+	sdm630-nile-pioneer.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY) += \
+	sdm630-nile-discovery.dtb
+dtb-$(CONFIG_MACH_SONY_VOYAGER) += \
+	sdm630-nile-voyager.dtb
+
 dtb-$(CONFIG_MACH_SONY_KIRIN) += \
 	sdm630-ganges-kirin.dtb
 dtb-$(CONFIG_MACH_SONY_MERMAID) += \

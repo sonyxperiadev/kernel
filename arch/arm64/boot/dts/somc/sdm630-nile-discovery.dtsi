@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm630-nile-common.dtsi"
+#include "sdm630-nile-common-display.dtsi"
+#include "sdm630-nile-discovery-camera.dtsi"
+#include "sdm630-nile-discovery-display.dtsi"
+
+/ {
+	discovery_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <15>;
+		#include "fg-gen3-batterydata-3450mah.dtsi"
+	};
+};
+
+&pm660_fg {
+	qcom,battery-data = <&discovery_batterydata>;
+};
+
+&qusb_phy0 {
+	qcom,qusb-phy-init-seq = <0xa7 0x80
+				  0x33 0x84
+				  0x83 0x88
+				  0xc7 0x8c
+				  0x30 0x08
+				  0x79 0x0c
+				  0x21 0x10
+				  0x14 0x9c
+				  0x9f 0x1c
+				  0x00 0x18>;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 54 0x0>;
+};

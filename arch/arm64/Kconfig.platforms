@@ -369,6 +369,42 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config ARCH_SONY_NILE
+	bool "Sony Mobile Nile platform"
+	depends on ARCH_SDM630
+	help
+	  Support for the SONY Mobile Nile platform
+	  which is based on QCOM SDM630 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PIONEER
+	bool "Sony Mobile Pioneer"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Pioneer device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_DISCOVERY
+	bool "Sony Mobile Discovery"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Discovery device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_VOYAGER
+	bool "Sony Mobile Voyager"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Voyager device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_SONY_GANGES
 	bool "Sony Mobile Ganges platform"
 	depends on ARCH_SDM630 || ARCH_SDM660

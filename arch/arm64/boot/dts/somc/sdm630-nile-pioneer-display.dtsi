@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ */
+
+#include "dsi-panel-td4322-truly-fhd-cmd.dtsi"
+
+/ {
+	chosen {
+		bootargs = "msm_drm.dsi_display0=qcom,mdss_dsi_td4322_truly_fhd_cmd:config0";
+	};
+};
+
+&soc {
+	dsi_panel_pwr_supply_truly: dsi_panel_pwr_supply_truly {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <22000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+	};
+
+	dsi_panel_vspvsn_pwr_supply_truly: dsi_panel_vspvsn_pwr_supply_truly {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <16000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <7000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+};
+
+&dsi_td4322_truly_fhd_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-ctrl-num = <0>;
+	qcom,dsi-phy-num = <0>;
+
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_truly>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_truly>;
+
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-te-using-wd;
+
+	somc,dsi-panel-type = "lcd";
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [
+				23 1E 08 09 05 03 04 A0
+				23 1E 08 09 05 03 04 A0
+				23 1E 08 09 05 03 04 A0
+				23 1E 08 09 05 03 04 A0
+				23 1A 08 09 05 03 04 A0
+			];
+		};
+	};
+};
