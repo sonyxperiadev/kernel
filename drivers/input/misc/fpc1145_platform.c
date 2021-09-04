@@ -52,6 +52,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/uaccess.h>
 
+#ifdef CONFIG_ARCH_SONY_NILE
+#include "cei_fp_detect.h"
+#endif
+
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
 #define FPC1145_RESET_HIGH2_US 1250
