@@ -8,7 +8,7 @@
 #include "sdm630-nile-discovery-camera.dtsi"
 #include "sdm630-nile-discovery-display.dtsi"
 
-/ {
+&vendor {
 	discovery_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "fg-gen3-batterydata-3450mah.dtsi"

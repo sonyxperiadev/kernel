@@ -8,7 +8,7 @@
 #include "sdm630-nile-voyager-camera.dtsi"
 #include "sdm630-nile-voyager-display.dtsi"
 
-/ {
+&vendor {
 	voyager_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "fg-gen3-batterydata-3450mah.dtsi"

@@ -8,7 +8,7 @@
 #include "sdm630-nile-pioneer-camera.dtsi"
 #include "sdm630-nile-pioneer-display.dtsi"
 
-/ {
+&vendor {
 	pioneer_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "fg-gen3-batterydata-tdk-3200mah.dtsi"
