@@ -228,8 +228,6 @@
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
 		pinctrl-0 = <&ts_int_active &ts_lcd_id_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_lcd_id_suspend>;
-		synaptics,pwr-reg-name = "avdd";
-		synaptics,bus-reg-name = "vdd";
 		synaptics,ub-i2c-addr = <0x20>;
 		synaptics,irq-gpio = <&tlmm 45 0x2008>; /* IRQF_ONESHOT | IRQF_TRIGGER_LOW */
 		synaptics,irq-on-state = <0>;
