@@ -36,3 +36,7 @@
 				  0x9f 0x1c
 				  0x00 0x18>;
 };
+
+&synaptics_dsx {
+	panel = <&dsi_td4322_truly_fhd_cmd>;
+};

@@ -36,3 +36,7 @@
 &sdhc_2 {
 	cd-gpios = <&tlmm 54 0x0>;
 };
+
+&synaptics_dsx {
+	panel = <&dsi_td4328_tianma_fhdplus_cmd>;
+};
