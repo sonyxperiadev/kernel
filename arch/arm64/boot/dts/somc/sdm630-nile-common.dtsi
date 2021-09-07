@@ -217,6 +217,9 @@
 };
 
 &i2c_1 {
+	status = "okay";
+	qcom,i2c-touch-active = "synaptics,dsx-i2c";
+
 	synaptics@70 {
 		compatible = "synaptics,dsx-i2c";
 		reg = <0x70>;
