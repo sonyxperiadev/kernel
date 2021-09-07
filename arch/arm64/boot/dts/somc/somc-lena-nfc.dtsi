@@ -14,14 +14,20 @@
 	/* I2C */
 	status = "ok";
 	nfc@28 {
-		compatible = "nxp,sn1x0-i2c";
+		compatible = "nxp,pn553";
 		reg = <0x28>;
-		nxp,ven = <&tlmm 6 GPIO_ACTIVE_LOW>;
-		nxp,dwld = <&tlmm 8 GPIO_ACTIVE_HIGH>;
-		nxp,irq = <&tlmm 9 GPIO_ACTIVE_HIGH>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <9 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "nxp_sn1x0_irq";
+		interrupts = <9>;
+		nxp,irq_gpio = <&tlmm 9 0x00>;
+		nxp,dwld_en = <&tlmm 8 0x00>;
+		nxp,ven = <&tlmm 6 0x01>;
+		nxp,ese-pwr = <&tlmm 57 0x00>;
+	};
+};
+
+&soc {
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
 	};
 };
 
