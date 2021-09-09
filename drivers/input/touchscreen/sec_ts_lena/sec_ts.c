@@ -652,7 +652,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 	int location;
 
 	if (ts->power_status == SEC_TS_STATE_LPM) {
-		wake_lock_timeout(&ts->wakelock, msecs_to_jiffies(500));
+		__pm_wakeup_event(ts->wakelock, msecs_to_jiffies(500));
 
 		/* waiting for blsp block resuming, if not occurs i2c error */
 		ret = wait_for_completion_interruptible_timeout(&ts->resume_done, msecs_to_jiffies(500));
@@ -1839,7 +1839,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	mutex_init(&ts->eventlock);
 	mutex_init(&ts->modechange);
 
-	wake_lock_init(&ts->wakelock, WAKE_LOCK_SUSPEND, "tsp_wakelock");
+	ts->wakelock = wakeup_source_register(&client->dev, "tsp_wakelock");
 	init_completion(&ts->resume_done);
 	complete_all(&ts->resume_done);
 
@@ -2035,7 +2035,7 @@ err_input_register_device:
 	kfree(ts->pFrame);
 err_allocate_frame:
 err_init:
-	wake_lock_destroy(&ts->wakelock);
+	wakeup_source_unregister(ts->wakelock);
 	sec_ts_power(ts, false);
 	if (ts->plat_data->support_dex) {
 		if (ts->input_dev_pad)
@@ -2188,7 +2188,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 	}
 
 	mutex_lock(&ts->modechange);
-	wake_lock(&ts->wakelock);
+	__pm_stay_awake(ts->wakelock);
 
 	ts->reset_is_on_going = true;
 	input_info(true, &ts->client->dev, "%s\n", __func__);
@@ -2205,7 +2205,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 		schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
 		mutex_unlock(&ts->modechange);
 
-		wake_unlock(&ts->wakelock);
+		__pm_relax(ts->wakelock);
 
 		return;
 	}
@@ -2221,7 +2221,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 				cancel_delayed_work(&ts->reset_work);
 				schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
 				mutex_unlock(&ts->modechange);
-				wake_unlock(&ts->wakelock);
+				__pm_relax(ts->wakelock);
 				return;
 			}
 		} else {
@@ -2251,7 +2251,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 	ts->reset_is_on_going = false;
 	mutex_unlock(&ts->modechange);
 
-	wake_unlock(&ts->wakelock);
+	__pm_relax(ts->wakelock);
 }
 #endif
 
@@ -2460,7 +2460,7 @@ static int sec_ts_remove(struct i2c_client *client)
 	p_ghost_check = NULL;
 #endif
 	device_init_wakeup(&client->dev, false);
-	wake_lock_destroy(&ts->wakelock);
+	wakeup_source_unregister(ts->wakelock);
 
 	ts->lowpower_mode = false;
 	ts->probe_done = false;
