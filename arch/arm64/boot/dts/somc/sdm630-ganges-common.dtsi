@@ -217,6 +217,10 @@
 			0x9f 0x1c
 			0x00 0x18>;
 	};
+
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
 };
 
 &pm660l_wled {
@@ -319,14 +323,16 @@
 
 &i2c_6 {
 	/delete-node/nq@28;
+
 	nfc@28 {
-		compatible = "nxp,pn547";
+		compatible = "nxp,pn553";
 		reg = <0x28>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <28 0>;
+		interrupts = <28 0x0>;
 		nxp,irq_gpio = <&tlmm 28 0x00>;
-		nxp,dwld_en = <&tlmm 30 0x00>;
 		nxp,ven = <&tlmm 29 0x00>;
+		nxp,dwld_en = <&tlmm 30 0x00>;
+		nxp,ese-pwr = <&tlmm 31 0x00>;
 	};
 };
 
