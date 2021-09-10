@@ -210,6 +210,10 @@
 			debounce-interval = <15>;
 		};
 	};
+
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
 };
 
 &qcom_seecom {
@@ -240,23 +244,16 @@
 
 &i2c_6 {
 	/delete-node/ nq@28;
+
 	nfc@28 {
-		compatible = "nxp,pn547";
+		compatible = "nxp,pn553";
 		reg = <0x28>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <28 0>;
-		nxp,irq_gpio = <&tlmm 28 0>;
-		nxp,ven = <&tlmm 29 0x01>;
-		nxp,dwld_en = <&tlmm 30 0>;
-		// Note: esepwr is used only by TEE. Kept for HW reference.
-		//nxp,pvdd_en = <&tlmm 31 0>;
-		qcom,clk-src = "BBCLK3";
-		qcom,clk-gpio = <&pm660_gpios 4 0x00>;
-		clock-names = "nfc_clk";
-		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK3_PIN>;
-		pinctrl-names = "pn547-active", "pn547-inactive";
-		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
-		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+		interrupts = <28 0x0>;
+		nxp,irq_gpio = <&tlmm 28 0x00>;
+		nxp,ven = <&tlmm 29 0x00>;
+		nxp,dwld_en = <&tlmm 30 0x00>;
+		nxp,ese-pwr = <&tlmm 31 0x00>;
 	};
 };
 
