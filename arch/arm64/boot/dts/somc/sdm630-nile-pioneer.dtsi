@@ -10,18 +10,14 @@
 
 &vendor {
 	pioneer_batterydata: qcom,battery-data {
-		qcom,batt-id-range-pct = <15>;
-		#include "fg-gen3-batterydata-tdk-3200mah.dtsi"
-		#include "fg-gen3-batterydata-somc-3200mah.dtsi"
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-pioneer-send-4380mv.dtsi"
+		#include "fg-gen3-batterydata-pioneer-tdk-4380mv.dtsi"
 	};
 };
 
 &pm660_fg {
 	qcom,battery-data = <&pioneer_batterydata>;
-};
-
-&pm660_charger {
-	qcom,fv-max-uv = <4340000>;
 };
 
 &qusb_phy0 {

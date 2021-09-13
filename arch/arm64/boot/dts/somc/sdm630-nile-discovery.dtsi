@@ -10,8 +10,8 @@
 
 &vendor {
 	discovery_batterydata: qcom,battery-data {
-		qcom,batt-id-range-pct = <15>;
-		#include "fg-gen3-batterydata-3450mah.dtsi"
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-discovery-send-4350mv.dtsi"
 	};
 };
 
