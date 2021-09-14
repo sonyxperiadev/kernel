@@ -754,21 +754,6 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 		chip->dt.somc_jeita_hard_thresholds[0] = -EINVAL;
 		chip->dt.somc_jeita_hard_thresholds[1] = -EINVAL;
 	}
-
-#endif
-
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-	rc = of_property_read_u32(node, "somc,product-max-icl-ua",
-					&chip->dt.somc_product_max_icl_ua);
-	if (rc < 0)
-		chip->dt.somc_product_max_icl_ua = -EINVAL;
-
-	rc = of_property_read_u32_array(node, "somc,jeita-hard-thresholds",
-				chip->dt.somc_jeita_hard_thresholds, 2);
-	if (rc < 0) {
-		chip->dt.somc_jeita_hard_thresholds[0] = -EINVAL;
-		chip->dt.somc_jeita_hard_thresholds[1] = -EINVAL;
-	}
 	chg->wireless_enable = of_property_read_bool(node,
 						"somc,wireless-support");
 	if (chg->wireless_enable) {
