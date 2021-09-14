@@ -2783,7 +2783,7 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 
 	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
-
+#if defined(CONFIG_ARCH_SONY_LENA)
 	if (screen_state == 0) {
 		vote(chg->usb_icl_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
@@ -2795,7 +2795,7 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		smblib_dbg(chg, PR_INTERRUPT, "screen_off state=%d,thermal_mitigation_sleep=%d\n",
 			screen_state, chg->thermal_mitigation_sleep[chg->system_temp_level]);
 	}
-
+#endif
 	return 0;
 }
 
@@ -9725,13 +9725,14 @@ int smblib_init(struct smb_charger *chg)
 				"Couldn't register notifier rc=%d\n", rc);
 			return rc;
 		}
-
+#if defined(CONFIG_ARCH_SONY_LENA)
 		rc = screen_on_chg_register_notifier(chg);
 		if (rc < 0) {
 			smblib_err(chg,
 				"Couldn't register screen on notifier rc=%d\n", rc);
 			return rc;
 		}
+#endif
 		break;
 	case PARALLEL_SLAVE:
 		break;
@@ -9773,7 +9774,9 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->role_reversal_check);
 		cancel_delayed_work_sync(&chg->pr_swap_detach_work);
 		power_supply_unreg_notifier(&chg->nb);
+#if defined(CONFIG_ARCH_SONY_LENA)
 		power_supply_unreg_notifier(&chg->nbc);
+#endif
 		smblib_destroy_votables(chg);
 		qcom_step_chg_deinit();
 		qcom_batt_deinit();
