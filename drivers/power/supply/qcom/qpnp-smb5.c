@@ -2924,9 +2924,9 @@ static int smb5_configure_typec(struct smb_charger *chg)
 	rc = smblib_masked_write(chg, USBIN_CONT_AICL_THRESHOLD_CFG_REG,
 					USBIN_CONT_AICL_THRESHOLD_CFG_MASK,
 #if defined(CONFIG_ARCH_SONY_LENA)
-					USBIN_5V_AICL_THRESHOLD_4P0V);
+					USBIN_CONT_AICL_THRESHOLD_4P0V);
 #else
-					USBIN_5V_AICL_THRESHOLD_4P5V);
+					USBIN_CONT_AICL_THRESHOLD_4P5V);
 #endif
 	if (rc < 0)
 		dev_err(chg->dev,
