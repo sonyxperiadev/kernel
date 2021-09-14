@@ -4367,6 +4367,12 @@ static struct device_attribute smb5_somc_attrs[] = {
 	__ATTR(somc_usb_icl_voter, 0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_usb_icl_voter_effective,
 				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dc_icl_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dc_icl_voter_effective,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dc_suspend_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dc_suspend_voter_effective,
+				0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_fcc_voter, 0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_fcc_voter_effective, 0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_chg_disable_voter, 0444, smb5_somc_param_show, NULL),
@@ -4415,8 +4421,23 @@ static struct device_attribute smb5_somc_attrs[] = {
 	__ATTR(somc_reg_usbin_current_limit_cfg,
 				0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_reg_misc_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usbin_adapter_allow_override,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usbin_adapter_allow_cfg,
+				0444, smb5_somc_param_show, NULL),
 	__ATTR(somc_reg_usbin_5v_aicl_threshold_cfg,
 				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dcin_uv_count, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_target_dc_icl, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_settled_dc_icl, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_settled_dc_icl_adjustment, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dcusbex_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_dc_h_volt_icl_cfg, 0644,
+			smb5_somc_param_show, smb5_somc_param_store),
+	__ATTR(somc_dc_l_volt_icl_cfg, 0644,
+			smb5_somc_param_show, smb5_somc_param_store),
+	__ATTR(somc_dcin_aicl_skip, 0644,
+			smb5_somc_param_show, smb5_somc_param_store),
 };
 
 static ssize_t smb5_somc_param_show(struct device *dev,
@@ -4438,6 +4459,22 @@ static ssize_t smb5_somc_param_show(struct device *dev,
 	case ATTR_USB_ICL_VOTER_EFFECTIVE:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 				get_effective_result(chg->usb_icl_votable));
+		break;
+	case ATTR_DC_ICL_VOTER:
+		size = somc_output_voter_param(chg->dc_icl_votable, buf,
+								PAGE_SIZE);
+		break;
+	case ATTR_DC_ICL_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				get_effective_result(chg->dc_icl_votable));
+		break;
+	case ATTR_DC_SUSPEND_VOTER:
+		size = somc_output_voter_param(chg->dc_suspend_votable, buf,
+								PAGE_SIZE);
+		break;
+	case ATTR_DC_SUSPEND_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				get_effective_result(chg->dc_suspend_votable));
 		break;
 	case ATTR_FCC_VOTER:
 		size = somc_output_voter_param(chg->fcc_votable, buf,
@@ -4716,6 +4753,22 @@ static ssize_t smb5_somc_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
+	case ATTR_REG_USBIN_ADAPTER_ALLOW_OVERRIDE:
+		ret = smblib_read(chg, USBIN_ADAPTER_ALLOW_OVERRIDE_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read USBIN_ADAPTER_ALLOW_OVERRIDE_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USBIN_ADAPTER_ALLOW_CFG:
+		ret = smblib_read(chg, USBIN_ADAPTER_ALLOW_CFG_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read USBIN_ADAPTER_ALLOW_CFG_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
 	case ATTR_REG_USBIN_5V_AICL_THRESHOLD_CFG:
 		ret = smblib_read(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG, &reg);
 		if (ret)
@@ -4725,6 +4778,30 @@ static ssize_t smb5_somc_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
 					reg & USBIN_5V_AICL_THRESHOLD_CFG_MASK);
+		break;
+	case ATTR_DCIN_UV_COUNT:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->somc_dcin_uv_count);
+		break;
+	case ATTR_DCIN_AICL_TARGET:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->somc_target_dc_icl);
+		break;
+	case ATTR_DCIN_AICL_SETTLED:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->somc_settled_dc_icl);
+		break;
+	case ATTR_DCIN_AICL_ADJUSTMENT:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->somc_settled_dc_icl_adjustment);
+		break;
+	case ATTR_DCUSBEX_STATUS:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dcusbex_status);
+		break;
+	case ATTR_DC_H_VOLT_ICL_CFG:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_h_volt_icl_ua);
+		break;
+	case ATTR_DC_L_VOLT_ICL_CFG:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_l_volt_icl_ua);
+		break;
+	case ATTR_DCIN_AICL_SKIP:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->debug_dcin_aicl_skip);
 		break;
 	default:
 		size = 0;
