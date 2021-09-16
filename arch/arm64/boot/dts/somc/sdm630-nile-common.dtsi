@@ -423,10 +423,8 @@
 
 /* PM660L */
 &pm660l_wled {
-	qcom,current-limit-microamp = <17500>;
-	qcom,enabled-strings = <0 1>;
-
-	/delete-property/ qcom,auto-calibration;
+	qcom,fs-current-limit = <20000>;
+	qcom,string-cfg = <5>;
 };
 
 &pm660l_torch0 {
