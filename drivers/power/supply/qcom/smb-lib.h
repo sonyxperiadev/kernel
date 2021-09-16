@@ -16,6 +16,9 @@
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #include <linux/regulator/machine.h>
 #endif
+#if defined(CONFIG_ARCH_SONY_NILE)
+#include <linux/alarmtimer.h>
+#endif
 
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
@@ -510,6 +513,13 @@ struct smb_charger {
 	int chg_prechg_safety_time;
 	int chg_fastchg_safety_time;
 	/* safety timer */
+#endif
+#if defined(CONFIG_ARCH_SONY_NILE)
+       int soft_charge_batt_type;
+       struct work_struct soft_charge_work;
+       struct alarm soft_charge_timer;
+       int batt_type;
+       int soft_charge31_LV1_data[4];
 #endif
 };
 

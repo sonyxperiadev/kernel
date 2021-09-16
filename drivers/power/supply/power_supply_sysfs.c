@@ -556,6 +556,9 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(charger_type),
 	POWER_SUPPLY_ATTR(wireless_status),
 #endif
+#ifdef CONFIG_ARCH_SONY_NILE
+	POWER_SUPPLY_ATTR(recharge_voltage),
+#endif
 	POWER_SUPPLY_ATTR(serial_number),
 	POWER_SUPPLY_ATTR(fcc_mah),
 	POWER_SUPPLY_ATTR(reset_miscta),

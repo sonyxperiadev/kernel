@@ -425,6 +425,9 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_CHARGER_TYPE,
 	POWER_SUPPLY_PROP_WIRELESS_STATUS,
 #endif
+#ifdef CONFIG_ARCH_SONY_NILE
+	POWER_SUPPLY_PROP_RECHARGE_VOLTAGE,
+#endif
 	/*
 	 * Add local extensions for properties with string values between
 	 * MODEL_NAME and SERIAL_NUMBER. Don't add below SERIAL_NUMBER.
