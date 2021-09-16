@@ -11,49 +11,6 @@
 	};
 }; 
 
-&soc {
-	dsi_panel_pwr_supply_innolux: dsi_panel_pwr_supply_innolux {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1650000>;
-			qcom,supply-max-voltage = <1950000>;
-			qcom,supply-enable-load = <9000>;
-			qcom,supply-disable-load = <80>;
-		};
-	};
-
-	dsi_panel_vspvsn_pwr_supply_innolux: dsi_panel_vspvsn_pwr_supply_innolux {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "lab";
-			qcom,supply-min-voltage = <5900000>;
-			qcom,supply-max-voltage = <6100000>;
-			qcom,supply-enable-load = <7500>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <10>;
-			qcom,supply-post-off-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@1 {
-			reg = <1>;
-			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <5900000>;
-			qcom,supply-max-voltage = <6100000>;
-			qcom,supply-enable-load = <5800>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <10>;
-			qcom,supply-post-off-sleep = <10>;
-		};
-	};
-};
-
 &dsi_td4322_innolux_fhd_cmd {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,dsi-ctrl-num = <0>;
@@ -62,8 +19,8 @@
 	qcom,platform-te-gpio = <&tlmm 59 0>;
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
 
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
-	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_innolux>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_full_incell>;
 
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x2F>;
