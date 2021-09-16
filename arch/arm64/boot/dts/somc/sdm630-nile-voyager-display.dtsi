@@ -32,6 +32,41 @@
 	qcom,mdss-dsi-panel-status-read-length = <1>;
 	qcom,mdss-dsi-te-using-wd;
 
+	somc,lcd-id-adc = <801000 917000>;
+	somc,mdss-dsi-master;
+	somc,pw-on-rst-b-seq = <0 15>, <1 20>;
+	somc,pw-off-rst-b-seq = <0 11>;
+	somc,pw-wait-after-on-vdd = <0>;
+	somc,pw-wait-after-on-vddio = <0>;
+	somc,pw-wait-after-on-vsp = <8>;
+	somc,pw-wait-after-on-vsn = <0>;
+	somc,pw-wait-after-off-vdd = <0>;
+	somc,pw-wait-after-off-vddio = <1>;
+	somc,pw-wait-after-off-vsp = <8>;
+	somc,pw-wait-after-off-vsn = <8>;
+	somc,pw-wait-after-on-touch-vddio = <0>;
+	somc,pw-wait-after-on-touch-reset = <0>;
+	somc,pw-wait-after-on-touch-int-n = <10>;
+	somc,pw-wait-after-off-touch-vddio = <0>;
+	somc,pw-wait-after-off-touch-reset = <11>;
+	somc,pw-wait-after-off-touch-int-n = <0>;
+	somc,pw-down-period = <300>;
+
+	somc,lab-output-voltage = <5500000>;
+	somc,ibb-output-voltage = <5500000>;
+	somc,qpnp-lab-limit-maximum-current = <1200>;
+	somc,qpnp-ibb-limit-maximum-current = <700>;
+	somc,qpnp-lab-max-precharge-time = <500>;
+	somc,qpnp-lab-soft-start = <800>;
+	somc,qpnp-ibb-discharge-resistor = <300>;
+	somc,qpnp-lab-pull-down-enable;
+	somc,qpnp-lab-full-pull-down;
+	somc,qpnp-ibb-pull-down-enable;
+	somc,qpnp-ibb-full-pull-down;
+
+	somc,mdss-dsi-disp-on-in-hs = <0>;
+	somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+
 	somc,dsi-panel-type = "lcd";
 
 	qcom,mdss-dsi-display-timings {

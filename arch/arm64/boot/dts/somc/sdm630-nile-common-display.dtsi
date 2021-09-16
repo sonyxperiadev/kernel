@@ -71,7 +71,7 @@
 		qcom,mdp = <&mdss_mdp>;
 	};
 
-    sde_wb: qcom,wb-display@0 {
+	sde_wb: qcom,wb-display@0 {
 		compatible = "qcom,wb-display";
 		cell-index = <0>;
 		label = "wb_display";
@@ -79,7 +79,6 @@
 };
 
 &mdss_mdp {
-	//connectors = <&sde_wb &sde_dp>;
 	connectors = <&sde_wb &sde_dsi>;
 }; 
 
