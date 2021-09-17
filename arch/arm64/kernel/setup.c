@@ -315,7 +315,12 @@ static int __init sony_param_warmboot(char *p)
 	if (kstrtoul(p, 16, &warmboot))
 		return 1;
 
-	if (!warmboot && (sony_startup & 0x4004))
+	/*
+	 * The bootloader sets the startup parameter to the following values:
+	 * 0x00004000 for USB wall charger
+	 * 0x00000004 for USB PC charger
+	 */
+	if (!warmboot && (sony_startup == 0x4000 || sony_startup == 0x4))
 		strlcat(boot_command_line, " androidboot.mode=charger",
 			COMMAND_LINE_SIZE);
 	return 0;
