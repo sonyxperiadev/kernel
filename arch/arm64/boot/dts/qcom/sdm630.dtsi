@@ -1732,7 +1732,7 @@
 		status = "ok";
 	};
 
-	icnss: qcom,icnss@18800000 {
+	qcom,icnss@18800000 {
 		compatible = "qcom,icnss";
 		reg = <0x18800000 0x800000>,
 		      <0xb0000000 0x10000>;
