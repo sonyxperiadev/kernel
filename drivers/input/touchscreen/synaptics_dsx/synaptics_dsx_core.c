@@ -4591,6 +4591,16 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	if (strstr(saved_command_line, "qcom,mdss_dsi_td4322_truly_fhd_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_TRULY;
+	else if (strstr(saved_command_line, "qcom,mdss_dsi_td4322_innolux_fhd_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_INNOLUX;
+	else if (strstr(saved_command_line, "qcom,mdss_dsi_td4328_tianma_fhdplus_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_TIANMA;
+	else
+		/* tp_source default set to 0xFF (unknown) */
+		rmi4_data->tp_source = TP_SOURCE_UNKNOWN;
+
 	rmi4_data->pdev = pdev;
 	rmi4_data->current_page = MASK_8BIT;
 	rmi4_data->hw_if = hw_if;
