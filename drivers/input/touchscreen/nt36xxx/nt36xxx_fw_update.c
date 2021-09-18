@@ -158,6 +158,11 @@ int32_t Check_FW_Ver(void)
 		return 0;
 	}
 
+	// disable downgrade check
+	if (ts->tp_source == TP_SOURCE_TRULY ||
+	    ts->tp_source == TP_SOURCE_TIANMA)
+		return 0;
+
 	// compare IC and binary FW version
 	if (buf[1] > fw_entry->data[FW_BIN_VER_OFFSET])
 		return 1;
@@ -998,8 +1003,15 @@ void Boot_Update_Firmware(struct work_struct *work)
 
 	char firmware_name[256] = "";
 
-	snprintf(firmware_name, sizeof(firmware_name),
-			BOOT_UPDATE_FIRMWARE_NAME);
+	if (ts->tp_source == TP_SOURCE_TRULY)
+		snprintf(firmware_name, sizeof(firmware_name),
+				BOOT_UPDATE_FIRMWARE_NAME_TRULY);
+	else if (ts->tp_source == TP_SOURCE_TIANMA)
+		snprintf(firmware_name, sizeof(firmware_name),
+				BOOT_UPDATE_FIRMWARE_NAME_TIANMA);
+	else
+		snprintf(firmware_name, sizeof(firmware_name),
+				BOOT_UPDATE_FIRMWARE_NAME);
 
 	if (ts->nvt_pid == 0x5B0B) {
 		NVT_LOG("Skip Firmware Update\n");

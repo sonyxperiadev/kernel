@@ -88,12 +88,18 @@ extern const uint16_t gesture_key_array[];
 #endif
 #define BOOT_UPDATE_FIRMWARE 1
 #define BOOT_UPDATE_FIRMWARE_NAME "novatek_ts_fw.bin"
+#define BOOT_UPDATE_FIRMWARE_NAME_TRULY "SM13_KM_08_PID5403.bin"
+#define BOOT_UPDATE_FIRMWARE_NAME_TIANMA "SM23_TM_08_PID5404.bin"
 
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
 
 #define NVT_BUFFER_SIZE 1025
+
+#define TP_SOURCE_TRULY	0x00
+#define TP_SOURCE_TIANMA	0x01
+#define TP_SOURCE_UNKNOWN	0xFF
 
 struct nvt_ts_data {
 	struct i2c_client *client;
@@ -128,6 +134,7 @@ struct nvt_ts_data {
 	uint8_t xbuf[NVT_BUFFER_SIZE];
 	struct mutex xbuf_lock;
 	bool irq_enabled;
+	uint8_t tp_source;
 };
 
 #if NVT_TOUCH_PROC

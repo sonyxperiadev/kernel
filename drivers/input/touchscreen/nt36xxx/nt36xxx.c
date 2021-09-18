@@ -1567,6 +1567,14 @@ static int32_t nvt_ts_probe(struct i2c_client *client,
 	mutex_init(&ts->lock);
 	mutex_init(&ts->xbuf_lock);
 
+	if (strstr(saved_command_line, "qcom,mdss_dsi_nt36672a_truly_fhdplus_video"))
+		ts->tp_source = TP_SOURCE_TRULY;
+	else if (strstr(saved_command_line, "qcom,mdss_dsi_nt36672a_tianma_fhdplus_video"))
+		ts->tp_source = TP_SOURCE_TIANMA;
+	else
+		/* tp_source default set to 0xFF (unknown) */
+		ts->tp_source = TP_SOURCE_UNKNOWN;
+
 	ts->id = id;
 
 #if defined(CONFIG_DRM)
