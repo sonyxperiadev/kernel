@@ -110,6 +110,7 @@
 				<&tlmm 64 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,wrapper-core = <&qupv3_0>;
 		qcom,wakeup-byte = <0xFD>;
+		qcom,auto-suspend-disable = <1>;
 		status = "disabled";
 	};
 
