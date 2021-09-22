@@ -1,0 +1,28 @@
+[submodule "techpack/audio"]
+	path = techpack/audio
+	url = https://github.com/sonyxperiadev/kernel-techpack-audio
+        branch = aosp/LA.UM.9.12.r1
+[submodule "techpack/camera"]
+	path = techpack/camera
+	url = https://github.com/sonyxperiadev/kernel-techpack-camera
+        branch = aosp/LA.UM.9.12.r1
+[submodule "techpack/data-kernel"]
+	path = techpack/data-kernel
+	url = https://github.com/sonyxperiadev/kernel-techpack-data-kernel
+        branch = aosp/LA.UM.9.12.r1
+[submodule "drivers/staging/wlan-qc/fw-api"]
+	path = drivers/staging/wlan-qc/fw-api
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-fw-api.git
+        branch = aosp/LA.UM.9.12.r1
+[submodule "drivers/staging/wlan-qc/qcacld-3.0"]
+	path = drivers/staging/wlan-qc/qcacld-3.0
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-qcacld-3.0.git
+        branch = aosp/LA.UM.9.12.r1
+[submodule "drivers/staging/wlan-qc/qca-wifi-host-cmn"]
+	path = drivers/staging/wlan-qc/qca-wifi-host-cmn
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-qca-wifi-host-cmn.git
+        branch = aosp/LA.UM.9.12.r1
+[submodule "techpack/display"]
+	path = techpack/display
+	url = https://github.com/sonyxperiadev/kernel-techpack-display-driver
+        branch = aosp/LA.UM.9.12.r1
