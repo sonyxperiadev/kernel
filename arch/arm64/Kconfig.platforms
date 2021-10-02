@@ -231,6 +231,15 @@ config ARCH_SONY_SAGAMI
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config MACH_SONY_PDX214
+	bool "Sony Mobile PDX-214"
+	depends on ARCH_SONY_SAGAMI
+	help
+	  Support for the SONY Mobile PDX-214 board
+	  which is based on SONY Sagami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config MACH_SONY_PDX215
 	bool "Sony Mobile PDX-215"
 	depends on ARCH_SONY_SAGAMI
