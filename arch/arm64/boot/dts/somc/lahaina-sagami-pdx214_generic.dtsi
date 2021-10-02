@@ -1,0 +1,4 @@
+#include "lahaina-sagami-pdx214_common.dtsi"
+
+&soc {
+};

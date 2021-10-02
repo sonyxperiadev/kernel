@@ -1,0 +1,81 @@
+#include "lahaina-sagami-common.dtsi"
+
+&soc {
+};
+
+&pm8350c_rgb {
+	red {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			113 9 15
+			114 9 15
+			115 9 15>;
+	};
+	green {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			113 4 16
+			114 4 16
+			115 4 16>;
+	};
+	blue {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			113 21 11
+			114 21 11
+			115 21 11>;
+	};
+};
+
+&pm8350c_pwm_1 {
+	qcom,lut-patterns = <6 0 0 0 0 0 0 0 0 0 0
+			     0 0 0 0 0 0 0 0 0 0 0
+			     0 0 0 0 0 0 0 0 4 0 0
+			     0 0 0 0 0 0 0 0 0 0 0
+			     0 0 0 0 0 0 0 0 0 0 0
+			     0 0 0 0 0>;
+	lpg@1 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@2 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@3 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <30>;
+		qcom,ramp-high-index = <59>;
+	};
+};
+
+&thermal_zones {
+	pa_therm1 {
+		status = "disable";
+	};
+	pa_therm2 {
+		status = "disable";
+	};
+	pmr735b_tz {
+		status = "disable";
+	};
+};
+
+&cs40l25a {
+	cirrus,f0-default = <2818048>;
+	cirrus,f0-min = <2654208>;
+	cirrus,f0-max = <2949120>;
+	cirrus,redc-default = <192457>;
+	cirrus,redc-min = <173211>;
+	cirrus,redc-max = <211702>;
+};
+
+#include "somc-sagami-display.dtsi"
+#include "somc-sagami-display-pdx214.dtsi"
+#include "charger-sagami-common.dtsi"
+#include "charger-sagami-pdx214.dtsi"
+#include "usb-dp-sagami-pdx214.dtsi"
