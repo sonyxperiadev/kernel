@@ -5836,7 +5836,7 @@
 };
 
 #include "lahaina-gpu.dtsi"
-#include "display/lahaina-sde.dtsi"
+#include "lahaina-sde.dtsi"
 #include "lahaina-thermal.dtsi"
 
 &qupv3_se18_4uart {
@@ -5847,5 +5847,5 @@
 	status = "ok";
 };
 
-#include "camera/lahaina-camera.dtsi"
+#include "lahaina-camera.dtsi"
 #include "msm-rdbg.dtsi"

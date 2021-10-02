@@ -1,4 +1,4 @@
-/*#include "display/lahaina-sde-display-cdp.dtsi"*/
+/*#include "lahaina-sde-display-cdp.dtsi"*/
 
 &qupv3_se4_i2c {
 	status = "ok";

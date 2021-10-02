@@ -3,7 +3,7 @@
 
 #include "lahaina-pmic-overlay.dtsi"
 #include "lahaina-audio-overlay.dtsi"
-#include "display/lahaina-sde-display-mtp.dtsi"
+#include "lahaina-sde-display-mtp.dtsi"
 #include "lahaina-thermal-overlay.dtsi"
 
 &spmi_debug_bus {
@@ -163,4 +163,4 @@
 	status = "ok";
 };
 
-#include "camera/lahaina-camera-sensor-mtp.dtsi"
+#include "lahaina-camera-sensor-mtp.dtsi"
