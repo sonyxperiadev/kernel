@@ -1,5 +1,5 @@
 #include "lahaina-qrd-common.dtsi"
-#include "camera/lahaina-camera-sensor-hdk.dtsi"
+#include "lahaina-camera-sensor-hdk.dtsi"
 
 &wsa883x_0222 {
 	status = "disabled";
