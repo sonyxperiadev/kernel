@@ -78,7 +78,7 @@
 #define I2C_MASTER_HUB		(BIT(0))
 
 #define KHz(freq)		(1000 * freq)
-#define I2C_AUTO_SUSPEND_DELAY	250
+#define I2C_AUTO_SUSPEND_DELAY	100
 
 #define I2C_TIMEOUT_SAFETY_COEFFICIENT	10
 
