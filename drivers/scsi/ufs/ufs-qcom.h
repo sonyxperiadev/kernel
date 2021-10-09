@@ -59,8 +59,8 @@
 #define UFS_QCOM_LIMIT_DESIRED_MODE	FAST
 #define UFS_QCOM_LIMIT_PHY_SUBMODE	UFS_QCOM_PHY_SUBMODE_G4
 
-/* default value of auto suspend is 3 seconds */
-#define UFS_QCOM_AUTO_SUSPEND_DELAY	3000
+/* default value of auto suspend is 3 seconds, edit 2 seconds */
+#define UFS_QCOM_AUTO_SUSPEND_DELAY	2000
 #define UFS_QCOM_CLK_GATING_DELAY_MS_PWR_SAVE	10
 #define UFS_QCOM_CLK_GATING_DELAY_MS_PERF	50
 
