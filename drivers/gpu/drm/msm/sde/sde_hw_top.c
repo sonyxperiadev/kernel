@@ -16,12 +16,6 @@
 #include "sde_dbg.h"
 #include "sde_kms.h"
 
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996) || \
-    defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660) || \
-    defined(CONFIG_ARCH_SDM630)
- #define RUN_ON_LEGACY_PLATFORM
-#endif
-
 #define SSPP_SPARE                        0x28
 #define UBWC_DEC_HW_VERSION               0x058
 #define UBWC_STATIC                       0x144
@@ -285,7 +279,8 @@ static void _update_vsync_source(struct sde_hw_mdp *mdp,
 			    of_machine_is_compatible("qcom,msm8998") ||
 			    of_machine_is_compatible("qcom,sdm630")  ||
 			    of_machine_is_compatible("qcom,sdm636")  ||
-			    of_machine_is_compatible("qcom,sdm660"))
+			    of_machine_is_compatible("qcom,sdm660")  ||
+			    of_machine_is_compatible("qcom,trinket"))
 				SDE_REG_WRITE(c, wd_load_value,
 						CALCULATE_WD_LOAD_VALUE_LEGACY(
 						cfg->frame_rate));
