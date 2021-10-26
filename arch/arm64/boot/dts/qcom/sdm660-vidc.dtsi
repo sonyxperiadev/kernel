@@ -112,64 +112,63 @@
 			};
 	    };
 
-	    venus-ddr-gov {
-		compatible = "qcom,msm-vidc,governor,table";
-		name = "venus-ddr-gov";
-		status = "ok";
-		qcom,bus-freq-table {
-			qcom,profile-enc {
-				qcom,codec-mask = <0x55555555>;
-				qcom,load-busfreq-tbl =
-					<979200 1044000>,  /* UHD30E     */
-					<864000 887000>,   /* 720p240LPE */
-					<489600 666000>,   /* 1080p60E   */
-					<432000 578000>,   /* 720p120E   */
-					<244800 346000>,   /* 1080p30E   */
-					<216000 293000>,   /* 720p60E    */
-					<108000 151000>,   /* 720p30E    */
-					<0 0>;
-			};
-			qcom,profile-dec {
-				qcom,codec-mask = <0xffffffff>;
-				qcom,load-busfreq-tbl =
-					<979200 2365000>,  /* UHD30D     */
-					<864000 1978000>,  /* 720p240D   */
-					<489600 1133000>,  /* 1080p60D   */
-					<432000 994000>,   /* 720p120D   */
-					<244800 580000>,   /* 1080p30D   */
-					<216000 501000>,   /* 720p60E    */
-					<108000 255000>,   /* 720p30D    */
-					<0 0>;
-			};
-			qcom,profile-dec-ubwc {
-				qcom,codec-mask = <0xffffffff>;
-				qcom,ubwc-mode;
-				qcom,load-busfreq-tbl =
-					<979200 1892000>,  /* UHD30D     */
-					<864000 1554000>,  /* 720p240D   */
-					<489600 895000>,   /* 1080p60D   */
-					<432000 781000>,   /* 720p120D   */
-					<244800 460000>,   /* 1080p30D   */
-					<216000 301000>,   /* 720p60E    */
-					<108000 202000>,   /* 720p30D    */
-					<0 0>;
-			};
-			qcom,profile-dec-ubwc-10bit {
-				qcom,codec-mask = <0xffffffff>;
-				qcom,ubwc-10bit;
-				qcom,load-busfreq-tbl =
-					<979200 2446336>,  /* UHD30D     */
-					<864000 2108416>,  /* 720p240D   */
-					<489600 1207296>,  /* 1080p60D   */
-					<432000 1058816>,  /* 720p120D   */
-					<244800 616448>,   /* 1080p30D   */
-					<216000 534528>,   /* 720p60D    */
-					<108000 271360>,   /* 720p30D    */
-					<0 0>;
+		venus-ddr-gov {
+			compatible = "qcom,msm-vidc,governor,table";
+			name = "venus-ddr-gov";
+			status = "ok";
+			qcom,bus-freq-table {
+				qcom,profile-enc {
+					qcom,codec-mask = <0x55555555>;
+					qcom,load-busfreq-tbl =
+						<979200 1044000>,  /* UHD30E     */
+						<864000 887000>,   /* 720p240LPE */
+						<489600 666000>,   /* 1080p60E   */
+						<432000 578000>,   /* 720p120E   */
+						<244800 346000>,   /* 1080p30E   */
+						<216000 293000>,   /* 720p60E    */
+						<108000 151000>,   /* 720p30E    */
+						<0 0>;
+				};
+				qcom,profile-dec {
+					qcom,codec-mask = <0xffffffff>;
+					qcom,load-busfreq-tbl =
+						<979200 2365000>,  /* UHD30D     */
+						<864000 1978000>,  /* 720p240D   */
+						<489600 1133000>,  /* 1080p60D   */
+						<432000 994000>,   /* 720p120D   */
+						<244800 580000>,   /* 1080p30D   */
+						<216000 501000>,   /* 720p60E    */
+						<108000 255000>,   /* 720p30D    */
+						<0 0>;
+				};
+				qcom,profile-dec-ubwc {
+					qcom,codec-mask = <0xffffffff>;
+					qcom,ubwc-mode;
+					qcom,load-busfreq-tbl =
+						<979200 1892000>,  /* UHD30D     */
+						<864000 1554000>,  /* 720p240D   */
+						<489600 895000>,   /* 1080p60D   */
+						<432000 781000>,   /* 720p120D   */
+						<244800 460000>,   /* 1080p30D   */
+						<216000 301000>,   /* 720p60E    */
+						<108000 202000>,   /* 720p30D    */
+						<0 0>;
+				};
+				qcom,profile-dec-ubwc-10bit {
+					qcom,codec-mask = <0xffffffff>;
+					qcom,ubwc-10bit;
+					qcom,load-busfreq-tbl =
+						<979200 2446336>,  /* UHD30D     */
+						<864000 2108416>,  /* 720p240D   */
+						<489600 1207296>,  /* 1080p60D   */
+						<432000 1058816>,  /* 720p120D   */
+						<244800 616448>,   /* 1080p30D   */
+						<216000 534528>,   /* 720p60D    */
+						<108000 271360>,   /* 720p30D    */
+						<0 0>;
+				};
 			};
 		};
-	};
-
 
 		/* MMUs */
 		non_secure_cb {
