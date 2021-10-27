@@ -3260,7 +3260,7 @@ static void sd_probe_async(void *data, async_cookie_t cookie)
 	if (sdp->autosuspend_delay >= 0)
 		pm_runtime_set_autosuspend_delay(dev, sdp->autosuspend_delay);
 
-	device_add_disk(dev, gd);
+	device_add_disk(dev, gd, NULL);
 	if (sdkp->capacity)
 		sd_dif_config_host(sdkp);
 
