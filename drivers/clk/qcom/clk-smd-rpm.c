@@ -676,8 +676,6 @@ static const struct rpm_smd_clk_desc rpm_clk_msm8996 = {
 	.num_clks = ARRAY_SIZE(msm8996_clks),
 };
 
-
-
 /* bengal */
 DEFINE_CLK_SMD_RPM_BRANCH(bengal, bi_tcxo, bi_tcxo_ao,
 					QCOM_SMD_RPM_MISC_CLK, 0, 19200000);
@@ -898,11 +896,11 @@ static struct clk_hw *trinket_clks[] = {
 	[RPM_SMD_RF_CLK2] = &trinket_rf_clk2.hw,
 	[RPM_SMD_RF_CLK2_A] = &trinket_rf_clk2_a.hw,
 	[RPM_SMD_LN_BB_CLK1] = &trinket_ln_bb_clk1.hw,
-	[RPM_SMD_LN_BB_CLK1_AO] = &trinket_ln_bb_clk1_a.hw,
+	[RPM_SMD_LN_BB_CLK1_A] = &trinket_ln_bb_clk1_a.hw,
 	[RPM_SMD_LN_BB_CLK2] = &trinket_ln_bb_clk2.hw,
-	[RPM_SMD_LN_BB_CLK2_AO] = &trinket_ln_bb_clk2_a.hw,
+	[RPM_SMD_LN_BB_CLK2_A] = &trinket_ln_bb_clk2_a.hw,
 	[RPM_SMD_LN_BB_CLK3] = &trinket_ln_bb_clk3.hw,
-	[RPM_SMD_LN_BB_CLK3_AO] = &trinket_ln_bb_clk3_a.hw,
+	[RPM_SMD_LN_BB_CLK3_A] = &trinket_ln_bb_clk3_a.hw,
 	[RPM_SMD_CNOC_CLK] = &trinket_cnoc_clk.hw,
 	[RPM_SMD_CNOC_A_CLK] = &trinket_cnoc_a_clk.hw,
 	[RPM_SMD_CE1_CLK] = &trinket_ce1_clk.hw,
@@ -975,7 +973,7 @@ static struct clk_hw *trinket_clks[] = {
 
 static const struct rpm_smd_clk_desc rpm_clk_trinket = {
 	.clks = trinket_clks,
-	.num_rpm_clks = RPM_SMD_LN_BB_CLK3_AO,
+	.num_rpm_clks = RPM_SMD_LN_BB_CLK3_A,
 	.num_clks = ARRAY_SIZE(trinket_clks),
 };
 
@@ -1091,7 +1089,7 @@ static const struct rpm_smd_clk_desc rpm_clk_scuba = {
 };
 
 /* sdm660 */
-DEFINE_CLK_SMD_RPM_BRANCH(sdm660, cxo, cxo_a, QCOM_SMD_RPM_MISC_CLK, 0,
+DEFINE_CLK_SMD_RPM_BRANCH(sdm660, bi_tcxo, bi_tcxo_ao, QCOM_SMD_RPM_MISC_CLK, 0,
 								19200000);
 DEFINE_CLK_SMD_RPM(sdm660, snoc_clk, snoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 1);
 DEFINE_CLK_SMD_RPM(sdm660, cnoc_clk, cnoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 2);
@@ -1125,16 +1123,12 @@ static DEFINE_CLK_VOTER(aggre2_noc_msmbus_clk, aggre2_noc_clk, LONG_MAX);
 static DEFINE_CLK_VOTER(aggre2_noc_msmbus_a_clk, aggre2_noc_a_clk, LONG_MAX);
 static DEFINE_CLK_VOTER(aggre2_noc_usb_clk, aggre2_noc_clk, 19200000);
 static DEFINE_CLK_VOTER(aggre2_noc_smmu_clk, aggre2_noc_clk, 1000);
-static DEFINE_CLK_BRANCH_VOTER(cxo_dwc3_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_lpm_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_otg_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_pil_lpass_clk, cxo);
-static DEFINE_CLK_BRANCH_VOTER(cxo_pil_cdsp_clk, cxo);
-
+static DEFINE_CLK_BRANCH_VOTER(bi_tcxo_dwc3_clk, bi_tcxo);
+static DEFINE_CLK_BRANCH_VOTER(bi_tcxo_lpm_clk, bi_tcxo);
 
 static struct clk_hw *sdm660_clks[] = {
-	[RPM_SMD_XO_CLK_SRC]        = &sdm660_cxo.hw,
-	[RPM_SMD_XO_A_CLK_SRC]      = &sdm660_cxo_a.hw,
+	[RPM_SMD_XO_CLK_SRC]        = &sdm660_bi_tcxo.hw,
+	[RPM_SMD_XO_A_CLK_SRC]      = &sdm660_bi_tcxo_ao.hw,
 	[RPM_SMD_SNOC_CLK]          = &sdm660_snoc_clk.hw,
 	[RPM_SMD_SNOC_A_CLK]        = &sdm660_snoc_a_clk.hw,
 	[RPM_SMD_BIMC_CLK]          = &sdm660_bimc_clk.hw,
@@ -1184,11 +1178,11 @@ static struct clk_hw *sdm660_clks[] = {
 	[SCM_CE1_CLK]           = &scm_ce1_clk.hw,
 	[SNOC_MSMBUS_CLK]       = &snoc_msmbus_clk.hw,
 	[SNOC_MSMBUS_A_CLK]     = &snoc_msmbus_a_clk.hw,
-	[CXO_DWC3_CLK]          = &cxo_dwc3_clk.hw,
-	[CXO_SMD_LPM_CLK]           = &cxo_lpm_clk.hw,
-	[CXO_SMD_OTG_CLK]           = &cxo_otg_clk.hw,
-	[CXO_SMD_PIL_LPASS_CLK]     = &cxo_pil_lpass_clk.hw,
-	[CXO_SMD_PIL_CDSP_CLK]      = &cxo_pil_cdsp_clk.hw,
+	[CXO_DWC3_CLK]          = &bi_tcxo_dwc3_clk.hw,
+	[CXO_SMD_LPM_CLK]           = &bi_tcxo_lpm_clk.hw,
+	[CXO_SMD_OTG_CLK]           = &bi_tcxo_otg_clk.hw,
+	[CXO_SMD_PIL_LPASS_CLK]     = &bi_tcxo_pil_lpass_clk.hw,
+	[CXO_SMD_PIL_CDSP_CLK]      = &bi_tcxo_pil_cdsp_clk.hw,
 	[CNOC_KEEPALIVE_A_CLK] = &cnoc_periph_keepalive_a_clk.hw,
 	[AGGR2_NOC_MSMBUS_CLK]  = &aggre2_noc_msmbus_clk.hw,
 	[AGGR2_NOC_MSMBUS_A_CLK] = &aggre2_noc_msmbus_a_clk.hw,
@@ -1220,7 +1214,7 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 	struct clk *clk;
 	struct rpm_cc *rcc;
 	struct clk_onecell_data *data;
-	int ret, is_bengal, is_scuba, is_sdm660;
+	int ret, is_bengal, is_scuba, is_trinket, is_sdm660;
 	size_t num_clks, i;
 	struct clk_hw **hw_clks;
 	const struct rpm_smd_clk_desc *desc;
@@ -1230,6 +1224,9 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 
 	is_scuba = of_device_is_compatible(pdev->dev.of_node,
 						"qcom,rpmcc-scuba");
+
+	is_trinket = of_device_is_compatible(pdev->dev.of_node,
+						"qcom,rpmcc-trinket");
 	if (is_bengal || is_scuba) {
 		ret = clk_vote_bimc(&bengal_bimc_clk.hw, INT_MAX);
 		if (ret < 0)
@@ -1340,7 +1337,7 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 		clk_set_rate(snoc_keepalive_a_clk.hw.clk, 19200000);
 		clk_prepare_enable(snoc_keepalive_a_clk.hw.clk);
 	} else if (is_sdm660) {
-		clk_prepare_enable(sdm660_cxo_a.hw.clk);
+		clk_prepare_enable(sdm660_bi_tcxo_ao.hw.clk);
 
 		/* Hold an active set vote for the cnoc_periph resource */
 		clk_set_rate(cnoc_periph_keepalive_a_clk.hw.clk, 19200000);

@@ -48,5 +48,6 @@ void unlock_votable(struct votable *votable);
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 ssize_t somc_output_voter_param(struct votable *votable,
 						char *buf, size_t size);
+int somc_get_vote_clients(struct votable *votable, char *clients[]);
 #endif
 #endif /* __PMIC_VOTER_H */

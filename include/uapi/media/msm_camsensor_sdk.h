@@ -41,7 +41,7 @@
 #define MAX_ACTUATOR_SCENARIO     8
 #define MAX_ACT_MOD_NAME_SIZE     32
 #define MAX_ACT_NAME_SIZE         32
-#define MAX_ACTUATOR_INIT_SET     120
+#define MAX_ACTUATOR_INIT_SET     2000
 #define MAX_I2C_REG_SET           12
 
 #define MAX_LED_TRIGGERS          3
@@ -50,8 +50,6 @@
 #define MSM_EEPROM_MAX_MEM_MAP_CNT      8
 
 #define MSM_SENSOR_BYPASS_VIDEO_NODE    1
-
-#define SENSOR_PROBE_WRITE
 
 #define SECURE_CAMERA
 
@@ -187,6 +185,7 @@ enum actuator_type {
 	ACTUATOR_PIEZO,
 	ACTUATOR_HVCM,
 	ACTUATOR_BIVCM,
+	ACTUATOR_VCM2,
 };
 
 enum msm_flash_driver_type {
@@ -299,19 +298,10 @@ struct msm_sensor_init_params {
 	unsigned int            sensor_mount_angle;
 };
 
-struct msm_camera_i2c_reg_setting {
-	struct msm_camera_i2c_reg_array *reg_setting;
-	unsigned short size;
-	enum msm_camera_i2c_reg_addr_type addr_type;
-	enum msm_camera_i2c_data_type data_type;
-	unsigned short delay;
-};
-
 struct msm_sensor_id_info_t {
 	unsigned short sensor_id_reg_addr;
 	unsigned short sensor_id;
 	unsigned short sensor_id_mask;
-	struct msm_camera_i2c_reg_setting setting;
 };
 
 struct msm_camera_sensor_slave_info {
@@ -336,6 +326,14 @@ struct msm_camera_i2c_reg_array {
 	unsigned short reg_addr;
 	unsigned short reg_data;
 	unsigned int delay;
+};
+
+struct msm_camera_i2c_reg_setting {
+	struct msm_camera_i2c_reg_array *reg_setting;
+	unsigned short size;
+	enum msm_camera_i2c_reg_addr_type addr_type;
+	enum msm_camera_i2c_data_type data_type;
+	unsigned short delay;
 };
 
 struct msm_camera_csid_vc_cfg {

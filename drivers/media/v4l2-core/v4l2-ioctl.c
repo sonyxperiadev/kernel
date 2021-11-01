@@ -1428,6 +1428,12 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 		case V4L2_PIX_FMT_MT21C:	descr = "Mediatek Compressed Format"; break;
 		case V4L2_PIX_FMT_TME:
 			descr = "TME"; break;
+		case V4L2_PIX_FMT_DIVX:
+			descr = "DIVX"; break;
+		case V4L2_PIX_FMT_DIVX_311:
+			descr = "DIVX311"; break;
+		case V4L2_PIX_FMT_HEVC_HYBRID:
+			descr = "HEVC Hybrid"; break;
 		default:
 			WARN(1, "Unknown pixelformat 0x%08x\n", fmt->pixelformat);
 			if (fmt->description[0])

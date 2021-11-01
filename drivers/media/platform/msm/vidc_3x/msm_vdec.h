@@ -14,7 +14,7 @@
 #ifndef _MSM_VDEC_H_
 #define _MSM_VDEC_H_
 
-#include <media/msm_vidc.h>
+#include "msm_vidc.h"
 #include "msm_vidc_internal.h"
 
 int msm_vdec_inst_init(struct msm_vidc_inst *inst);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * drivers/mmc/host/sdhci-msm.c - Qualcomm Technologies, Inc. MSM SDHCI Platform
  * driver source file
@@ -156,7 +156,6 @@
 
 /* 512 descriptors */
 #define SDHCI_MSM_MAX_SEGMENTS  (1 << 9)
-#define SDHCI_MSM_MMC_CLK_GATE_DELAY	200 /* msecs */
 
 #define CORE_FREQ_100MHZ	(100 * 1000 * 1000)
 #define TCXO_FREQ		19200000
@@ -1343,11 +1342,8 @@ void sdhci_msm_enter_dbg_mode(struct sdhci_host *host)
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	struct platform_device *pdev = msm_host->pdev;
 	u32 enable_dbg_feature = 0;
-	u32 minor;
 
-	minor = IPCAT_MINOR_MASK(readl_relaxed(host->ioaddr +
-				SDCC_IP_CATALOG));
-	if (minor < 2 || msm_host->debug_mode_enabled)
+	if (msm_host->minor < 2 || msm_host->debug_mode_enabled)
 		return;
 	if (!(host->quirks2 & SDHCI_QUIRK2_USE_DBG_FEATURE))
 		return;
@@ -1361,7 +1357,7 @@ void sdhci_msm_enter_dbg_mode(struct sdhci_host *host)
 			SDCC_TESTBUS_CONFIG) | TESTBUS_EN),
 			host->ioaddr + SDCC_TESTBUS_CONFIG);
 
-	if (minor >= 2)
+	if (msm_host->minor >= 2)
 		enable_dbg_feature |= FSM_HISTORY |
 			AUTO_RECOVERY_DISABLE |
 			MM_TRIGGER_DISABLE |
@@ -1388,11 +1384,8 @@ void sdhci_msm_exit_dbg_mode(struct sdhci_host *host)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
 	struct platform_device *pdev = msm_host->pdev;
-	u32 minor;
 
-	minor = IPCAT_MINOR_MASK(readl_relaxed(host->ioaddr +
-				SDCC_IP_CATALOG));
-	if (minor < 2 || !msm_host->debug_mode_enabled)
+	if (msm_host->minor  < 2 || !msm_host->debug_mode_enabled)
 		return;
 	if (!(host->quirks2 & SDHCI_QUIRK2_USE_DBG_FEATURE))
 		return;
@@ -2538,10 +2531,46 @@ void sdhci_msm_cqe_sdhci_dumpregs(struct mmc_host *mmc)
 	sdhci_dumpregs(host);
 }
 
+/*
+ * sdhci_msm_enhanced_strobe_mask :-
+ * Before running CMDQ transfers in HS400 Enhanced Strobe mode,
+ * SW should write 3 to
+ * HC_VENDOR_SPECIFIC_FUNC3.CMDEN_HS400_INPUT_MASK_CNT register.
+ * The default reset value of this register is 2.
+ */
+static void sdhci_msm_enhanced_strobe_mask(struct mmc_host *mmc, bool set)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+	const struct sdhci_msm_offset *msm_host_offset =
+					msm_host->offset;
+
+	if (!msm_host->enhanced_strobe ||
+			!mmc_card_strobe(msm_host->mmc->card)) {
+		pr_debug("%s: host/card does not support hs400 enhanced strobe\n",
+				mmc_hostname(host->mmc));
+		return;
+	}
+
+	if (set) {
+		writel_relaxed((readl_relaxed(host->ioaddr +
+			msm_host_offset->CORE_VENDOR_SPEC3)
+			| CORE_CMDEN_HS400_INPUT_MASK_CNT),
+			host->ioaddr + msm_host_offset->CORE_VENDOR_SPEC3);
+	} else {
+		writel_relaxed((readl_relaxed(host->ioaddr +
+			msm_host_offset->CORE_VENDOR_SPEC3)
+			& ~CORE_CMDEN_HS400_INPUT_MASK_CNT),
+			host->ioaddr + msm_host_offset->CORE_VENDOR_SPEC3);
+	}
+}
+
 static const struct cqhci_host_ops sdhci_msm_cqhci_ops = {
 	.enable		= sdhci_msm_cqe_enable,
 	.disable	= sdhci_msm_cqe_disable,
 	.dumpregs		= sdhci_msm_cqe_sdhci_dumpregs,
+	.enhanced_strobe_mask = sdhci_msm_enhanced_strobe_mask,
 };
 
 #ifdef CONFIG_MMC_CQHCI
@@ -4346,40 +4375,6 @@ static void sdhci_msm_reset(struct sdhci_host *host, u8 mask)
 		cqhci_suspend(host->mmc);
 }
 
-/*
- * sdhci_msm_enhanced_strobe_mask :-
- * Before running CMDQ transfers in HS400 Enhanced Strobe mode,
- * SW should write 3 to
- * HC_VENDOR_SPECIFIC_FUNC3.CMDEN_HS400_INPUT_MASK_CNT register.
- * The default reset value of this register is 2.
- */
-static void sdhci_msm_enhanced_strobe_mask(struct sdhci_host *host, bool set)
-{
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-	struct sdhci_msm_host *msm_host = pltfm_host->priv;
-	const struct sdhci_msm_offset *msm_host_offset =
-					msm_host->offset;
-
-	if (!msm_host->enhanced_strobe ||
-			!mmc_card_strobe(msm_host->mmc->card)) {
-		pr_debug("%s: host/card does not support hs400 enhanced strobe\n",
-				mmc_hostname(host->mmc));
-		return;
-	}
-
-	if (set) {
-		writel_relaxed((readl_relaxed(host->ioaddr +
-			msm_host_offset->CORE_VENDOR_SPEC3)
-			| CORE_CMDEN_HS400_INPUT_MASK_CNT),
-			host->ioaddr + msm_host_offset->CORE_VENDOR_SPEC3);
-	} else {
-		writel_relaxed((readl_relaxed(host->ioaddr +
-			msm_host_offset->CORE_VENDOR_SPEC3)
-			& ~CORE_CMDEN_HS400_INPUT_MASK_CNT),
-			host->ioaddr + msm_host_offset->CORE_VENDOR_SPEC3);
-	}
-}
-
 static void sdhci_msm_clear_set_dumpregs(struct sdhci_host *host, bool set)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -5045,7 +5040,6 @@ static struct sdhci_ops sdhci_msm_ops = {
 	.set_bus_width = sdhci_set_bus_width,
 	.reset = sdhci_msm_reset,
 	.clear_set_dumpregs = sdhci_msm_clear_set_dumpregs,
-	.enhanced_strobe_mask = sdhci_msm_enhanced_strobe_mask,
 	.reset_workaround = sdhci_msm_reset_workaround,
 	.init = sdhci_msm_init,
 	.pre_req = sdhci_msm_pre_req,
@@ -5134,7 +5128,7 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 	 * starts coming.
 	 */
 	if ((major == 1) && ((minor == 0x42) || (minor == 0x46) ||
-				(minor == 0x49) || (minor >= 0x6b)))
+			(minor == 0x49) || (minor == 0x4D) || (minor >= 0x6b)))
 		msm_host->use_14lpp_dll = true;
 
 	/* Fake 3.0V support for SDIO devices which requires such voltage */
@@ -5273,7 +5267,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	void __iomem *tlmm_mem;
 	unsigned long flags;
 	bool force_probe;
-	u32 minor;
 
 	pr_debug("%s: Enter %s\n", dev_name(&pdev->dev), __func__);
 	msm_host = devm_kzalloc(&pdev->dev, sizeof(struct sdhci_msm_host),
@@ -5573,7 +5566,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	if (host->quirks2 & SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK)
 		host->quirks2 |= SDHCI_QUIRK2_DIVIDE_TOUT_BY_4;
 
-	minor = IPCAT_MINOR_MASK(readl_relaxed(host->ioaddr +
+	msm_host->minor = IPCAT_MINOR_MASK(readl_relaxed(host->ioaddr +
 				SDCC_IP_CATALOG));
 
 	host_version = readw_relaxed((host->ioaddr + SDHCI_HOST_VERSION));
@@ -5615,11 +5608,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	/* Enable pwr irq interrupts */
 	sdhci_msm_writel_relaxed(INT_MASK, host,
 		msm_host_offset->CORE_PWRCTL_MASK);
-
-#ifdef CONFIG_MMC_CLKGATE
-	/* Set clock gating delay to be used when CONFIG_MMC_CLKGATE is set */
-	msm_host->mmc->clkgate_delay = SDHCI_MSM_MMC_CLK_GATE_DELAY;
-#endif
 
 	/* Set host capabilities */
 	msm_host->mmc->caps |= msm_host->pdata->mmc_bus_width;
@@ -5781,7 +5769,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		device_remove_file(&pdev->dev, &msm_host->auto_cmd21_attr);
 	}
 
-	if (minor >= 2) {
+	if (msm_host->minor >= 2) {
 		msm_host->mask_and_match.show = show_mask_and_match;
 		msm_host->mask_and_match.store = store_mask_and_match;
 		sysfs_attr_init(&msm_host->mask_and_match.attr);

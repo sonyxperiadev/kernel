@@ -2,6 +2,10 @@
 #ifndef __MSM_MEDIA_INFO_H__
 #define __MSM_MEDIA_INFO_H__
 
+#define NV12_STRIDE_ALIGNMENT 128
+#define NV12_SCANLINE_ALIGNMENT 32
+#define UBWC_EXTRA_SIZE 16384 /* 16*1024 extra size */
+
 /* Width and Height should be multiple of 16 */
 #define INTERLACE_WIDTH_MAX 1920
 #define INTERLACE_HEIGHT_MAX 1920
@@ -45,10 +49,10 @@ enum color_fmts {
 	 * . . . . . . . . . . . . . . . .  V
 	 * . . . . . . . . . . . . . . . .  --> Buffer size alignment
 	 *
-	 * Y_Stride : Width aligned to 512
-	 * UV_Stride : Width aligned to 512
-	 * Y_Scanlines: Height aligned to 512
-	 * UV_Scanlines: Height/2 aligned to 256
+	 * Y_Stride : Width aligned to 128
+	 * UV_Stride : Width aligned to 128
+	 * Y_Scanlines: Height aligned to 32
+	 * UV_Scanlines: Height/2 aligned to 16
 	 * Total size = align(Y_Stride * Y_Scanlines
 	 *          + UV_Stride * UV_Scanlines, 4096)
 	 */
@@ -80,10 +84,10 @@ enum color_fmts {
 	 * . . . . . . . . . . . . . . . .  V
 	 * . . . . . . . . . . . . . . . .  --> Padding & Buffer size alignment
 	 *
-	 * Y_Stride : Width aligned to 512
-	 * UV_Stride : Width aligned to 512
-	 * Y_Scanlines: Height aligned to 512
-	 * UV_Scanlines: Height/2 aligned to 256
+	 * Y_Stride : Width aligned to 128
+	 * UV_Stride : Width aligned to 128
+	 * Y_Scanlines: Height aligned to 32
+	 * UV_Scanlines: Height/2 aligned to 16
 	 * Total size = align(Y_Stride * Y_Scanlines
 	 *          + UV_Stride * UV_Scanlines, 4096)
 	 */
@@ -782,6 +786,9 @@ static inline unsigned int VENUS_Y_STRIDE(unsigned int color_fmt,
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
 	case COLOR_FMT_NV21:
+		alignment = NV12_STRIDE_ALIGNMENT;
+		stride = MSM_MEDIA_ALIGN(width, alignment);
+		break;
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
@@ -823,8 +830,11 @@ static inline unsigned int VENUS_UV_STRIDE(unsigned int color_fmt,
 		goto invalid_input;
 
 	switch (color_fmt) {
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
+		alignment = NV12_STRIDE_ALIGNMENT;
+		stride = MSM_MEDIA_ALIGN(width, alignment);
+		break;
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
@@ -868,6 +878,8 @@ static inline unsigned int VENUS_Y_SCANLINES(unsigned int color_fmt,
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
 	case COLOR_FMT_NV21:
+		alignment = NV12_SCANLINE_ALIGNMENT;
+		break;
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		break;
@@ -903,8 +915,10 @@ static inline unsigned int VENUS_UV_SCANLINES(unsigned int color_fmt,
 		goto invalid_input;
 
 	switch (color_fmt) {
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
+		alignment = NV12_SCANLINE_ALIGNMENT/2;
+		break;
 	case COLOR_FMT_NV12_512:
 		alignment = 256;
 		break;
@@ -1182,7 +1196,7 @@ invalid_input:
 static inline unsigned int VENUS_BUFFER_SIZE(unsigned int color_fmt,
 	unsigned int width, unsigned int height)
 {
-	unsigned int size = 0;
+	unsigned int size = 0, uv_alignment = 0;
 	unsigned int y_plane, uv_plane, y_stride,
 		uv_stride, y_sclines, uv_sclines;
 	unsigned int y_ubwc_plane = 0, uv_ubwc_plane = 0;
@@ -1208,8 +1222,9 @@ static inline unsigned int VENUS_BUFFER_SIZE(unsigned int color_fmt,
 	case COLOR_FMT_NV12:
 	case COLOR_FMT_P010:
 	case COLOR_FMT_NV12_512:
+		uv_alignment = 4096;
 		y_plane = y_stride * y_sclines;
-		uv_plane = uv_stride * uv_sclines;
+		uv_plane = uv_stride * uv_sclines + uv_alignment;
 		size = y_plane + uv_plane;
 		break;
 	case COLOR_FMT_NV12_UBWC:
@@ -1252,8 +1267,9 @@ static inline unsigned int VENUS_BUFFER_SIZE(unsigned int color_fmt,
 			uv_meta_plane = MSM_MEDIA_ALIGN(uv_meta_stride *
 				uv_meta_scanlines, 4096);
 			size = (y_ubwc_plane + uv_ubwc_plane + y_meta_plane +
-				uv_meta_plane);
+				uv_meta_plane)+(64 * y_stride);
 		}
+		size += UBWC_EXTRA_SIZE;
 		break;
 	case COLOR_FMT_NV12_BPP10_UBWC:
 		y_ubwc_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
