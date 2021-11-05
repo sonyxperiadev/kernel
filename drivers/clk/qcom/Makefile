@@ -38,6 +38,7 @@ obj-$(CONFIG_MSM_DEBUGCC_SDM845) += debugcc-sdm845.o
 obj-$(CONFIG_MSM_DISPCC_SDM845) += dispcc-sdm845.o
 obj-$(CONFIG_MSM_GPUCC_SDM845) += gpucc-sdm845.o
 obj-$(CONFIG_MSM_VIDEOCC_SDM845) += videocc-sdm845.o
+obj-$(CONFIG_CLOCK_CPU_OSM_SDM845) += clk-cpu-osm-sdm845.o
 
 # Keep alphabetically sorted by config
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
