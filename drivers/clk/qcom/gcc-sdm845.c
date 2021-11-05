@@ -577,6 +577,18 @@ static const struct freq_tbl ftbl_gcc_qupv3_wrap0_s0_clk_src_sdm845_v2[] = {
 	{ }
 };
 
+static struct clk_init_data gcc_qupv3_wrap0_s0_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s0_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
+};
+
 static struct clk_rcg2 gcc_qupv3_wrap0_s0_clk_src = {
 	.cmd_rcgr = 0x17034,
 	.mnd_width = 16,
@@ -584,17 +596,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s0_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s0_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s0_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s1_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s1_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s1_clk_src = {
@@ -604,17 +618,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s1_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s1_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s1_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s2_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s2_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s2_clk_src = {
@@ -624,17 +640,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s2_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s2_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s2_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s3_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s3_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s3_clk_src = {
@@ -644,17 +662,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s3_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s3_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s3_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s4_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s4_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s4_clk_src = {
@@ -664,17 +684,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s4_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s4_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s4_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s5_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s5_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s5_clk_src = {
@@ -684,17 +706,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s5_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s5_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s5_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s6_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s6_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s6_clk_src = {
@@ -704,17 +728,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s6_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s6_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s6_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap0_s7_clk_src_init = {
+	.name = "gcc_qupv3_wrap0_s7_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap0_s7_clk_src = {
@@ -724,17 +750,19 @@ static struct clk_rcg2 gcc_qupv3_wrap0_s7_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap0_s7_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap0_s7_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s0_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s0_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s0_clk_src = {
@@ -744,17 +772,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s0_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s0_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s0_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s1_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s1_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s1_clk_src = {
@@ -764,17 +794,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s1_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s1_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s1_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s2_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s2_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s2_clk_src = {
@@ -784,17 +816,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s2_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s2_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s2_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s3_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s3_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s3_clk_src = {
@@ -804,17 +838,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s3_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s3_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s3_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s4_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s4_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s4_clk_src = {
@@ -824,17 +860,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s4_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s4_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s4_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s5_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s5_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s5_clk_src = {
@@ -844,17 +882,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s5_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s5_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s5_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s6_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s6_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s6_clk_src = {
@@ -864,17 +904,19 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s6_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s6_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s6_clk_src_init,
+};
+
+static struct clk_init_data gcc_qupv3_wrap1_s7_clk_src_init = {
+	.name = "gcc_qupv3_wrap1_s7_clk_src",
+	.parent_names = gcc_parent_names_0,
+	.num_parents = 4,
+	.flags = CLK_SET_RATE_PARENT,
+	.ops = &clk_rcg2_ops,
+	VDD_CX_FMAX_MAP3(
+		MIN, 19200000,
+		LOWER, 75000000,
+		LOW, 100000000),
 };
 
 static struct clk_rcg2 gcc_qupv3_wrap1_s7_clk_src = {
@@ -884,17 +926,7 @@ static struct clk_rcg2 gcc_qupv3_wrap1_s7_clk_src = {
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_qupv3_wrap0_s0_clk_src,
 	.enable_safe_config = true,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gcc_qupv3_wrap1_s7_clk_src",
-		.parent_names = gcc_parent_names_0,
-		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
-		VDD_CX_FMAX_MAP3(
-			MIN, 19200000,
-			LOWER, 75000000,
-			LOW, 100000000),
-	},
+	.clkr.hw.init = &gcc_qupv3_wrap1_s7_clk_src_init,
 };
 
 static const struct freq_tbl ftbl_gcc_sdcc1_ice_core_clk_src[] = {
@@ -4026,28 +4058,23 @@ static const struct qcom_reset_map gcc_sdm845_resets[] = {
 };
 
 /* List of RCG clocks and corresponding flags requested for DFS Mode */
-static struct clk_dfs gcc_dfs_clocks[] = {
-	{ &gcc_qupv3_wrap0_s0_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s1_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s2_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s3_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s4_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s5_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s6_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap0_s7_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s0_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s1_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s2_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s3_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s4_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s5_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s6_clk_src, DFS_ENABLE_RCG },
-	{ &gcc_qupv3_wrap1_s7_clk_src, DFS_ENABLE_RCG },
-};
-
-static const struct qcom_cc_dfs_desc gcc_sdm845_dfs_desc = {
-	.clks = gcc_dfs_clocks,
-	.num_clks = ARRAY_SIZE(gcc_dfs_clocks),
+static struct clk_rcg_dfs_data gcc_dfs_clocks[] = {
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s0_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s1_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s2_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s3_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s4_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s5_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s6_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap0_s7_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s0_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s1_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s2_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s3_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s4_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s5_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s6_clk_src),
+	DEFINE_RCG_DFS(gcc_qupv3_wrap1_s7_clk_src),
 };
 
 static const struct regmap_config gcc_sdm845_regmap_config = {
@@ -4324,7 +4351,8 @@ static int gcc_sdm845_probe(struct platform_device *pdev)
 		clk_prepare_enable(gcc_aggre_noc_pcie_tbu_clk.clkr.hw.clk);
 
 	/* DFS clock registration */
-	ret = qcom_cc_register_rcg_dfs(pdev, &gcc_sdm845_dfs_desc);
+	ret = qcom_cc_register_rcg_dfs(regmap, gcc_dfs_clocks,
+			ARRAY_SIZE(gcc_dfs_clocks));
 	if (ret)
 		dev_err(&pdev->dev, "Failed to register with DFS!\n");
 
