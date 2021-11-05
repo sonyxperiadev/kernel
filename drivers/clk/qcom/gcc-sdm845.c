@@ -245,7 +245,7 @@ static struct clk_alpha_pll gpll0 = {
 	.offset = 0x0,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -253,7 +253,7 @@ static struct clk_alpha_pll gpll0 = {
 			.name = "gpll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -267,7 +267,7 @@ static struct clk_alpha_pll gpll4 = {
 	.offset = 0x76000,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),
@@ -275,7 +275,7 @@ static struct clk_alpha_pll gpll4 = {
 			.name = "gpll4",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -299,11 +299,12 @@ static struct clk_alpha_pll_postdiv gpll0_out_even = {
 	.post_div_table = post_div_table_fabia_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
 	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_out_even",
 		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -311,7 +312,7 @@ static struct clk_alpha_pll gpll6 = {
 	.offset = 0x13000,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(6),
@@ -319,7 +320,7 @@ static struct clk_alpha_pll gpll6 = {
 			.name = "gpll6",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,

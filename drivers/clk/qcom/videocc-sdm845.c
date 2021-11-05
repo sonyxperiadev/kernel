@@ -61,22 +61,22 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config video_pll0_config = {
+static const struct alpha_pll_config video_pll0_config = {
 	.l = 0x10,
-	.frac = 0xaaab,
+	.alpha = 0xaaab,
 };
 
 static struct clk_alpha_pll video_pll0 = {
 	.offset = 0x42c,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "video_pll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
