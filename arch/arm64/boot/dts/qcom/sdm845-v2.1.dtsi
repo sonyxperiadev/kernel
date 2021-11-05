@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm845-v2.dtsi"
+#include "sdm845-v2-camera.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDM845 V2.1";
+	qcom,msm-id = <321 0x20001>;
+};
+
+&spmi_bus {
+	/delete-property/ qcom,enable-ahb-bus-workaround;
+};
+
+&clock_gcc {
+	compatible = "qcom,gcc-sdm845-v2.1", "syscon";
+};
+
+&apps_smmu {
+	/delete-property/ qcom,no-asid-retention;
+};
