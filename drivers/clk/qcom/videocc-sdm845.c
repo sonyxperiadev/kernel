@@ -1,22 +1,36 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  */
 
-#include <linux/clk-provider.h>
-#include <linux/module.h>
+#define pr_fmt(fmt) "clk: %s: " fmt, __func__
+
+#include <linux/kernel.h>
+#include <linux/bitops.h>
+#include <linux/err.h>
 #include <linux/platform_device.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/regmap.h>
+#include <linux/reset-controller.h>
 
 #include <dt-bindings/clock/qcom,videocc-sdm845.h>
 
 #include "common.h"
-#include "clk-alpha-pll.h"
-#include "clk-branch.h"
-#include "clk-rcg.h"
 #include "clk-regmap.h"
 #include "clk-pll.h"
-#include "gdsc.h"
+#include "clk-rcg.h"
+#include "clk-branch.h"
+#include "reset.h"
+#include "clk-alpha-pll.h"
+#include "vdd-level-sdm845.h"
+
+#define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
+
+static DEFINE_VDD_REGULATORS(vdd_cx, VDD_CX_NUM, 1, vdd_corner);
 
 enum {
 	P_BI_TCXO,
@@ -42,20 +56,32 @@ static const char * const video_cc_parent_names_0[] = {
 	"core_bi_pll_test_se",
 };
 
-static const struct alpha_pll_config video_pll0_config = {
+static struct pll_vco fabia_vco[] = {
+	{ 249600000, 2000000000, 0 },
+	{ 125000000, 1000000000, 1 },
+};
+
+static const struct pll_config video_pll0_config = {
 	.l = 0x10,
-	.alpha = 0xaaab,
+	.frac = 0xaaab,
 };
 
 static struct clk_alpha_pll video_pll0 = {
 	.offset = 0x42c,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.vco_table = fabia_vco,
+	.num_vco = ARRAY_SIZE(fabia_vco),
+	.type = FABIA_PLL,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "video_pll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_ops,
+			.ops = &clk_fabia_pll_ops,
+			VDD_CX_FMAX_MAP4(
+				MIN, 615000000,
+				LOW, 1066000000,
+				LOW_L1, 1600000000,
+				NOMINAL, 2000000000),
 		},
 	},
 };
@@ -63,7 +89,28 @@ static struct clk_alpha_pll video_pll0 = {
 static const struct freq_tbl ftbl_video_cc_venus_clk_src[] = {
 	F(100000000, P_VIDEO_PLL0_OUT_MAIN, 4, 0, 0),
 	F(200000000, P_VIDEO_PLL0_OUT_MAIN, 2, 0, 0),
+	F(320000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(380000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(444000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(533000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	{ }
+};
+
+static const struct freq_tbl ftbl_video_cc_venus_clk_src_sdm845_v2[] = {
+	F(100000000, P_VIDEO_PLL0_OUT_MAIN, 4, 0, 0),
+	F(200000000, P_VIDEO_PLL0_OUT_MAIN, 2, 0, 0),
 	F(330000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(404000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(444000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	F(533000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
+	{ }
+};
+
+static const struct freq_tbl ftbl_video_cc_venus_clk_src_sdm670[] = {
+	F(100000000, P_VIDEO_PLL0_OUT_MAIN, 4, 0, 0),
+	F(200000000, P_VIDEO_PLL0_OUT_MAIN, 2, 0, 0),
+	F(330000000, P_VIDEO_PLL0_OUT_MAIN, 2, 0, 0),
+	F(364700000, P_VIDEO_PLL0_OUT_MAIN, 2, 0, 0),
 	F(404000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
 	F(444000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
 	F(533000000, P_VIDEO_PLL0_OUT_MAIN, 1, 0, 0),
@@ -76,12 +123,20 @@ static struct clk_rcg2 video_cc_venus_clk_src = {
 	.hid_width = 5,
 	.parent_map = video_cc_parent_map_0,
 	.freq_tbl = ftbl_video_cc_venus_clk_src,
+	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "video_cc_venus_clk_src",
 		.parent_names = video_cc_parent_names_0,
 		.num_parents = 5,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_shared_ops,
+		.ops = &clk_rcg2_ops,
+		VDD_CX_FMAX_MAP6(
+			MIN, 100000000,
+			LOWER, 200000000,
+			LOW, 320000000,
+			LOW_L1, 380000000,
+			NOMINAL, 444000000,
+			HIGH, 533000000),
 	},
 };
 
@@ -243,39 +298,6 @@ static struct clk_branch video_cc_venus_ctl_core_clk = {
 	},
 };
 
-static struct gdsc venus_gdsc = {
-	.gdscr = 0x814,
-	.pd = {
-		.name = "venus_gdsc",
-	},
-	.cxcs = (unsigned int []){ 0x850, 0x910 },
-	.cxc_count = 2,
-	.pwrsts = PWRSTS_OFF_ON,
-	.flags = POLL_CFG_GDSCR,
-};
-
-static struct gdsc vcodec0_gdsc = {
-	.gdscr = 0x874,
-	.pd = {
-		.name = "vcodec0_gdsc",
-	},
-	.cxcs = (unsigned int []){ 0x890, 0x930 },
-	.cxc_count = 2,
-	.flags = HW_CTRL | POLL_CFG_GDSCR,
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
-static struct gdsc vcodec1_gdsc = {
-	.gdscr = 0x8b4,
-	.pd = {
-		.name = "vcodec1_gdsc",
-	},
-	.cxcs = (unsigned int []){ 0x8d0, 0x950 },
-	.cxc_count = 2,
-	.flags = HW_CTRL | POLL_CFG_GDSCR,
-	.pwrsts = PWRSTS_OFF_ON,
-};
-
 static struct clk_regmap *video_cc_sdm845_clocks[] = {
 	[VIDEO_CC_APB_CLK] = &video_cc_apb_clk.clkr,
 	[VIDEO_CC_AT_CLK] = &video_cc_at_clk.clkr,
@@ -292,12 +314,6 @@ static struct clk_regmap *video_cc_sdm845_clocks[] = {
 	[VIDEO_PLL0] = &video_pll0.clkr,
 };
 
-static struct gdsc *video_cc_sdm845_gdscs[] = {
-	[VENUS_GDSC] = &venus_gdsc,
-	[VCODEC0_GDSC] = &vcodec0_gdsc,
-	[VCODEC1_GDSC] = &vcodec1_gdsc,
-};
-
 static const struct regmap_config video_cc_sdm845_regmap_config = {
 	.reg_bits	= 32,
 	.reg_stride	= 4,
@@ -310,33 +326,88 @@ static const struct qcom_cc_desc video_cc_sdm845_desc = {
 	.config = &video_cc_sdm845_regmap_config,
 	.clks = video_cc_sdm845_clocks,
 	.num_clks = ARRAY_SIZE(video_cc_sdm845_clocks),
-	.gdscs = video_cc_sdm845_gdscs,
-	.num_gdscs = ARRAY_SIZE(video_cc_sdm845_gdscs),
 };
 
 static const struct of_device_id video_cc_sdm845_match_table[] = {
-	{ .compatible = "qcom,sdm845-videocc" },
+	{ .compatible = "qcom,video_cc-sdm845" },
+	{ .compatible = "qcom,video_cc-sdm845-v2" },
+	{ .compatible = "qcom,video_cc-sdm670" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, video_cc_sdm845_match_table);
 
+static void video_cc_sdm845_fixup_sdm845v2(void)
+{
+	video_cc_venus_clk_src.freq_tbl = ftbl_video_cc_venus_clk_src_sdm845_v2;
+	video_cc_venus_clk_src.clkr.hw.init->rate_max[VDD_CX_LOW] = 330000000;
+	video_cc_venus_clk_src.clkr.hw.init->rate_max[VDD_CX_LOW_L1] =
+		404000000;
+}
+
+static void video_cc_sdm845_fixup_sdm670(void)
+{
+	video_cc_venus_clk_src.freq_tbl = ftbl_video_cc_venus_clk_src_sdm670;
+	video_cc_venus_clk_src.clkr.hw.init->rate_max[VDD_CX_LOW] = 330000000;
+	video_cc_venus_clk_src.clkr.hw.init->rate_max[VDD_CX_LOW_L1] =
+		404000000;
+}
+
+static int video_cc_sdm845_fixup(struct platform_device *pdev)
+{
+	const char *compat = NULL;
+	int compatlen = 0;
+
+	compat = of_get_property(pdev->dev.of_node, "compatible", &compatlen);
+	if (!compat || (compatlen <= 0))
+		return -EINVAL;
+
+	if (!strcmp(compat, "qcom,video_cc-sdm845-v2"))
+		video_cc_sdm845_fixup_sdm845v2();
+	else if (!strcmp(compat, "qcom,video_cc-sdm670"))
+		video_cc_sdm845_fixup_sdm670();
+
+	return 0;
+}
+
 static int video_cc_sdm845_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
+	int ret = 0;
 
 	regmap = qcom_cc_map(pdev, &video_cc_sdm845_desc);
-	if (IS_ERR(regmap))
+	if (IS_ERR(regmap)) {
+		pr_err("Failed to map the Video CC registers\n");
 		return PTR_ERR(regmap);
+	}
+
+	vdd_cx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_cx");
+	if (IS_ERR(vdd_cx.regulator[0])) {
+		if (!(PTR_ERR(vdd_cx.regulator[0]) == -EPROBE_DEFER))
+			dev_err(&pdev->dev,
+				"Unable to get vdd_cx regulator\n");
+		return PTR_ERR(vdd_cx.regulator[0]);
+	}
+
+	ret = video_cc_sdm845_fixup(pdev);
+	if (ret)
+		return ret;
 
 	clk_fabia_pll_configure(&video_pll0, regmap, &video_pll0_config);
 
-	return qcom_cc_really_probe(pdev, &video_cc_sdm845_desc, regmap);
+	ret = qcom_cc_really_probe(pdev, &video_cc_sdm845_desc, regmap);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register Video CC clocks\n");
+		return ret;
+	}
+
+	dev_info(&pdev->dev, "Registered Video CC clocks\n");
+	return ret;
 }
 
 static struct platform_driver video_cc_sdm845_driver = {
 	.probe		= video_cc_sdm845_probe,
 	.driver		= {
-		.name	= "sdm845-videocc",
+		.name	= "video_cc-sdm845",
 		.of_match_table = video_cc_sdm845_match_table,
 	},
 };
@@ -353,4 +424,6 @@ static void __exit video_cc_sdm845_exit(void)
 }
 module_exit(video_cc_sdm845_exit);
 
+MODULE_DESCRIPTION("QCOM VIDEO_CC SDM845 Driver");
 MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("platform:video_cc-sdm845");

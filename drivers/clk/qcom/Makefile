@@ -32,6 +32,13 @@ obj-$(CONFIG_SM_GCC_TRINKET) += gcc-trinket.o
 obj-$(CONFIG_SM_GPUCC_TRINKET) += gpucc-trinket.o
 obj-$(CONFIG_SM_VIDEOCC_TRINKET) += videocc-trinket.o
 
+obj-$(CONFIG_MSM_GCC_SDM845) += gcc-sdm845.o
+obj-$(CONFIG_MSM_CAMCC_SDM845) += camcc-sdm845.o
+obj-$(CONFIG_MSM_DEBUGCC_SDM845) += debugcc-sdm845.o
+obj-$(CONFIG_MSM_DISPCC_SDM845) += dispcc-sdm845.o
+obj-$(CONFIG_MSM_GPUCC_SDM845) += gpucc-sdm845.o
+obj-$(CONFIG_MSM_VIDEOCC_SDM845) += videocc-sdm845.o
+
 # Keep alphabetically sorted by config
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
 obj-$(CONFIG_APQ_MMCC_8084) += mmcc-apq8084.o
@@ -72,16 +79,13 @@ obj-$(CONFIG_QM_GPUCC_SCUBA) += gpucc-scuba.o
 obj-$(CONFIG_QM_DEBUGCC_SCUBA) += debugcc-scuba.o
 obj-$(CONFIG_SDM_CAMCC_LAGOON) += camcc-lagoon.o
 obj-$(CONFIG_SDM_DEBUGCC_LAGOON) += debugcc-lagoon.o
-obj-$(CONFIG_SDM_DISPCC_845) += dispcc-sdm845.o
 obj-$(CONFIG_SDM_DISPCC_LAGOON) += dispcc-lagoon.o
 obj-$(CONFIG_SDM_GCC_660) += gcc-sdm660.o
-obj-$(CONFIG_SDM_GCC_845) += gcc-sdm845.o
 obj-$(CONFIG_SDM_GCC_LAGOON) += gcc-lagoon.o
 obj-$(CONFIG_SDM_GPUCC_660) += gpucc-sdm660.o
 obj-$(CONFIG_SDM_GPUCC_LAGOON) += gpucc-lagoon.o
 obj-$(CONFIG_SDM_MMCC_660) += mmcc-sdm660.o
 obj-$(CONFIG_SDM_NPUCC_LAGOON) += npucc-lagoon.o
-obj-$(CONFIG_SDM_VIDEOCC_845) += videocc-sdm845.o
 obj-$(CONFIG_SDM_VIDEOCC_LAGOON) += videocc-lagoon.o
 obj-$(CONFIG_SM_CAMCC_LITO) += camcc-lito.o
 obj-$(CONFIG_SM_DEBUGCC_BENGAL) += debugcc-bengal.o
