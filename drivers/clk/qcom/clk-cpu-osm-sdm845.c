@@ -1087,7 +1087,6 @@ static int clk_osm_read_lut(struct platform_device *pdev, struct clk_osm *c)
 		}
 		vdd->num_levels = j;
 		vdd->cur_level = j;
-		vdd->use_max_uV = true;
 	}
 
 	for (i = 0; i < j; i++)
