@@ -7,7 +7,7 @@
 #define __DRIVERS_CLK_QCOM_VDD_LEVEL_COBALT_H
 
 #include <linux/regulator/consumer.h>
-#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
 #define VDD_CX_FMAX_MAP1(l1, f1) \
 	.vdd_class = &vdd_cx,			\
