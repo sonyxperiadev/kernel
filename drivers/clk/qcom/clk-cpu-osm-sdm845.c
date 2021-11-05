@@ -730,7 +730,6 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *table;
 	struct clk_osm *c, *parent;
 	struct clk_hw *p_hw;
-	int ret;
 	unsigned int i, prev_cc = 0;
 	unsigned int xo_kHz;
 
@@ -797,18 +796,9 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	}
 	table[i].frequency = CPUFREQ_TABLE_END;
 
-	ret = cpufreq_table_validate_and_show(policy, table);
-	if (ret) {
-		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
-		goto err;
-	}
-
+	policy->freq_table = table;
 	policy->driver_data = c;
 	return 0;
-
-err:
-	kfree(table);
-	return ret;
 }
 
 static int osm_cpufreq_cpu_exit(struct cpufreq_policy *policy)
