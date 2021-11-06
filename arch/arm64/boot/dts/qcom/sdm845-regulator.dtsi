@@ -22,13 +22,12 @@
 	};
 };
 
-&soc {
-	/* RPMh regulators: */
 
+/* RPMh regulators */
+&apps_rsc {
 	/* PM8998 S1 = VDD_EBI supply */
 	rpmh-regulator-ebilvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ebi.lvl";
 		pm8998_s1_level: regulator-s1 {
 			regulator-name = "pm8998_s1_level";
@@ -47,7 +46,6 @@
 
 	rpmh-regulator-smpa2 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "smpa2";
 		pm8998_s2: regulator-s2 {
 			regulator-name = "pm8998_s2";
@@ -60,7 +58,6 @@
 
 	rpmh-regulator-smpa3 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "smpa3";
 		pm8998_s3: regulator-s3 {
 			regulator-name = "pm8998_s3";
@@ -73,7 +70,6 @@
 
 	rpmh-regulator-smpa5 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "smpa5";
 		pm8998_s5: regulator-s5 {
 			regulator-name = "pm8998_s5";
@@ -87,7 +83,6 @@
 	/* PM8998 S6 = VDD_MX supply */
 	rpmh-regulator-mxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "mx.lvl";
 		pm8998_s6_level: regulator-s6-level {
 			regulator-name = "pm8998_s6_level";
@@ -114,7 +109,6 @@
 
 	rpmh-regulator-smpa7 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "smpa7";
 		pm8998_s7: regulator-s7 {
 			regulator-name = "pm8998_s7";
@@ -128,7 +122,6 @@
 	/* PM8998 S9 + S8 = VDD_CX supply */
 	rpmh-regulator-cxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "cx.lvl";
 		pm8998_s9_level-parent-supply = <&pm8998_s6_level>;
 		pm8998_s9_level_ao-parent-supply = <&pm8998_s6_level_ao>;
@@ -160,7 +153,6 @@
 
 	rpmh-regulator-ldoa1 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa1";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -201,7 +193,6 @@
 
 	rpmh-regulator-ldoa2 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa2";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -221,7 +212,6 @@
 
 	rpmh-regulator-ldoa3 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa3";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -241,7 +231,6 @@
 	/* PM8998 L4 = VDD_SSC_MX supply */
 	rpmh-regulator-lmxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "lmx.lvl";
 		pm8998_l4_level: regulator-l4-level {
 			regulator-name = "pm8998_l4_level";
@@ -253,7 +242,6 @@
 
 	rpmh-regulator-ldoa5 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa5";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -272,7 +260,6 @@
 
 	rpmh-regulator-ldoa6 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa6";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -291,7 +278,6 @@
 
 	rpmh-regulator-ldoa7 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa7";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -310,7 +296,6 @@
 
 	rpmh-regulator-ldoa8 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa8";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -329,7 +314,6 @@
 
 	rpmh-regulator-ldoa9 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa9";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -348,7 +332,6 @@
 
 	rpmh-regulator-ldoa10 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa10";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -367,7 +350,6 @@
 
 	rpmh-regulator-ldoa11 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa11";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -386,7 +368,6 @@
 
 	rpmh-regulator-ldoa12 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa12";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -405,7 +386,6 @@
 
 	rpmh-regulator-ldoa13 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa13";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -424,7 +404,6 @@
 
 	rpmh-regulator-ldoa14 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa14";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -446,7 +425,6 @@
 
 	rpmh-regulator-ldoa15 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa15";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -465,7 +443,6 @@
 
 	rpmh-regulator-ldoa16 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa16";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -484,7 +461,6 @@
 
 	rpmh-regulator-ldoa17 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa17";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -503,7 +479,6 @@
 
 	rpmh-regulator-ldoa18 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa18";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -522,7 +497,6 @@
 
 	rpmh-regulator-ldoa19 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa19";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -541,7 +515,6 @@
 
 	rpmh-regulator-ldoa20 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa20";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -560,7 +533,6 @@
 
 	rpmh-regulator-ldoa21 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa21";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -579,7 +551,6 @@
 
 	rpmh-regulator-ldoa22 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa22";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -598,7 +569,6 @@
 
 	rpmh-regulator-ldoa23 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa23";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -617,7 +587,6 @@
 
 	rpmh-regulator-ldoa24 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa24";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -637,7 +606,6 @@
 
 	rpmh-regulator-ldoa25 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa25";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -656,7 +624,6 @@
 
 	rpmh-regulator-ldoa26 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa26";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -679,7 +646,6 @@
 	/* PM8998 L27 = VDD_SSC_CX supply */
 	rpmh-regulator-lcxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "lcx.lvl";
 		pm8998_l27_level: regulator-l27-level {
 			regulator-name = "pm8998_l27_level";
@@ -691,7 +657,6 @@
 
 	rpmh-regulator-ldoa28 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "ldoa28";
 		qcom,regulator-type = "pmic4-ldo";
 		qcom,supported-modes =
@@ -710,7 +675,6 @@
 
 	rpmh-regulator-vsa1 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "vsa1";
 		pm8998_lvs1: regulator-lvs1 {
 			regulator-name = "pm8998_lvs1";
@@ -722,7 +686,6 @@
 
 	rpmh-regulator-vsa2 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "vsa2";
 		pm8998_lvs2: regulator-lvs2 {
 			regulator-name = "pm8998_lvs2";
@@ -734,7 +697,6 @@
 
 	rpmh-regulator-bobb1 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "bobb1";
 		qcom,regulator-type = "pmic4-bob";
 		qcom,send-defaults;
@@ -761,7 +723,6 @@
 	/* PM8005 S1 + S4 = 2 phase VDD_GFX supply */
 	rpmh-regulator-gfxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "gfx.lvl";
 		pm8005_s1_level: regulator-s1-level {
 			regulator-name = "pm8005_s1_level";
@@ -778,7 +739,6 @@
 	/* PM8005 S2 = VDD_MODEM supply */
 	rpmh-regulator-msslvl {
 		compatible = "qcom,rpmh-arc-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "mss.lvl";
 		pm8005_s2_level: regulator-s2-level {
 			regulator-name = "pm8005_s2_level";
@@ -790,7 +750,6 @@
 
 	rpmh-regulator-smpc3 {
 		compatible = "qcom,rpmh-vrm-regulator";
-		mboxes = <&apps_rsc 0>;
 		qcom,resource-name = "smpc3";
 		pm8005_s3: regulator-s3 {
 			regulator-name = "pm8005_s3";
@@ -800,9 +759,11 @@
 			qcom,init-voltage = <600000>;
 		};
 	};
+};
 
+&soc {
 	refgen: refgen-regulator@ff1000 {
-		compatible = "qcom,refgen-regulator";
+		compatible = "qcom,refgen-sdm845-regulator";
 		reg = <0xff1000 0x60>;
 		regulator-name = "refgen";
 		regulator-enable-ramp-delay = <5>;

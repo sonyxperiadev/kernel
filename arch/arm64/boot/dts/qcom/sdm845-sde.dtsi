@@ -290,9 +290,6 @@
 
 		qcom,sde-dram-channels = <2>;
 
-		mboxes = <&disp_rsc 0>;
-		mbox-names = "disp_rsc";
-
 		/* data and reg bus scale settings */
 		qcom,sde-data-bus {
 			qcom,msm-bus,name = "disp_rsc_mnoc";
