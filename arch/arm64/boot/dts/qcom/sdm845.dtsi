@@ -524,7 +524,17 @@
 
 		removed_region: removed_region@85fc0000 {
 			no-map;
-			reg = <0 0x85fc0000 0 0x2f40000>;
+			reg = <0 0x85fc0000 0 0x40000>;
+		};
+
+		smem_mem: smem_region@86000000 {
+			no-map;
+			reg = <0 0x86000000 0 0x200000>;
+		};
+
+		removed_region1: removed_region@86200000 {
+			no-map;
+			reg = <0 0x86200000 0 0x2d00000>;
 		};
 
 		qseecom_mem: qseecom_region@0x8ab00000 {
@@ -2142,15 +2152,21 @@
 		qcom,num-locks = <8>;
 	};
 
-	qcom,smem@86000000 {
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	smem: qcom,smem {
 		compatible = "qcom,smem";
-		reg = <0x86000000 0x200000>,
-			<0x17911008 0x4>,
-			<0x778000 0x7000>,
-			<0x1fd4000 0x8>;
-		reg-names = "smem", "irq-reg-base", "aux-mem1",
-			"smem_targ_info_reg";
-		qcom,mpu-enabled;
+		memory-region = <&smem_mem>;
+		hwlocks = <&tcsr_mutex 3>;
 	};
 
 	qcom,glink-mailbox-xprt-spss@1885008 {
