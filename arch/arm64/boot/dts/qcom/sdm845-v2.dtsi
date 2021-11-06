@@ -15,7 +15,9 @@
 	/delete-property/ qcom,sdr104-wa;
 };
 
-/delete-node/ &pdc;
+&pdc {
+	qcom,pdc-ranges = <0 480 94>, <94 609 15>, <115 630 7>;
+};
 
 &tlmm {
 	compatible = "qcom,sdm845-pinctrl-v2";
@@ -58,15 +60,6 @@
 		compatible = "syscon";
 		reg = <0x5091008 0x4>;
 	};
-
-	pdc: interrupt-controller@0xb220000{
-		compatible = "qcom,pdc-sdm845-v2";
-		reg = <0xb220000 0x400>;
-		#interrupt-cells = <3>;
-		interrupt-parent = <&intc>;
-		interrupt-controller;
-	};
-
 };
 
 &pil_modem {
