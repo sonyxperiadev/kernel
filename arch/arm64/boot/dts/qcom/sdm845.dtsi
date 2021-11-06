@@ -668,6 +668,22 @@
 			linux,cma-default;
 		};
 	};
+
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			clock-frequency = <38400000>;
+			clock-output-names = "xo_board";
+			#clock-cells = <0>;
+		};
+
+		sleep_clk: sleep-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <32764>;
+			clock-output-names = "sleep_clk";
+			#clock-cells = <0>;
+		};
+	};
 };
 
 #include "msm-gdsc-sdm845.dtsi"
@@ -1175,13 +1191,6 @@
 		qcom,core-dev-table =
 			< 1881600 MHZ_TO_MBPS(200, 4) >,
 			< 2208000 MHZ_TO_MBPS(681, 4) >;
-	};
-
-	clock_rpmh: qcom,rpmhclk {
-		compatible = "qcom,rpmh-clk-sdm845";
-		#clock-cells = <1>;
-		mboxes = <&apps_rsc 0>;
-		mbox-names = "apps";
 	};
 
 	clock_gcc: qcom,gcc@100000 {
@@ -2222,6 +2231,11 @@
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
+
+		clock_rpmh: qcom,rpmhclk {
+			compatible = "qcom,sdm845-rpmh-clk";
+			#clock-cells = <1>;
+		};
 	};
 
 	disp_rsc: rsc@af20000 {
@@ -2240,6 +2254,11 @@
 		msm_bus_disp_rsc {
 			compatible = "qcom,msm-bus-rsc";
 			qcom,msm-bus-id = <MSM_BUS_RSC_DISP>;
+		};
+
+		sde_rsc_rpmh {
+			compatible = "qcom,sde-rsc-rpmh";
+			cell-index = <0>;
 		};
 	};
 
