@@ -582,7 +582,7 @@
 			 <&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK>,
 			 <&clock_dispcc DISP_CC_MDSS_DP_CRYPTO_CLK>,
 			 <&clock_dispcc DISP_CC_MDSS_DP_PIXEL_CLK_SRC>,
-			 <&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>;
+			 <&mdss_dp_pll DP_PHY_PLL_VCO_DIV_CLK>;
 		clock-names = "core_aux_clk", "core_usb_ref_clk_src",
 			"core_usb_ref_clk", "core_usb_cfg_ahb_clk",
 			"core_usb_pipe_clk", "ctrl_link_clk",
