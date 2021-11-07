@@ -2148,32 +2148,11 @@
 				  "l3-scu-faultirq";
 	};
 
-	qcom,llcc@1100000 {
-		compatible = "qcom,llcc-core", "syscon", "simple-mfd";
-		reg = <0x1100000 0x250000>;
-		reg-names = "llcc_base";
-		qcom,llcc-banks-off = <0x0 0x80000 0x100000 0x180000>;
-		qcom,llcc-broadcast-off = <0x200000>;
-
-		llcc: qcom,sdm845-llcc {
-			compatible = "qcom,sdm845-llcc";
-			#cache-cells = <1>;
-			max-slices = <32>;
-		};
-
-		qcom,llcc-perfmon {
-			compatible = "qcom,llcc-perfmon";
-		};
-
-		qcom,llcc-erp {
-			compatible = "qcom,llcc-erp";
-			interrupt-names = "ecc_irq";
-			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
-		qcom,llcc-amon {
-			compatible = "qcom,llcc-amon";
-		};
+	cache-controller@1100000 {
+		compatible = "qcom,sdm845-llcc";
+		reg = <0x01100000 0x200000>, <0x01300000 0x50000>;
+		reg-names = "llcc_base", "llcc_broadcast_base";
+		cap-based-alloc-and-pwr-collapse;
 
 		LLCC_1: llcc_1_dcache {
 			qcom,dump-size = <0x1141c0>;

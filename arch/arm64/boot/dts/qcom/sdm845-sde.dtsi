@@ -384,7 +384,6 @@
 		qcom,mdss-sbuf-headroom = <20>;
 
 		cache-slice-names = "rotator";
-		cache-slices = <&llcc 4>;
 
 		/* reg bus scale settings */
 		rot_reg: qcom,rot-reg-bus {

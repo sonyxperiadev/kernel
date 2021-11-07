@@ -16,7 +16,6 @@
 
 		/* LLCC Info */
 		cache-slice-names = "vidsc0", "vidsc1";
-		cache-slices = <&llcc 2>, <&llcc 3>;
 
 		/* Supply */
 		venus-supply = <&venus_gdsc>;
