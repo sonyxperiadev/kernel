@@ -2194,21 +2194,6 @@
 		hwlocks = <&tcsr_mutex 3>;
 	};
 
-	qcom,glink-mailbox-xprt-spss@1885008 {
-		compatible = "qcom,glink-mailbox-xprt";
-		reg = <0x1885008 0x8>,
-			<0x1885010 0x4>,
-			<0x188501c 0x4>,
-			<0x1886008 0x4>;
-		reg-names = "mbox-loc-addr", "mbox-loc-size", "irq-reg-base",
-				"irq-rx-reset";
-		qcom,irq-mask = <0x1>;
-		interrupts = <0 348 4>;
-		label = "spss";
-		qcom,tx-ring-size = <0x400>;
-		qcom,rx-ring-size = <0x400>;
-	};
-
 	qmp_aop: qcom,qmp-aop@c300000 {
 		compatible = "qcom,qmp-mbox";
 		label = "aop";
@@ -2284,187 +2269,263 @@
 		};
 	};
 
-	qcom,glink-smem-native-xprt-modem@86000000 {
-		compatible = "qcom,glink-smem-native-xprt";
-		reg = <0x86000000 0x200000>,
-			<0x1799000c 0x4>;
-		reg-names = "smem", "irq-reg-base";
-		qcom,irq-mask = <0x1000>;
-		interrupts = <GIC_SPI 449 IRQ_TYPE_EDGE_RISING>;
-		label = "mpss";
+	sp_scsr: mailbox@188501c {
+		compatible = "qcom,sdm845-spcs-global";
+		reg = <0x188501c 0x4>;
+		#mbox-cells = <1>;
 	};
 
-	qcom,glink-smem-native-xprt-adsp@86000000 {
-		compatible = "qcom,glink-smem-native-xprt";
-		reg = <0x86000000 0x200000>,
-			<0x1799000c 0x4>;
-		reg-names = "smem", "irq-reg-base";
-		qcom,irq-mask = <0x100>;
-		interrupts = <GIC_SPI 156 IRQ_TYPE_EDGE_RISING>;
-		label = "lpass";
-		cpu-affinity = <1 2>;
-		qcom,qos-config = <&glink_qos_adsp>;
-		qcom,ramp-time = <0xaf>;
+	sp_scsr_block: syscon@1880000 {
+		compatible = "syscon";
+		reg = <0x1880000 0x10000>;
 	};
 
-	glink_qos_adsp: qcom,glink-qos-config-adsp {
-		compatible = "qcom,glink-qos-config";
-		qcom,flow-info = <0x3c 0x0>,
-				<0x3c 0x0>,
-				<0x3c 0x0>,
-				<0x3c 0x0>;
-		qcom,mtu-size = <0x800>;
-		qcom,tput-stats-cycle = <0xa>;
+	intsp: qcom,qsee_irq {
+		#address-cells = <0>;
+		compatible = "qcom,sdm845-qsee-irq";
+
+		syscon = <&sp_scsr_block>;
+		interrupts = <0 348 IRQ_TYPE_LEVEL_HIGH>,
+			     <0 349 IRQ_TYPE_LEVEL_HIGH>;
+
+		interrupt-names = "sp_ipc0",
+				  "sp_ipc1";
+
+		interrupt-controller;
+		#interrupt-cells = <3>;
 	};
 
-	qcom,glink-smem-native-xprt-dsps@86000000 {
-		compatible = "qcom,glink-smem-native-xprt";
-		reg = <0x86000000 0x200000>,
-			<0x1799000c 0x4>;
-		reg-names = "smem", "irq-reg-base";
-		qcom,irq-mask = <0x1000000>;
-		interrupts = <GIC_SPI 170 IRQ_TYPE_EDGE_RISING>;
-		label = "dsps";
+	qcom,glink {
+		compatible = "qcom,glink";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		glink_modem: modem {
+			qcom,remote-pid = <1>;
+			transport = "smem";
+			mboxes = <&apss_shared 12>;
+			mbox-names = "mpss_smem";
+			interrupts = <GIC_SPI 449 IRQ_TYPE_EDGE_RISING>;
+
+			label = "modem";
+			qcom,glink-label = "mpss";
+
+			qcom,modem_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,low-latency;
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,modem_ds {
+				qcom,glink-channels = "DS";
+				qcom,intents = <0x4000 2>;
+			};
+
+			qcom,modem_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_adsp>,
+						    <&glink_cdsp>,
+							<&glink_cdsp>,
+							<&glink_spss>;
+			};
+		};
+
+		glink_adsp: adsp {
+			qcom,remote-pid = <2>;
+			transport = "smem";
+			mboxes = <&apss_shared 8>;
+			mbox-names = "adsp_smem";
+			interrupts = <GIC_SPI 156 IRQ_TYPE_EDGE_RISING>;
+
+			label = "adsp";
+			qcom,glink-label = "lpass";
+
+			qcom,adsp_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,low-latency;
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,apr_tal_rpmsg {
+				qcom,glink-channels = "apr_audio_svc";
+				qcom,intents = <0x200 20>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,adsp_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>,
+						    <&glink_slpi>,
+						    <&glink_cdsp>;
+			};
+		};
+
+		glink_slpi: dsps {
+			qcom,remote-pid = <3>;
+			transport = "smem";
+			mboxes = <&apss_shared 26>;
+			mbox-names = "dsps_smem";
+			interrupts = <GIC_SPI 170 IRQ_TYPE_EDGE_RISING>;
+
+			label = "slpi";
+			qcom,glink-label = "dsps";
+
+			qcom,slpi_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,low-latency;
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,slpi_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>,
+						    <&glink_adsp>,
+						    <&glink_cdsp>;
+			};
+		};
+
+		glink_cdsp: cdsp {
+			qcom,remote-pid = <5>;
+			transport = "smem";
+			mboxes = <&apss_shared 28>;
+			mbox-names = "cdsp_smem";
+			interrupts = <GIC_SPI 574 IRQ_TYPE_EDGE_RISING>;
+
+			label = "cdsp";
+			qcom,glink-label = "cdsp";
+
+			qcom,cdsp_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,msm_cdsprm_rpmsg {
+				compatible = "qcom,msm-cdsprm-rpmsg";
+				qcom,glink-channels = "cdsprmglink-apps-dsp";
+				qcom,intents = <0x20 12>;
+
+				msm_cdsp_rm: qcom,msm_cdsp_rm {
+					compatible = "qcom,msm-cdsp-rm";
+					qcom,qos-latency-us = <100>;
+					qcom,qos-maxhold-ms = <20>;
+				};
+			};
+
+			qcom,cdsp_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>,
+						    <&glink_adsp>,
+							<&glink_slpi>;
+			};
+		};
+
+		glink_spss: spss {
+			qcom,remote-pid = <8>;
+			transport = "spss";
+			mboxes = <&sp_scsr 0>;
+			mbox-names = "spss_spss";
+			interrupt-parent = <&intsp>;
+			interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>;
+
+			reg = <0x1885008 0x8>,
+			      <0x1885010 0x4>;
+			reg-names = "qcom,spss-addr",
+				    "qcom,spss-size";
+
+			label = "spss";
+			qcom,glink-label = "spss";
+
+			qcom,spss_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>;
+			};
+		};
+
+		glink_spi_xprt_wdsp: wdsp {
+			transport = "spi";
+			tx-descriptors = <0x12000 0x12004>;
+			rx-descriptors = <0x1200c 0x12010>;
+
+			label = "wdsp";
+			qcom,glink-label = "wdsp";
+
+			qcom,wdsp_ctrl {
+				qcom,glink-channels = "g_glink_ctrl";
+				qcom,intents = <0x400 1>;
+			};
+
+			qcom,wdsp_ild {
+				qcom,glink-channels =
+					"g_glink_persistent_data_ild";
+			};
+
+			qcom,wdsp_nild {
+				qcom,glink-channels =
+					"g_glink_persistent_data_nild";
+			};
+
+			qcom,wdsp_data {
+				qcom,glink-channels = "g_glink_audio_data";
+				qcom,intents = <0x1000 2>;
+			};
+
+			qcom,diag_data {
+				qcom,glink-channels = "DIAG_DATA";
+				qcom,intents = <0x4000 2>;
+			};
+
+			qcom,diag_ctrl {
+				qcom,glink-channels = "DIAG_CTRL";
+				qcom,intents = <0x4000 1>;
+			};
+
+			qcom,diag_cmd {
+				qcom,glink-channels = "DIAG_CMD";
+				qcom,intents = <0x4000 1 >;
+			};
+		};
 	};
 
-	glink_spi_xprt_wdsp: qcom,glink-spi-xprt-wdsp {
-		compatible = "qcom,glink-spi-xprt";
-		label = "wdsp";
-		qcom,remote-fifo-config = <&glink_fifo_wdsp>;
-		qcom,qos-config = <&glink_qos_wdsp>;
-		qcom,ramp-time = <0x10>,
-				     <0x20>,
-				     <0x30>,
-				     <0x40>;
-	};
-
-	glink_fifo_wdsp: qcom,glink-fifo-config-wdsp {
-		compatible = "qcom,glink-fifo-config";
-		qcom,out-read-idx-reg = <0x12000>;
-		qcom,out-write-idx-reg = <0x12004>;
-		qcom,in-read-idx-reg = <0x1200C>;
-		qcom,in-write-idx-reg = <0x12010>;
-	};
-
-	glink_qos_wdsp: qcom,glink-qos-config-wdsp {
-		compatible = "qcom,glink-qos-config";
-		qcom,flow-info = <0x80 0x0>,
-				 <0x70 0x1>,
-				 <0x60 0x2>,
-				 <0x50 0x3>;
-		qcom,mtu-size = <0x800>;
-		qcom,tput-stats-cycle = <0xa>;
-	};
-
-	qcom,glink-smem-native-xprt-cdsp@86000000 {
-		compatible = "qcom,glink-smem-native-xprt";
-		reg = <0x86000000 0x200000>,
-			<0x1799000c 0x4>;
-		reg-names = "smem", "irq-reg-base";
-		qcom,irq-mask = <0x10>;
-		interrupts = <GIC_SPI 574 IRQ_TYPE_EDGE_RISING>;
-		label = "cdsp";
-	};
-
-	glink_mpss: qcom,glink-ssr-modem {
-		compatible = "qcom,glink_ssr";
-		label = "modem";
-		qcom,edge = "mpss";
-		qcom,notify-edges = <&glink_lpass>, <&glink_dsps>,
-				    <&glink_cdsp>, <&glink_spss>;
-		qcom,xprt = "smem";
-	};
-
-	glink_lpass: qcom,glink-ssr-adsp {
-		compatible = "qcom,glink_ssr";
-		label = "adsp";
-		qcom,edge = "lpass";
-		qcom,notify-edges = <&glink_mpss>, <&glink_dsps>, <&glink_cdsp>;
-		qcom,xprt = "smem";
-	};
-
-	glink_dsps: qcom,glink-ssr-dsps {
-		compatible = "qcom,glink_ssr";
-		label = "slpi";
-		qcom,edge = "dsps";
-		qcom,notify-edges = <&glink_mpss>, <&glink_lpass>,
-				    <&glink_cdsp>;
-		qcom,xprt = "smem";
-	};
-
-	glink_cdsp: qcom,glink-ssr-cdsp {
-		compatible = "qcom,glink_ssr";
-		label = "cdsp";
-		qcom,edge = "cdsp";
-		qcom,notify-edges = <&glink_mpss>, <&glink_lpass>,
-				    <&glink_dsps>;
-		qcom,xprt = "smem";
-	};
-
-	glink_spss: qcom,glink-ssr-spss {
-		compatible = "qcom,glink_ssr";
-		label = "spss";
-		qcom,edge = "spss";
-		qcom,notify-edges = <&glink_mpss>;
-		qcom,xprt = "mailbox";
-	};
-
-	qcom,ipc_router {
-		compatible = "qcom,ipc_router";
-		qcom,node-id = <1>;
-	};
-
-	qcom,ipc_router_modem_xprt {
-		compatible = "qcom,ipc_router_glink_xprt";
-		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "mpss";
-		qcom,glink-xprt = "smem";
-		qcom,xprt-linkid = <1>;
-		qcom,xprt-version = <1>;
-		qcom,fragmented-data;
-	};
-
-	qcom,ipc_router_q6_xprt {
-		compatible = "qcom,ipc_router_glink_xprt";
-		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "lpass";
-		qcom,glink-xprt = "smem";
-		qcom,xprt-linkid = <1>;
-		qcom,xprt-version = <1>;
-		qcom,fragmented-data;
-	};
-
-	qcom,ipc_router_dsps_xprt {
-		compatible = "qcom,ipc_router_glink_xprt";
-		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "dsps";
-		qcom,glink-xprt = "smem";
-		qcom,xprt-linkid = <1>;
-		qcom,xprt-version = <1>;
-		qcom,fragmented-data;
-		qcom,dynamic-wakeup-source;
-		qcom,low-latency-xprt;
-	};
-
-	qcom,ipc_router_cdsp_xprt {
-		compatible = "qcom,ipc_router_glink_xprt";
-		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "cdsp";
-		qcom,glink-xprt = "smem";
-		qcom,xprt-linkid = <1>;
-		qcom,xprt-version = <1>;
-		qcom,fragmented-data;
-	};
-
-	qcom,qsee_ipc_irq_bridge {
+	qcom,qsee_irq_bridge {
 		compatible = "qcom,qsee-ipc-irq-bridge";
 
 		qcom,qsee-ipc-irq-spss {
-			qcom,rx-irq-clr = <0x1888008 0x4>;
-			qcom,rx-irq-clr-mask = <0x1>;
 			qcom,dev-name = "qsee_ipc_irq_spss";
-			interrupts = <0 349 4>;
 			label = "spss";
+			interrupt-parent = <&intsp>;
+			interrupts = <GIC_PPI 0 IRQ_TYPE_LEVEL_HIGH>;
 		};
 	};
 
