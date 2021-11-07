@@ -550,7 +550,7 @@ static int vs_block_client_disk_add(struct block_client *client)
 	client->blkdev = blkdev;
 	vs_service_state_unlock(client->service);
 
-	device_add_disk(&client->service->dev, blkdev->disk);
+	device_add_disk(&client->service->dev, blkdev->disk, NULL);
 	dev_dbg(&client->service->dev, "added block disk '%s'\n",
 			blkdev->disk->disk_name);
 
