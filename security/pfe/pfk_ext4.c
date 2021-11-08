@@ -199,7 +199,7 @@ int pfk_ext4_parse_inode(const struct bio *bio,
 
 bool pfk_ext4_allow_merge_bio(const struct bio *bio1,
 	const struct bio *bio2, const struct inode *inode1,
-	const struct inode *inode2)
+	const struct inode *inode2, unsigned int sectors)
 {
 	/* if there is no ext4 pfk, don't disallow merging blocks */
 	if (!pfk_ext4_is_ready())

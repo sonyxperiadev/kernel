@@ -78,7 +78,7 @@ typedef int (*pfk_parse_inode_type)(const struct bio *bio,
 
 typedef bool (*pfk_allow_merge_bio_type)(const struct bio *bio1,
 	const struct bio *bio2, const struct inode *inode1,
-	const struct inode *inode2);
+	const struct inode *inode2, unsigned int sectors);
 
 static const pfk_parse_inode_type pfk_parse_inode_ftable[] = {
 	/* EXT4_CRYPT_PFE */ &pfk_ext4_parse_inode,
@@ -478,7 +478,8 @@ int pfk_load_key_end(const struct bio *bio, bool *is_pfe)
  * Return: true if the BIOs allowed to be merged, false
  * otherwise.
  */
-bool pfk_allow_merge_bio(const struct bio *bio1, const struct bio *bio2)
+bool pfk_allow_merge_bio(const struct bio *bio1, const struct bio *bio2,
+				unsigned int sectors)
 {
 	const struct blk_encryption_key *key1 = NULL;
 	const struct blk_encryption_key *key2 = NULL;
@@ -521,7 +522,7 @@ bool pfk_allow_merge_bio(const struct bio *bio1, const struct bio *bio2)
 	if (which_pfe1 != INVALID_PFE) {
 		/* Both bios are for the same type of encrypted file. */
 		return (*(pfk_allow_merge_bio_ftable[which_pfe1]))(bio1, bio2,
-				inode1, inode2);
+			inode1, inode2, sectors);
 	}
 
 	/*
