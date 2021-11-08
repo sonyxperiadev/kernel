@@ -154,6 +154,6 @@ bool fscrypt_mergeable_bio(struct bio *bio, u64 dun, bool bio_encrypted,
 		return true;
 
 	/* ICE allows only consecutive iv_key stream. */
-	return bio_end_dun(bio) == dun;
+	return bio_end_dun(bio, bio_sectors(bio)) == dun;
 }
 EXPORT_SYMBOL(fscrypt_mergeable_bio);

@@ -28,7 +28,7 @@ int pfk_ext4_parse_inode(const struct bio *bio,
 
 bool pfk_ext4_allow_merge_bio(const struct bio *bio1,
 	const struct bio *bio2, const struct inode *inode1,
-	const struct inode *inode2);
+	const struct inode *inode2, unsigned int sectors);
 
 int __init pfk_ext4_init(void);
 

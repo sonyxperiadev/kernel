@@ -28,7 +28,7 @@ int pfk_f2fs_parse_inode(const struct bio *bio,
 
 bool pfk_f2fs_allow_merge_bio(const struct bio *bio1,
 	const struct bio *bio2, const struct inode *inode1,
-	const struct inode *inode2);
+	const struct inode *inode2, unsigned int sectorst);
 
 int __init pfk_f2fs_init(void);
 

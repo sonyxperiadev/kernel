@@ -39,7 +39,8 @@ int pfk_load_key_end(const struct bio *bio, bool *is_pfe);
 int pfk_remove_key(const unsigned char *key, size_t key_size);
 int pfk_fbe_clear_key(const unsigned char *key, size_t key_size,
 		const unsigned char *salt, size_t salt_size);
-bool pfk_allow_merge_bio(const struct bio *bio1, const struct bio *bio2);
+bool pfk_allow_merge_bio(const struct bio *bio1, const struct bio *bio2,
+						unsigned int sectors);
 void pfk_clear_on_reset(void);
 
 #else
@@ -60,7 +61,7 @@ static inline int pfk_remove_key(const unsigned char *key, size_t key_size)
 }
 
 static inline bool pfk_allow_merge_bio(const struct bio *bio1,
-		const struct bio *bio2)
+		const struct bio *bio2, unsigned int sectors)
 {
 	return true;
 }
