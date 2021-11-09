@@ -524,7 +524,13 @@
 
 		removed_region: removed_region@85fc0000 {
 			no-map;
-			reg = <0 0x85fc0000 0 0x40000>;
+			reg = <0 0x85fc0000 0 0x20000>;
+		};
+
+		cmd_db: reserved-memory@85fe0000 {
+			compatible = "qcom,cmd-db";
+			reg = <0 0x85fe0000 0 0x20000>;
+			no-map;
 		};
 
 		smem_mem: smem_region@86000000 {
@@ -2991,11 +2997,6 @@
 		reg = <0x17900000 0xd080>;
 		reg-names = "gladiator_base";
 		interrupts = <0 17 0>;
-	};
-
-	cmd_db: qcom,cmd-db@861e0000 {
-		compatible = "qcom,cmd-db";
-		reg = <0xc3f000c 8>;
 	};
 
 	dcc: dcc_v2@10a2000 {
