@@ -15,7 +15,7 @@
 		reg = <0x0ac65000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x65000>;
-		interrupts = <0 477 0>;
+		interrupts = <GIC_SPI 477 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
@@ -51,7 +51,7 @@
 		reg = <0xac66000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x66000>;
-		interrupts = <0 478 0>;
+		interrupts = <GIC_SPI 478 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
@@ -88,7 +88,7 @@
 		reg = <0xac67000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x67000>;
-		interrupts = <0 479 0>;
+		interrupts = <GIC_SPI 479 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
@@ -127,7 +127,7 @@
 		reg-names = "cci";
 		reg-cam-base = <0x4a000>;
 		interrupt-names = "cci";
-		interrupts = <0 460 0>;
+		interrupts = <GIC_SPI 460 IRQ_TYPE_LEVEL_HIGH>;
 		status = "ok";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
@@ -374,7 +374,7 @@
 			<0xac42000 0x5000>;
 		reg-cam-base = <0x40000 0x42000>;
 		interrupt-names = "cpas_camnoc";
-		interrupts = <0 459 0>;
+		interrupts = <GIC_SPI 459 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,cpas-hw-ver = <0x170100>; /* Titan v170 v1.0.0 */
 		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
@@ -547,7 +547,7 @@
 		reg = <0xac48000 0x1000>;
 		reg-names = "cpas-cdm";
 		reg-cam-base = <0x48000>;
-		interrupts = <0 461 0>;
+		interrupts = <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "cpas-cdm";
 		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
@@ -580,7 +580,7 @@
 		reg = <0xacb3000 0x1000>;
 		reg-cam-base = <0xb3000>;
 		interrupt-names = "csid";
-		interrupts = <0 464 0>;
+		interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife0";
 		camss-supply = <&titan_top_gdsc>;
 		ife0-supply = <&ife_0_gdsc>;
@@ -626,7 +626,7 @@
 		reg = <0xacaf000 0x4000>;
 		reg-cam-base = <0xaf000>;
 		interrupt-names = "ife";
-		interrupts = <0 465 0>;
+		interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife0";
 		camss-supply = <&titan_top_gdsc>;
 		ife0-supply = <&ife_0_gdsc>;
@@ -668,7 +668,7 @@
 		reg = <0xacba000 0x1000>;
 		reg-cam-base = <0xba000>;
 		interrupt-names = "csid";
-		interrupts = <0 466 0>;
+		interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife1";
 		camss-supply = <&titan_top_gdsc>;
 		ife1-supply = <&ife_1_gdsc>;
@@ -714,7 +714,7 @@
 		reg = <0xacb6000 0x4000>;
 		reg-cam-base = <0xb6000>;
 		interrupt-names = "ife";
-		interrupts = <0 467 0>;
+		interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife1";
 		camss-supply = <&titan_top_gdsc>;
 		ife1-supply = <&ife_1_gdsc>;
@@ -756,7 +756,7 @@
 		reg = <0xacc8000 0x1000>;
 		reg-cam-base = <0xc8000>;
 		interrupt-names = "csid-lite";
-		interrupts = <0 468 0>;
+		interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
 		clock-names = "camera_ahb",
@@ -799,7 +799,7 @@
 		reg = <0xacc4000 0x4000>;
 		reg-cam-base = <0xc4000>;
 		interrupt-names = "ife-lite";
-		interrupts = <0 469 0>;
+		interrupts = <GIC_SPI 469 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
 		clock-names = "camera_ahb",
@@ -848,7 +848,7 @@
 			<0xac18000 0x3000>;
 		reg-names = "a5_qgic", "a5_sierra", "a5_csr";
 		reg-cam-base = <0x00000 0x10000 0x18000>;
-		interrupts = <0 463 0>;
+		interrupts = <GIC_SPI 463 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "a5";
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&titan_top_gdsc>;
@@ -987,7 +987,7 @@
 		reg = <0xac4e000 0x4000>;
 		reg-cam-base = <0x4e000>;
 		interrupt-names = "jpeg";
-		interrupts = <0 474 0>;
+		interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&titan_top_gdsc>;
 		clock-names = "camera_ahb",
@@ -1018,7 +1018,7 @@
 		reg = <0xac52000 0x4000>;
 		reg-cam-base = <0x52000>;
 		interrupt-names = "jpegdma";
-		interrupts = <0 475 0>;
+		interrupts = <GIC_SPI 475 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&titan_top_gdsc>;
 		clock-names = "camera_ahb",
@@ -1057,7 +1057,7 @@
 			<0xac5b000 0x400>;
 		reg-cam-base = <0x5a000 0x5b000>;
 		interrupt-names = "fd";
-		interrupts = <0 462 0>;
+		interrupts = <GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&titan_top_gdsc>;
 		clock-names = "gcc_ahb_clk",

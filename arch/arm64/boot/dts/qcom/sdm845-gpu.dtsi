@@ -45,7 +45,7 @@
 			<0x509e000 0x1000>;
 		reg-names = "kgsl_3d0_reg_memory", "kgsl_3d0_cx_dbgc_memory",
 			"cx_misc";
-		interrupts = <0 300 0>;
+		interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "kgsl_3d0_irq";
 		qcom,id = <0>;
 
@@ -323,7 +323,8 @@
 		reg = <0x506a000 0x30000>, <0xb200000 0x300000>;
 		reg-names = "kgsl_gmu_reg", "kgsl_gmu_pdc_reg";
 
-		interrupts = <0 304 0>, <0 305 0>;
+		interrupts = <GIC_SPI 304 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "kgsl_hfi_irq", "kgsl_gmu_irq";
 
 		qcom,msm-bus,name = "cnoc";

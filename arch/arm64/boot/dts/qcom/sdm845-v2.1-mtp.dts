@@ -48,12 +48,12 @@
 	/delete-property/cd-gpios;
 	#address-cells = <0>;
 	interrupt-parent = <&sdhc_2>;
-	interrupts = <0 1 2>;
+	interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_FALLING>;
 	#interrupt-cells = <1>;
 	interrupt-map-mask = <0xffffffff>;
-	interrupt-map = <0 &intc 0 204 0
-		1 &intc 0 222 0
-		2 &tlmm 11 0>;
+	interrupt-map = <0 &intc GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH
+		1 &intc GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH
+		2 &tlmm 11 IRQ_TYPE_LEVEL_HIGH>;
 	interrupt-names = "hc_irq", "pwr_irq", "sdiowakeup_irq";
 
 	vdd-supply = <&pm8998_l23>;

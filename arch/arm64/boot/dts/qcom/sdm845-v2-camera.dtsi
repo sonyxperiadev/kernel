@@ -10,7 +10,7 @@
 		reg = <0x0ac65000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x65000>;
-		interrupts = <0 477 0>;
+		interrupts = <GIC_SPI 477 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		regulator-names = "gdscr", "refgen";
 		gdscr-supply = <&titan_top_gdsc>;
@@ -45,7 +45,7 @@
 		reg = <0xac66000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x66000>;
-		interrupts = <0 478 0>;
+		interrupts = <GIC_SPI 478 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		regulator-names = "gdscr", "refgen";
 		gdscr-supply = <&titan_top_gdsc>;
@@ -81,7 +81,7 @@
 		reg = <0xac67000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x67000>;
-		interrupts = <0 479 0>;
+		interrupts = <GIC_SPI 479 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		regulator-names = "gdscr", "refgen";
 		gdscr-supply = <&titan_top_gdsc>;
@@ -116,7 +116,7 @@
 		reg = <0xac68000 0x1000>;
 		reg-names = "csiphy";
 		reg-cam-base = <0x68000>;
-		interrupts = <0 448 0>;
+		interrupts = <GIC_SPI 448 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		regulator-names = "gdscr", "refgen";
 		gdscr-supply = <&titan_top_gdsc>;
@@ -293,7 +293,7 @@
 			<0xac42000 0x5000>;
 		reg-cam-base = <0x40000 0x42000>;
 		interrupt-names = "cpas_camnoc";
-		interrupts = <0 459 0>;
+		interrupts = <GIC_SPI 459 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,cpas-hw-ver = <0x170110>; /* Titan v170 v1.1.0 */
 		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
@@ -459,7 +459,7 @@
 		reg = <0xac6b000 0xa00>;
 		reg-cam-base = <0x6b000>;
 		interrupt-names = "lrme";
-		interrupts = <0 476 0>;
+		interrupts = <GIC_SPI 476 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
 		clock-names = "camera_ahb",

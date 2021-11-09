@@ -31,44 +31,44 @@
 				36 37>;
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0xffffffff>;
-		interrupt-map = <0 0 0 0 &pdc 0 141 0
-				0 0 0 1 &pdc 0 149 0
-				0 0 0 2 &pdc 0 150 0
-				0 0 0 3 &pdc 0 151 0
-				0 0 0 4 &pdc 0 152 0
-				0 0 0 5 &pdc 0 140 0
-				0 0 0 6 &pdc 0 672 0
-				0 0 0 7 &pdc 0 673 0
-				0 0 0 8 &pdc 0 674 0
-				0 0 0 9 &pdc 0 675 0
-				0 0 0 10 &pdc 0 676 0
-				0 0 0 11 &pdc 0 677 0
-				0 0 0 12 &pdc 0 678 0
-				0 0 0 13 &pdc 0 679 0
-				0 0 0 14 &pdc 0 680 0
-				0 0 0 15 &pdc 0 681 0
-				0 0 0 16 &pdc 0 682 0
-				0 0 0 17 &pdc 0 683 0
-				0 0 0 18 &pdc 0 684 0
-				0 0 0 19 &pdc 0 685 0
-				0 0 0 20 &pdc 0 686 0
-				0 0 0 21 &pdc 0 687 0
-				0 0 0 22 &pdc 0 688 0
-				0 0 0 23 &pdc 0 689 0
-				0 0 0 24 &pdc 0 690 0
-				0 0 0 25 &pdc 0 691 0
-				0 0 0 26 &pdc 0 692 0
-				0 0 0 27 &pdc 0 693 0
-				0 0 0 28 &pdc 0 694 0
-				0 0 0 29 &pdc 0 695 0
-				0 0 0 30 &pdc 0 696 0
-				0 0 0 31 &pdc 0 697 0
-				0 0 0 32 &pdc 0 698 0
-				0 0 0 33 &pdc 0 699 0
-				0 0 0 34 &pdc 0 700 0
-				0 0 0 35 &pdc 0 701 0
-				0 0 0 36 &pdc 0 702 0
-				0 0 0 37 &pdc 0 703 0>;
+		interrupt-map = <0 0 0 0 &pdc GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 1 &pdc GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 2 &pdc GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 3 &pdc GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 4 &pdc GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 5 &pdc GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 6 &pdc GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 7 &pdc GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 8 &pdc GIC_SPI 674 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 9 &pdc GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 10 &pdc GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 11 &pdc GIC_SPI 677 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 12 &pdc GIC_SPI 678 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 13 &pdc GIC_SPI 679 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 14 &pdc GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 15 &pdc GIC_SPI 681 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 16 &pdc GIC_SPI 682 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 17 &pdc GIC_SPI 683 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 18 &pdc GIC_SPI 684 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 19 &pdc GIC_SPI 685 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 20 &pdc GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 21 &pdc GIC_SPI 687 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 22 &pdc GIC_SPI 688 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 23 &pdc GIC_SPI 689 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 24 &pdc GIC_SPI 690 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 25 &pdc GIC_SPI 691 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 26 &pdc GIC_SPI 692 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 27 &pdc GIC_SPI 693 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 28 &pdc GIC_SPI 694 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 29 &pdc GIC_SPI 695 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 30 &pdc GIC_SPI 696 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 31 &pdc GIC_SPI 697 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 32 &pdc GIC_SPI 698 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 33 &pdc GIC_SPI 699 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 34 &pdc GIC_SPI 700 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 35 &pdc GIC_SPI 701 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 36 &pdc GIC_SPI 702 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 37 &pdc GIC_SPI 703 IRQ_TYPE_LEVEL_HIGH>;
 
 		interrupt-names = "int_msi", "int_a", "int_b", "int_c",
 				"int_d", "int_global_int",
@@ -286,44 +286,44 @@
 				36 37>;
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0xffffffff>;
-		interrupt-map = <0 0 0 0 &intc 0 307 0
-				0 0 0 1 &intc 0 434 0
-				0 0 0 2 &intc 0 435 0
-				0 0 0 3 &intc 0 438 0
-				0 0 0 4 &intc 0 439 0
-				0 0 0 5 &intc 0 306 0
-				0 0 0 6 &intc 0 704 0
-				0 0 0 7 &intc 0 705 0
-				0 0 0 8 &intc 0 706 0
-				0 0 0 9 &intc 0 707 0
-				0 0 0 10 &intc 0 708 0
-				0 0 0 11 &intc 0 709 0
-				0 0 0 12 &intc 0 710 0
-				0 0 0 13 &intc 0 711 0
-				0 0 0 14 &intc 0 712 0
-				0 0 0 15 &intc 0 713 0
-				0 0 0 16 &intc 0 714 0
-				0 0 0 17 &intc 0 715 0
-				0 0 0 18 &intc 0 716 0
-				0 0 0 19 &intc 0 717 0
-				0 0 0 20 &intc 0 718 0
-				0 0 0 21 &intc 0 719 0
-				0 0 0 22 &intc 0 720 0
-				0 0 0 23 &intc 0 721 0
-				0 0 0 24 &intc 0 722 0
-				0 0 0 25 &intc 0 723 0
-				0 0 0 26 &intc 0 724 0
-				0 0 0 27 &intc 0 725 0
-				0 0 0 28 &intc 0 726 0
-				0 0 0 29 &intc 0 727 0
-				0 0 0 30 &intc 0 728 0
-				0 0 0 31 &intc 0 729 0
-				0 0 0 32 &intc 0 730 0
-				0 0 0 33 &intc 0 731 0
-				0 0 0 34 &intc 0 732 0
-				0 0 0 35 &intc 0 733 0
-				0 0 0 36 &intc 0 734 0
-				0 0 0 37 &intc 0 735 0>;
+		interrupt-map = <0 0 0 0 &intc GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 1 &intc GIC_SPI 434 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 2 &intc GIC_SPI 435 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 3 &intc GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 4 &intc GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 5 &intc GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 6 &intc GIC_SPI 704 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 7 &intc GIC_SPI 705 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 8 &intc GIC_SPI 706 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 9 &intc GIC_SPI 707 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 10 &intc GIC_SPI 708 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 11 &intc GIC_SPI 709 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 12 &intc GIC_SPI 710 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 13 &intc GIC_SPI 711 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 14 &intc GIC_SPI 712 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 15 &intc GIC_SPI 713 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 16 &intc GIC_SPI 714 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 17 &intc GIC_SPI 715 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 18 &intc GIC_SPI 716 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 19 &intc GIC_SPI 717 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 20 &intc GIC_SPI 718 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 21 &intc GIC_SPI 719 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 22 &intc GIC_SPI 720 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 23 &intc GIC_SPI 721 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 24 &intc GIC_SPI 722 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 25 &intc GIC_SPI 723 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 26 &intc GIC_SPI 724 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 27 &intc GIC_SPI 725 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 28 &intc GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 29 &intc GIC_SPI 727 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 30 &intc GIC_SPI 728 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 31 &intc GIC_SPI 729 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 32 &intc GIC_SPI 730 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 33 &intc GIC_SPI 731 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 34 &intc GIC_SPI 732 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 35 &intc GIC_SPI 733 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 36 &intc GIC_SPI 734 IRQ_TYPE_LEVEL_HIGH
+				0 0 0 37 &intc GIC_SPI 735 IRQ_TYPE_LEVEL_HIGH>;
 
 		interrupt-names = "int_msi", "int_a", "int_b", "int_c",
 				"int_d", "int_global_int",

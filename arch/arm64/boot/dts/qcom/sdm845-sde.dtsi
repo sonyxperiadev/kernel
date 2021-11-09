@@ -31,7 +31,7 @@
 
 		/* interrupt config */
 		interrupt-parent = <&pdc>;
-		interrupts = <0 83 0>;
+		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
 		iommus = <&apps_smmu 0x880 0x8>,
@@ -359,7 +359,7 @@
 			"iface_clk", "rot_clk", "axi_clk";
 
 		interrupt-parent = <&mdss_mdp>;
-		interrupts = <2 0>;
+		interrupts = <2 IRQ_TYPE_LEVEL_HIGH>;
 
 		power-domains = <&mdss_mdp>;
 
@@ -415,7 +415,7 @@
 			<0xaf08000 0x4>;
 		reg-names = "dsi_ctrl", "disp_cc_base";
 		interrupt-parent = <&mdss_mdp>;
-		interrupts = <4 0>;
+		interrupts = <4 IRQ_TYPE_LEVEL_HIGH>;
 		vdda-1p2-supply = <&pm8998_l26>;
 		clocks = <&clock_dispcc DISP_CC_MDSS_BYTE0_CLK>,
 		<&clock_dispcc DISP_CC_MDSS_BYTE0_CLK_SRC>,
@@ -450,7 +450,7 @@
 			<0xaf08000 0x4>;
 		reg-names = "dsi_ctrl", "disp_cc_base";
 		interrupt-parent = <&mdss_mdp>;
-		interrupts = <5 0>;
+		interrupts = <5 IRQ_TYPE_LEVEL_HIGH>;
 		vdda-1p2-supply = <&pm8998_l26>;
 		clocks = <&clock_dispcc DISP_CC_MDSS_BYTE1_CLK>,
 		<&clock_dispcc DISP_CC_MDSS_BYTE1_CLK_SRC>,
@@ -569,7 +569,7 @@
 			"usb3_dp_com", "hdcp_physical";
 
 		interrupt-parent = <&mdss_mdp>;
-		interrupts = <12 0>;
+		interrupts = <12 IRQ_TYPE_LEVEL_HIGH>;
 
 		clocks =  <&clock_dispcc DISP_CC_MDSS_DP_AUX_CLK>,
 			 <&clock_rpmh RPMH_CXO_CLK>,
