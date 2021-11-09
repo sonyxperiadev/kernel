@@ -1078,7 +1078,7 @@
 		operating-points-v2 = <&suspendable_ddr_bw_opp_table>;
 	};
 
-	npu_llcc_ddr_bwmon: qcom,npu-llcc-ddr-bwmon@0x9093000 {
+	npu_llcc_ddr_bwmon: qcom,npu-llcc-ddr-bwmon@9093000 {
 		compatible = "qcom,bimc-bwmon5";
 		reg = <0x9093000 0x1000>;
 		reg-names = "base";

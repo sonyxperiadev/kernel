@@ -5,7 +5,7 @@
 
 &soc {
 	/* GDSCs in Global CC */
-	pcie_0_gdsc: qcom,gdsc@0x16b004 {
+	pcie_0_gdsc: qcom,gdsc@16b004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "pcie_0_gdsc";
 		reg = <0x16b004 0x4>;
@@ -13,7 +13,7 @@
 		status = "disabled";
 	};
 
-	pcie_1_gdsc: qcom,gdsc@0x18d004 {
+	pcie_1_gdsc: qcom,gdsc@18d004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "pcie_1_gdsc";
 		reg = <0x18d004 0x4>;
@@ -21,7 +21,7 @@
 		status = "disabled";
 	};
 
-	ufs_card_gdsc: qcom,gdsc@0x175004 {
+	ufs_card_gdsc: qcom,gdsc@175004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ufs_card_gdsc";
 		reg = <0x175004 0x4>;
@@ -29,7 +29,7 @@
 		status = "disabled";
 	};
 
-	ufs_phy_gdsc: qcom,gdsc@0x177004 {
+	ufs_phy_gdsc: qcom,gdsc@177004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ufs_phy_gdsc";
 		reg = <0x177004 0x4>;
@@ -37,7 +37,7 @@
 		status = "disabled";
 	};
 
-	usb30_prim_gdsc: qcom,gdsc@0x10f004 {
+	usb30_prim_gdsc: qcom,gdsc@10f004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "usb30_prim_gdsc";
 		reg = <0x10f004 0x4>;
@@ -45,7 +45,7 @@
 		status = "disabled";
 	};
 
-	usb30_sec_gdsc: qcom,gdsc@0x110004 {
+	usb30_sec_gdsc: qcom,gdsc@110004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "usb30_sec_gdsc";
 		reg = <0x110004 0x4>;
@@ -53,7 +53,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_aggre_noc_mmu_audio_tbu_gdsc: qcom,gdsc@0x17d030 {
+	hlos1_vote_aggre_noc_mmu_audio_tbu_gdsc: qcom,gdsc@17d030 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_aggre_noc_mmu_audio_tbu_gdsc";
 		reg = <0x17d030 0x4>;
@@ -62,7 +62,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_aggre_noc_mmu_pcie_tbu_gdsc: qcom,gdsc@0x17d03c {
+	hlos1_vote_aggre_noc_mmu_pcie_tbu_gdsc: qcom,gdsc@17d03c {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_aggre_noc_mmu_pcie_tbu_gdsc";
 		reg = <0x17d03c 0x4>;
@@ -71,7 +71,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_aggre_noc_mmu_tbu1_gdsc: qcom,gdsc@0x17d034 {
+	hlos1_vote_aggre_noc_mmu_tbu1_gdsc: qcom,gdsc@17d034 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_aggre_noc_mmu_tbu1_gdsc";
 		reg = <0x17d034 0x4>;
@@ -80,7 +80,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_aggre_noc_mmu_tbu2_gdsc: qcom,gdsc@0x17d038 {
+	hlos1_vote_aggre_noc_mmu_tbu2_gdsc: qcom,gdsc@17d038 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_aggre_noc_mmu_tbu2_gdsc";
 		reg = <0x17d038 0x4>;
@@ -89,7 +89,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_mmnoc_mmu_tbu_hf0_gdsc: qcom,gdsc@0x17d040 {
+	hlos1_vote_mmnoc_mmu_tbu_hf0_gdsc: qcom,gdsc@17d040 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_mmnoc_mmu_tbu_hf0_gdsc";
 		reg = <0x17d040 0x4>;
@@ -98,7 +98,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_mmnoc_mmu_tbu_hf1_gdsc: qcom,gdsc@0x17d048 {
+	hlos1_vote_mmnoc_mmu_tbu_hf1_gdsc: qcom,gdsc@17d048 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_mmnoc_mmu_tbu_hf1_gdsc";
 		reg = <0x17d048 0x4>;
@@ -107,7 +107,7 @@
 		status = "disabled";
 	};
 
-	hlos1_vote_mmnoc_mmu_tbu_sf_gdsc: qcom,gdsc@0x17d044 {
+	hlos1_vote_mmnoc_mmu_tbu_sf_gdsc: qcom,gdsc@17d044 {
 		compatible = "qcom,gdsc";
 		regulator-name = "hlos1_vote_mmnoc_mmu_tbu_sf_gdsc";
 		reg = <0x17d044 0x4>;
@@ -117,7 +117,7 @@
 	};
 
 	/* GDSCs in Camera CC */
-	bps_gdsc: qcom,gdsc@0xad06004 {
+	bps_gdsc: qcom,gdsc@ad06004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "bps_gdsc";
 		reg = <0xad06004 0x4>;
@@ -125,7 +125,7 @@
 		status = "disabled";
 	};
 
-	ife_0_gdsc: qcom,gdsc@0xad09004 {
+	ife_0_gdsc: qcom,gdsc@ad09004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ife_0_gdsc";
 		reg = <0xad09004 0x4>;
@@ -133,7 +133,7 @@
 		status = "disabled";
 	};
 
-	ife_1_gdsc: qcom,gdsc@0xad0a004 {
+	ife_1_gdsc: qcom,gdsc@ad0a004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ife_1_gdsc";
 		reg = <0xad0a004 0x4>;
@@ -141,7 +141,7 @@
 		status = "disabled";
 	};
 
-	ipe_0_gdsc: qcom,gdsc@0xad07004 {
+	ipe_0_gdsc: qcom,gdsc@ad07004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ipe_0_gdsc";
 		reg = <0xad07004 0x4>;
@@ -149,7 +149,7 @@
 		status = "disabled";
 	};
 
-	ipe_1_gdsc: qcom,gdsc@0xad08004 {
+	ipe_1_gdsc: qcom,gdsc@ad08004 {
 		compatible = "qcom,gdsc";
 		regulator-name = "ipe_1_gdsc";
 		reg = <0xad08004 0x4>;
@@ -157,7 +157,7 @@
 		status = "disabled";
 	};
 
-	titan_top_gdsc: qcom,gdsc@0xad0b134 {
+	titan_top_gdsc: qcom,gdsc@ad0b134 {
 		compatible = "qcom,gdsc";
 		regulator-name = "titan_top_gdsc";
 		reg = <0xad0b134 0x4>;
@@ -166,7 +166,7 @@
 	};
 
 	/* GDSCs in Display CC */
-	mdss_core_gdsc: qcom,gdsc@0xaf03000 {
+	mdss_core_gdsc: qcom,gdsc@af03000 {
 		compatible = "qcom,gdsc";
 		regulator-name = "mdss_core_gdsc";
 		reg = <0xaf03000 0x4>;
@@ -178,12 +178,12 @@
 	};
 
 	/* GDSCs in Graphics CC */
-	gpu_cx_hw_ctrl: syscon@0x5091540 {
+	gpu_cx_hw_ctrl: syscon@5091540 {
 		compatible = "syscon";
 		reg = <0x5091540 0x4>;
 	};
 
-	gpu_cx_gdsc: qcom,gdsc@0x509106c {
+	gpu_cx_gdsc: qcom,gdsc@509106c {
 		compatible = "qcom,gdsc";
 		regulator-name = "gpu_cx_gdsc";
 		reg = <0x509106c 0x4>;
@@ -194,7 +194,7 @@
 		status = "disabled";
 	};
 
-	gpu_gx_gdsc: qcom,gdsc@0x509100c {
+	gpu_gx_gdsc: qcom,gdsc@509100c {
 		compatible = "qcom,gdsc";
 		regulator-name = "gpu_gx_gdsc";
 		reg = <0x509100c 0x4>;
@@ -203,7 +203,7 @@
 	};
 
 	/* GDSCs in Video CC */
-	vcodec0_gdsc: qcom,gdsc@0xab00874 {
+	vcodec0_gdsc: qcom,gdsc@ab00874 {
 		compatible = "qcom,gdsc";
 		regulator-name = "vcodec0_gdsc";
 		reg = <0xab00874 0x4>;
@@ -211,7 +211,7 @@
 		status = "disabled";
 	};
 
-	vcodec1_gdsc: qcom,gdsc@0xab008b4 {
+	vcodec1_gdsc: qcom,gdsc@ab008b4 {
 		compatible = "qcom,gdsc";
 		regulator-name = "vcodec1_gdsc";
 		reg = <0xab008b4 0x4>;
@@ -219,7 +219,7 @@
 		status = "disabled";
 	};
 
-	venus_gdsc: qcom,gdsc@0xab00814 {
+	venus_gdsc: qcom,gdsc@ab00814 {
 		compatible = "qcom,gdsc";
 		regulator-name = "venus_gdsc";
 		reg = <0xab00814 0x4>;

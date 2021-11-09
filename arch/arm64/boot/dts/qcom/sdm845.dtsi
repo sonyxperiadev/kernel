@@ -543,79 +543,79 @@
 			reg = <0 0x86200000 0 0x2d00000>;
 		};
 
-		qseecom_mem: qseecom_region@0x8ab00000 {
+		qseecom_mem: qseecom_region@8ab00000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0x8ab00000 0 0x1400000>;
 		};
 
-		pil_camera_mem: camera_region@0x8bf00000 {
+		pil_camera_mem: camera_region@8bf00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8bf00000 0 0x500000>;
 		};
 
-		pil_ipa_fw_mem: ips_fw_region@0x8c400000 {
+		pil_ipa_fw_mem: ips_fw_region@8c400000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8c400000 0 0x10000>;
 		};
 
-		pil_ipa_gsi_mem: ipa_gsi_region@0x8c410000 {
+		pil_ipa_gsi_mem: ipa_gsi_region@8c410000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8c410000 0 0x5000>;
 		};
 
-		pil_gpu_mem: gpu_region@0x8c415000 {
+		pil_gpu_mem: gpu_region@8c415000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8c415000 0 0x2000>;
 		};
 
-		pil_adsp_mem: adsp_region@0x8c500000 {
+		pil_adsp_mem: adsp_region@8c500000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8c500000 0 0x1a00000>;
 		};
 
-		wlan_fw_region: wlan_fw_region@0x8df00000 {
+		wlan_fw_region: wlan_fw_region@8df00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8df00000 0 0x100000>;
 		};
 
-		pil_modem_mem: modem_region@0x8e000000 {
+		pil_modem_mem: modem_region@8e000000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x8e000000 0 0x7800000>;
 		};
 
-		pil_video_mem: video_region@0x95800000 {
+		pil_video_mem: video_region@95800000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x95800000 0 0x500000>;
 		};
 
-		pil_cdsp_mem: cdsp_region@0x95d00000 {
+		pil_cdsp_mem: cdsp_region@95d00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x95d00000 0 0x800000>;
 		};
 
-		pil_mba_mem: mba_region@0x96500000 {
+		pil_mba_mem: mba_region@96500000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x96500000 0 0x200000>;
 		};
 
-		pil_slpi_mem: slpi_region@0x96700000 {
+		pil_slpi_mem: slpi_region@96700000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x96700000 0 0x1400000>;
 		};
 
-		pil_spss_mem: pil_spss_region@0x97b00000 {
+		pil_spss_mem: pil_spss_region@97b00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x97b00000 0 0x100000>;
@@ -823,7 +823,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17C90000{
+	timer@17C90000{
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -831,7 +831,7 @@
 		reg = <0x17C90000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17CA0000 {
+		frame@17CA0000 {
 			frame-number = <0>;
 			interrupts = <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
@@ -1278,7 +1278,7 @@
 		reg = <0x17970018 0x4>;
 	};
 
-	clock_cpucc: qcom,cpucc@0x17d41000 {
+	clock_cpucc: qcom,cpucc@17d41000 {
 		compatible = "qcom,clk-cpu-osm";
 		reg = <0x17d41000 0x1400>,
 			<0x17d43000 0x1400>,
@@ -1850,7 +1850,7 @@
 		qcom,rtb-size = <0x100000>;
 	};
 
-	qcom,mpm2-sleep-counter@0x0c221000 {
+	qcom,mpm2-sleep-counter@0c221000 {
 		compatible = "qcom,mpm2-sleep-counter";
 		reg = <0x0c221000 0x1000>;
 		clock-frequency = <32768>;
@@ -4021,7 +4021,7 @@
 		};
 	};
 
-	gpi_dma0: qcom,gpi-dma@0x800000 {
+	gpi_dma0: qcom,gpi-dma@800000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0x800000 0x60000>;
@@ -4048,7 +4048,7 @@
 		status = "ok";
 	};
 
-	gpi_dma1: qcom,gpi-dma@0xa00000 {
+	gpi_dma1: qcom,gpi-dma@a00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0xa00000 0x60000>;
@@ -4075,7 +4075,7 @@
 		status = "ok";
 	};
 
-	tspp: msm_tspp@0x8880000 {
+	tspp: msm_tspp@8880000 {
 		compatible = "qcom,msm_tspp";
 		reg = <0x088a7000 0x200>, /* MSM_TSIF0_PHYS */
 		      <0x088a8000 0x200>, /* MSM_TSIF1_PHYS */

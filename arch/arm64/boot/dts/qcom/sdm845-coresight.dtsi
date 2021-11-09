@@ -151,7 +151,7 @@
 
 	};
 
-	funnel_swao:funnel@0x6b08000 {
+	funnel_swao:funnel@6b08000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -416,7 +416,7 @@
 
 	};
 
-	hwevent: hwevent@0x014066f0 {
+	hwevent: hwevent@014066f0 {
 		compatible = "qcom,coresight-hwevent";
 		reg = <0x14066f0 0x4>,
 		      <0x14166f0 0x4>,
@@ -432,7 +432,7 @@
 		clock-names = "apb_pclk";
 	};
 
-	funnel_in0: funnel@0x6041000 {
+	funnel_in0: funnel@6041000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -484,7 +484,7 @@
 		};
 	};
 
-	funnel_in2: funnel@0x6043000 {
+	funnel_in2: funnel@6043000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -558,7 +558,7 @@
 		};
 	};
 
-	funnel_gfx: funnel@0x6943000 {
+	funnel_gfx: funnel@6943000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 

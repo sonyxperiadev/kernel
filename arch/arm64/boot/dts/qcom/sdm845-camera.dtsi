@@ -1011,7 +1011,7 @@
 		status = "ok";
 	};
 
-	cam_jpeg_dma: qcom,jpegdma@0xac52000{
+	cam_jpeg_dma: qcom,jpegdma@ac52000{
 		cell-index = <0>;
 		compatible = "qcom,cam_jpeg_dma";
 		reg-names = "jpegdma_hw";

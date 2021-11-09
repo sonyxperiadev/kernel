@@ -24,7 +24,7 @@
 	 * HS UART instances. HS UART usecases can be supported on these
 	 * instances only.
 	 */
-	qupv3_se6_4uart: qcom,qup_uart@0x898000 {
+	qupv3_se6_4uart: qcom,qup_uart@898000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x898000 0x4000>;
 		reg-names = "se_phys";
@@ -44,7 +44,7 @@
 		qcom,wrapper-core = <&qupv3_0>;
 	};
 
-	qupv3_se7_4uart: qcom,qup_uart@0x89c000 {
+	qupv3_se7_4uart: qcom,qup_uart@89c000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x89c000 0x4000>;
 		reg-names = "se_phys";
@@ -417,7 +417,7 @@
 	/* 2-wire UART */
 
 	/* Debug UART Instance for CDP/MTP platform */
-	qupv3_se9_2uart: qcom,qup_uart@0xa84000 {
+	qupv3_se9_2uart: qcom,qup_uart@a84000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0xa84000 0x4000>;
 		reg-names = "se_phys";
@@ -434,7 +434,7 @@
 	};
 
 	/* Debug UART Instance for RUMI platform */
-	qupv3_se10_2uart: qcom,qup_uart@0xa88000 {
+	qupv3_se10_2uart: qcom,qup_uart@a88000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0xa88000 0x4000>;
 		reg-names = "se_phys";

@@ -51,15 +51,28 @@
 		};
 	};
 
-	gpu_gx_domain_addr: syscon@0x5091508 {
+	gpu_gx_domain_addr: syscon@5091508 {
 		compatible = "syscon";
 		reg = <0x5091508 0x4>;
 	};
 
-	gpu_gx_sw_reset: syscon@0x5091008 {
+	gpu_gx_sw_reset: syscon@5091008 {
 		compatible = "syscon";
 		reg = <0x5091008 0x4>;
 	};
+<<<<<<< HEAD
+=======
+
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,sdm845-pdc";
+		reg = <0xb220000 0x400>;
+		qcom,pdc-ranges = <0 512 90>, <94 641 15>, <115 662 7>;
+		#interrupt-cells = <3>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
+>>>>>>> b113be21cfc71 (arm64: dts: qcom: Fix kernel compile warnings)
 };
 
 &pil_modem {

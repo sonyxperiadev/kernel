@@ -45,7 +45,7 @@
 				<0x6b68 0x9a82a382>;
 	};
 
-	apps_smmu: apps-smmu@0x15000000 {
+	apps_smmu: apps-smmu@15000000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x15000000 0x80000>,
 			<0x150c2000 0x20>;
@@ -136,7 +136,7 @@
 			<MSM_BUS_SLAVE_IMEM_CFG>,
 			<0 1000>;
 
-		anoc_1_tbu: anoc_1_tbu@0x150c5000 {
+		anoc_1_tbu: anoc_1_tbu@150c5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150c5000 0x1000>,
 				<0x150c2200 0x8>;
@@ -157,7 +157,7 @@
 				<0 1000>;
 		};
 
-		anoc_2_tbu: anoc_2_tbu@0x150c9000 {
+		anoc_2_tbu: anoc_2_tbu@150c9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150c9000 0x1000>,
 				<0x150c2208 0x8>;
@@ -178,7 +178,7 @@
 				<0 1000>;
 		};
 
-		mnoc_hf_0_tbu: mnoc_hf_0_tbu@0x150cd000 {
+		mnoc_hf_0_tbu: mnoc_hf_0_tbu@150cd000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150cd000 0x1000>,
 				<0x150c2210 0x8>;
@@ -199,7 +199,7 @@
 				<0 1000>;
 		};
 
-		mnoc_hf_1_tbu: mnoc_hf_1_tbu@0x150d1000 {
+		mnoc_hf_1_tbu: mnoc_hf_1_tbu@150d1000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d1000 0x1000>,
 				<0x150c2218 0x8>;
@@ -220,7 +220,7 @@
 				<0 1000>;
 		};
 
-		mnoc_sf_0_tbu: mnoc_sf_0_tbu@0x150d5000 {
+		mnoc_sf_0_tbu: mnoc_sf_0_tbu@150d5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d5000 0x1000>,
 				<0x150c2220 0x8>;
@@ -241,7 +241,7 @@
 				<0 1000>;
 		};
 
-		compute_dsp_tbu: compute_dsp_tbu@0x150d9000 {
+		compute_dsp_tbu: compute_dsp_tbu@150d9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d9000 0x1000>,
 				<0x150c2228 0x8>;
@@ -261,7 +261,7 @@
 				<0 1000>;
 		};
 
-		adsp_tbu: adsp_tbu@0x150dd000 {
+		adsp_tbu: adsp_tbu@150dd000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150dd000 0x1000>,
 				<0x150c2230 0x8>;
@@ -282,7 +282,7 @@
 				<0 1000>;
 		};
 
-		anoc_1_pcie_tbu: anoc_1_pcie_tbu@0x150e1000 {
+		anoc_1_pcie_tbu: anoc_1_pcie_tbu@150e1000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150e1000 0x1000>,
 				<0x150c2238 0x8>;
