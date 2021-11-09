@@ -36,7 +36,7 @@
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
 static int vdd_gx_corner[] = {
-	RPMH_REGULATOR_LEVEL_OFF,		/* VDD_GX_NONE */
+	0,					/* VDD_GX_NONE */
 	RPMH_REGULATOR_LEVEL_MIN_SVS,		/* VDD_GX_MIN */
 	RPMH_REGULATOR_LEVEL_LOW_SVS,		/* VDD_GX_LOWER */
 	RPMH_REGULATOR_LEVEL_SVS,		/* VDD_GX_LOW */

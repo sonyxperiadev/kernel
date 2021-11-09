@@ -133,7 +133,7 @@ enum vdd_gx_levels {
 
 /* Need to use the correct VI/VL mappings */
 static int vdd_corner[] = {
-	RPMH_REGULATOR_LEVEL_OFF,		/* VDD_CX_NONE */
+	0,					/* VDD_CX_NONE */
 	RPMH_REGULATOR_LEVEL_MIN_SVS,		/* VDD_CX_MIN */
 	RPMH_REGULATOR_LEVEL_LOW_SVS,		/* VDD_CX_LOWER */
 	RPMH_REGULATOR_LEVEL_SVS,		/* VDD_CX_LOW */
