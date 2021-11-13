@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm845-tama-akatsuki_common.dtsi"
+
+&soc {
+};
+
+#include "somc-tama-nfc_pn553.dtsi"

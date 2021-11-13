@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ */
+
+qcom,akatsuki_tmm_4380mv {
+	qcom, = <24>;
+	somc,initial-capacity-uah = <3325000>;
+	qcom,max-voltage-uv = <4380000>;
+	qcom,fg-cc-cv-threshold-mv = <4370>;
+	qcom,fastchg-current-ma = <2400>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1312-6095-0";
+	qcom,checksum = <0xD56A>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.58";
+	qcom,fg-profile-data = [
+		 26 20 14 05
+		 B1 0A 6D FC
+		 9D 1C 20 02
+		 E3 0D 28 0A
+		 0F 18 AD 22
+		 2F 3C C4 4B
+		 86 00 00 00
+		 15 00 00 00
+		 00 00 D3 C5
+		 FD 07 AD CA
+		 28 00 08 00
+		 B0 CC B1 D4
+		 F9 05 03 FA
+		 8D F4 90 0A
+		 62 C2 15 33
+		 1B 06 09 20
+		 27 00 14 00
+		 27 20 27 05
+		 B5 0A 1C 06
+		 8E 1C 0F 03
+		 3F 0C C5 0B
+		 7E 18 D4 22
+		 B2 45 A3 52
+		 75 00 00 00
+		 12 00 00 00
+		 00 00 C0 C4
+		 A7 CA A9 CC
+		 22 00 00 00
+		 12 E2 B1 D4
+		 13 FC DF F3
+		 C0 06 AB 03
+		 BB EC AC 12
+		 99 33 CC FF
+		 07 10 00 00
+		 ED 0C 14 46
+		 22 00 40 00
+		 A1 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

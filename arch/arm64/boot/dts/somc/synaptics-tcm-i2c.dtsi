@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2017 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2017 Scott Lin <scott.lin@tw.synaptics.com>
+ * Copyright (C) 2017-2018 Sony Mobile Communications Inc.
+ */
+
+&qupv3_se5_i2c {
+	status = "ok";
+	synaptics_tcm@3c {
+		compatible = "synaptics,tcm-i2c";
+		reg = <0x3c>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		vdd-supply = <&pm8998_l14>;
+		avdd-supply = <&pm8998_l28>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+		pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+/*		synaptics,bus-reg-name = "vdd"; */
+/*		synaptics,pwr-reg-name = "avdd"; */
+		synaptics,irq-gpio = <&tlmm 125 0x2008>; /* IRQF_ONESHOT | IRQF_TRIGGER_LOW */
+		synaptics,irq-on-state = <0>;
+/*		synaptics,reset-gpio = <&tlmm 99 0x0000>; */
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <20>;
+		synaptics,reset-delay-ms = <200>;
+		synaptics,power-delay-ms = <200>;
+		synaptics,ubl-i2c-addr = <0x2c>;
+	};
+};

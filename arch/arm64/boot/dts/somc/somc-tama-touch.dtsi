@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+&qupv3_se5_i2c {
+	status = "okay";
+
+	synaptics_clearpad: synaptics_clearpad@2c {
+		compatible = "synaptics,clearpad";
+		reg = <0x2c>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		synaptics,irq_gpio = <&tlmm 125 0x2008>;
+		post_probe_start = <0>;
+		synaptics,firmware_name = "touch_module_id_0x%02x.img";
+		flash_on_post_probe = <1>;
+		flip_config = <0>;
+		watchdog_enabled = <1>;
+		watchdog_delay_ms = <10000>;
+		charger_supported = <0>;
+		pen_supported = <0>;
+		glove_supported = <1>;
+		cover_supported = <1>;
+		touch_pressure_enabled = <1>;
+		touch_size_enabled = <0>;
+		touch_orientation_enabled = <0>;
+		preset_x_max = <1079>;
+		preset_y_max = <1919>;
+		preset_n_fingers = <10>;
+		wakeup_gesture_supported = <1>;
+		wakeup_gesture_lpm_disabled = <1>;
+		wakeup_gesture_timeout = <0>;
+		stamina_mode_supported = <0x80000007>;
+		doze_default_time = <35>;
+		doze_glove_mode_time = <35>;
+		doze_cover_mode_time = <35>;
+		doze_force_doze_mode_time = <1>;
+
+		wakeup_gesture {
+			double_tap {
+				gesture_code = <0x0003>;
+				event_00 {
+					type = <2>; /* LOG */
+					message = "=== DOUBLE TAP ===";
+				};
+				event_01 {
+					type = <1>; /* KEY */
+					code = <531>; /* TOUCHPAD_ON */
+					down = <1>;
+				};
+				event_02 {
+					type = <1>; /* KEY */
+					code = <531>; /* TOUCHPAD_ON */
+					down = <0>;
+				};
+				event_03 {
+					type = <99>; /* END */
+				};
+			};
+		};
+		/* chip settings */
+		clearpad_default {
+			flash_default_timeout_ms = <20000>;
+			calibrate_on_fwflash = <0>;
+			calibration_supported = <0>;
+			hwreset_delay_for_powerup_ms = <220>;
+			interrupt_default_wait_ms = <1000>;
+			charger_only_delay_ms = <200>;
+		};
+		S3330 {
+			flash_default_timeout_ms = <20000>;
+			calibrate_on_fwflash = <0>;
+			calibration_supported = <0>;
+			hwreset_delay_for_powerup_ms = <220>;
+			interrupt_default_wait_ms = <1000>;
+			charger_only_delay_ms = <200>;
+		};
+		S332U {
+			flash_default_timeout_ms = <20000>;
+			calibrate_on_fwflash = <1>;
+			calibration_supported = <1>;
+			hwreset_delay_for_powerup_ms = <220>;
+			interrupt_default_wait_ms = <1000>;
+			charger_only_delay_ms = <200>;
+		};
+		TD4353jdi {
+			flash_default_timeout_ms = <20000>;
+			calibrate_on_fwflash = <0>;
+			calibration_supported = <0>;
+			hwreset_delay_for_powerup_ms = <220>;
+			interrupt_default_wait_ms = <1000>;
+			charger_only_delay_ms = <200>;
+		};
+	};
+};
+
+#include "synaptics-tcm-i2c.dtsi"
+#include "clearpad-ic-default-regoffset.dtsi"

@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ */
+
+&dsi_default_panel {
+	/delete-property/ qcom,panel-touch-supply-entries;
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+		};
+	};
+
+};
+
+&dsi_3 {
+	qcom,panel-supply-entries = <&dsi_panel_lcd_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 99 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			 qcom,display-topology = <1 0 1>;
+			 qcom,default-topology-index = <0>;
+			 qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+		};
+	};
+};
+
+&dsi_7 {
+	qcom,panel-supply-entries = <&dsi_panel_lcd_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 99 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+		};
+	};
+};

@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+&qupv3_se5_i2c {
+	atmel_mxt640u: atmel_mxt640u@4a {
+		compatible = "atmel,mxt640u";
+		reg = <0x4a>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		avdd-supply = <&pm8998_l28>;
+		atmel,fw_name = "touch_module_id_0x01.img";
+		atmel,reset-gpio = <&tlmm 99 0x00>;
+		atmel,irq-gpio = <&tlmm 125 0x2008>;
+		atmel,vddio-gpio = <&tlmm 133 0x00>;
+		atmel,numtouch = <10>;
+		atmel,knock_on_type = <1>;
+		atmel,lcd_x = <1440>;
+		atmel,lcd_y = <2880>;
+		atmel,global_access_pixel = <0>;
+		atmel,use_mfts = <1>;
+		atmel,butt_check_enable = <0>;
+		atmel,use_debug_reason = <1>;
+		atmel,use_lpwg_test = <1>;
+
+		/* feature */
+		atmel,watchdog_supported = <1>;
+		atmel,watchdog_delay_ms = <10000>;
+		atmel,side_key_supported = <1>;
+		atmel,glove_mode_supported = <1>;
+		atmel,cover_mode_supported = <1>;
+		atmel,aod_mode_supported = <1>;
+		atmel,stamina_mode_supported = <1>;
+		atmel,sod_mode_supported = <1>;
+	};
+};

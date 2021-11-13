@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ */
+
+#include "dsi-panel-apollo_vendor.dtsi"
+
+&mdss_mdp {
+	/* Default */
+	dsi_default_panel: somc,default_cmd_panel {
+		qcom,mdss-dsi-panel-name = "apollo default";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-pan-physical-width-dimension = <56>;
+		qcom,mdss-pan-physical-height-dimension = <112>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+
+		qcom,mdss-dsi-reset-sequence = <1 50>;
+		qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+		somc,pw-on-rst-seq = "after_power_on";
+
+		somc,mdss-dsi-master;
+		somc,pw-off-rst-b-seq = <0 0>;
+		somc,pw-wait-after-on-vdd = <0>;
+		somc,pw-wait-after-on-vddio = <0>;
+		somc,pw-wait-after-on-vsp = <8>;
+		somc,pw-wait-after-on-vsn = <0>;
+		somc,pw-wait-after-off-vdd = <0>;
+		somc,pw-wait-after-off-vddio = <0>;
+		somc,pw-wait-after-off-vsp = <5>;
+		somc,pw-wait-after-off-vsn = <8>;
+		somc,pw-wait-after-on-touch-avdd = <0>;
+		somc,pw-wait-after-on-touch-vddio = <0>;
+		somc,pw-wait-after-on-touch-reset = <5>;
+		somc,pw-wait-after-on-touch-int-n = <5>;
+		somc,pw-wait-after-off-touch-avdd = <0>;
+		somc,pw-wait-after-off-touch-vddio = <0>;
+		somc,pw-wait-after-off-touch-reset = <5>;
+		somc,pw-wait-after-off-touch-int-n = <0>;
+		somc,pw-down-period = <100>;
+		somc,lab-output-voltage = <5500000>;
+		somc,ibb-output-voltage = <5500000>;
+
+		somc,lcd-id-adc = <0 0x7fffffff>;
+
+		somc,qpnp-lab-limit-maximum-current = <200>;
+		somc,qpnp-ibb-limit-maximum-current = <800>;
+		somc,qpnp-lab-max-precharge-time = <500>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-ibb-discharge-resistor = <300>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
+
+		qcom,mdss-dsi-display-timings {
+			timing@0 {
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2160>;
+				qcom,mdss-dsi-h-back-porch = <8>;
+				qcom,mdss-dsi-h-pulse-width = <8>;
+				qcom,mdss-dsi-h-front-porch = <4>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-pulse-width = <8>;
+				qcom,mdss-dsi-v-front-porch = <259>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-jitter = <0x5 0x1>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-h-sync-pulse = <1>;
+				qcom,mdss-dsi-on-command = [
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 00 00 05 2B 00 00 08 6F
+						39 01 00 00 00 00 03 44 00 00
+						15 01 00 00 00 00 02 35 00
+						15 01 00 00 00 00 02 36 00
+						15 01 00 00 00 00 02 3A 77
+						39 01 00 00 00 00 05 30 00 00 08 6F
+						05 01 00 00 46 00 01 11];
+				qcom,mdss-dsi-post-panel-on-command = [
+						39 01 00 00 00 00 01 2C
+						05 01 00 00 00 00 01 29];
+				qcom,mdss-dsi-off-command = [
+						05 01 00 00 16 00 01 28
+						05 01 00 00 00 00 01 34
+						05 01 00 00 50 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,mdss-dsi-panel-clockrate = <964260000>;
+			};
+		};
+	};
+};

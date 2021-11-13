@@ -1,0 +1,128 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm845-tama-common.dtsi"
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sdm_gpio_31>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&pmi8998_gpio_8 &pmi8998_gpio_11>;
+};
+
+&soc {
+};
+
+/* GPIO_8: WLC_EN_N */
+&pmi8998_gpio_8 {
+	pins = "gpio8";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <3>;
+	power-source = <1>;
+};
+
+/* GPIO_11: RSVD(WLC_EN_N) */
+&pmi8998_gpio_11 {
+	pins = "gpio11";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <3>;
+	power-source = <1>;
+};
+
+/* GPIO_31 : WLC_INT_N */
+&sdm_gpio_31 {
+	mux {
+		pins = "gpio31";
+		function = "gpio";
+	};
+	config {
+		pins = "gpio31";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+&pmi8998_wled {
+	linux,name = "wled";
+	qcom,led-strings-list = [00 01 02];
+	somc,area_count_table_size = <24>;
+	somc,area_count_table = <0 117 234 351 468 585 702 819
+				936 1053 1170 1404 1638 1872 2106
+				2340 2574 2808 3042 3276 3510
+				3744 3978 4095>;
+	somc,bl-scale-enabled;
+};
+
+&qusb_phy0 {
+	qcom,efuse-offset = <0x00000000>;
+	qcom,qusb-phy-init-seq =
+		/* <value reg_offset> */
+		   <0x23 0x210 /* PWR_CTRL1 */
+		    0x03 0x04  /* PLL_ANALOG_CONTROLS_TWO */
+		    0x7c 0x18c /* PLL_CLOCK_INVERTERS */
+		    0x80 0x2c  /* PLL_CMODE */
+		    0x0a 0x184 /* PLL_LOCK_DELAY */
+		    0x19 0xb4  /* PLL_DIGITAL_TIMERS_TWO */
+		    0x40 0x194 /* PLL_BIAS_CONTROL_1 */
+		    0x16 0x198 /* PLL_BIAS_CONTROL_2 */
+		    0x21 0x214 /* PWR_CTRL2 */
+		    0x08 0x220 /* IMP_CTRL1 */
+		    0x58 0x224 /* IMP_CTRL2 */
+		    0x75 0x240 /* TUNE1 */
+		    0x2B 0x244 /* TUNE2 */
+		    0xca 0x248 /* TUNE3 */
+		    0x04 0x24c /* TUNE4 */
+		    0x01 0x250 /* TUNE5 */
+		    0x00 0x23c /* CHG_CTRL2 */
+		    0x22 0x210>; /* PWR_CTRL1 */
+};
+
+&red_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 250 180
+		46 100 69
+		47 220 150
+		48 130 95>;
+};
+
+&green_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 175 250
+		46 95 129
+		47 160 225
+		48 120 180>;
+};
+
+&blue_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 511 180
+		46 400 94
+		47 511 150
+		48 511 150>;
+};
+
+#include "dsi-panel-akari.dtsi"
+#include "somc-tama-display.dtsi"
+#include "somc-tama-display_akari.dtsi"
+#include "somc-tama-touch.dtsi"
+#include "somc-tama-touch_akari.dtsi"
+#include "charger-tama-common.dtsi"
+#include "charger-tama-akari.dtsi"

@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+qcom,apollo_tmm_4250mv {
+	qcom, = <24>;
+	somc,initial-capacity-uah = <2899000>;
+	qcom,max-voltage-uv = <4245000>;
+	qcom,fg-cc-cv-threshold-mv = <4235>;
+	qcom,fastchg-current-ma = <2760>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1310-1071-3";
+	qcom,checksum = <0x9D0D>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.58";
+	qcom,fg-profile-data = [
+		 3C 20 07 05
+		 8F 0A 73 FC
+		 9E 1C B7 01
+		 FA 05 6A F3
+		 79 18 5C 22
+		 B3 3C 46 4B
+		 72 00 00 00
+		 0F 00 00 00
+		 00 00 D1 BA
+		 82 CC 68 C3
+		 28 00 08 00
+		 4E E5 AA D5
+		 E9 05 1F FA
+		 D3 05 DD 02
+		 44 E5 B9 32
+		 21 06 09 20
+		 27 00 14 00
+		 D0 17 CA 0A
+		 FD 0C F7 02
+		 7F 1C D5 02
+		 FD 0C 87 0A
+		 81 18 D8 22
+		 84 45 34 53
+		 90 00 00 00
+		 0E 00 00 00
+		 00 00 20 CC
+		 06 C2 93 CA
+		 22 00 00 00
+		 DF E3 AA D5
+		 27 06 6A F3
+		 39 F5 2C 0A
+		 E9 06 99 12
+		 9C 33 CC FF
+		 07 10 00 00
+		 0D 0A EB 43
+		 22 00 40 00
+		 AF 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};
