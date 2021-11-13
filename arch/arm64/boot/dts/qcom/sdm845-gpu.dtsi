@@ -17,24 +17,28 @@
 		compatible = "qcom,kgsl-busmon";
 	};
 
+	gpu_bw_tbl: gpu-bw-tbl {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY(   0, 4); /*    0 MB/s */
+		BW_OPP_ENTRY( 100, 4); /*  381 MB/s */
+		BW_OPP_ENTRY( 150, 4); /*  572 MB/s */
+		BW_OPP_ENTRY( 200, 4); /*  762 MB/s */
+		BW_OPP_ENTRY( 300, 4); /* 1144 MB/s */
+		BW_OPP_ENTRY( 412, 4); /* 1571 MB/s */
+		BW_OPP_ENTRY( 547, 4); /* 2086 MB/s */
+		BW_OPP_ENTRY( 681, 4); /* 2597 MB/s */
+		BW_OPP_ENTRY( 768, 4); /* 2929 MB/s */
+		BW_OPP_ENTRY(1017, 4); /* 3879 MB/s */
+		BW_OPP_ENTRY(1296, 4); /* 4943 MB/s */
+		BW_OPP_ENTRY(1555, 4); /* 5931 MB/s */
+		BW_OPP_ENTRY(1804, 4); /* 6881 MB/s */
+	};
+
 	gpubw: qcom,gpubw {
 		compatible = "qcom,devbw";
 		governor = "bw_vbif";
 		qcom,src-dst-ports = <26 512>;
-		qcom,bw-tbl =
-			<     0 /*  off     */ >,
-			<   381 /*  100 MHz */ >,
-			<   572 /*  150 MHz */ >,
-			<   762 /*  200 MHz */ >,
-			<  1144 /*  300 MHz */ >,
-			<  1571 /*  412 MHz */ >,
-			<  2086 /*  547 MHz */ >,
-			<  2597 /*  681 MHz */ >,
-			<  2929 /*  768 MHz */ >,
-			<  3879 /*  1017 MHz */ >,
-			<  4943 /*  1296 MHz */ >,
-			<  5931 /*  1555 MHz */ >,
-			<  6881 /*  1804 MHz */ >;
+		operating-points-v2 = <&gpu_bw_tbl>;
 	};
 
 	msm_gpu: qcom,kgsl-3d0@5000000 {

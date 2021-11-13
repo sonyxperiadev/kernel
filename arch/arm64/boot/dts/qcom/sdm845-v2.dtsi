@@ -139,19 +139,17 @@
 		compatible = "syscon";
 		reg = <0x5091008 0x4>;
 	};
-<<<<<<< HEAD
-=======
 
-	pdc: interrupt-controller@b220000 {
-		compatible = "qcom,sdm845-pdc";
-		reg = <0xb220000 0x400>;
-		qcom,pdc-ranges = <0 512 90>, <94 641 15>, <115 662 7>;
-		#interrupt-cells = <3>;
-		interrupt-parent = <&intc>;
-		interrupt-controller;
+	llcc_bw_opp_table_v2: llcc-bw-opp-table-v2 {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY( 150, 16); /*  2288 MB/s */
+		BW_OPP_ENTRY( 300, 16); /*  4577 MB/s */
+		BW_OPP_ENTRY( 426, 16); /*  6500 MB/s */
+		BW_OPP_ENTRY( 533, 16); /*  8132 MB/s */
+		BW_OPP_ENTRY( 600, 16); /*  9155 MB/s */
+		BW_OPP_ENTRY( 806, 16); /* 12298 MB/s */
+		BW_OPP_ENTRY( 933, 16); /* 14236 MB/s */
 	};
-
->>>>>>> b113be21cfc71 (arm64: dts: qcom: Fix kernel compile warnings)
 };
 
 &pil_modem {
@@ -331,7 +329,7 @@
 				0x1808 0x01 0x0>;
 };
 
-&devfreq_l3lat_0 {
+&cpu0_cpu_l3_latmon {
 	qcom,core-dev-table =
 		<  300000  300000000 >,
 		<  480000  403200000 >,
@@ -348,7 +346,7 @@
 		< 1766400 1401600000 >;
 };
 
-&devfreq_l3lat_4 {
+&cpu4_cpu_l3_latmon {
 	qcom,core-dev-table =
 		<  300000  300000000 >,
 		<  825600  576000000 >,
@@ -360,30 +358,15 @@
 		< 2745600 1593600000 >;
 };
 
-&bwmon {
+&cpu_cpu_llcc_bwmon {
 	qcom,count-unit = <0x10000>;
 };
 
-&cpubw {
-	qcom,bw-tbl =
-		< MHZ_TO_MBPS(150, 16) >, /*  2288 MB/s */
-		< MHZ_TO_MBPS(300, 16) >, /*  4577 MB/s */
-		< MHZ_TO_MBPS(426, 16) >, /*  6500 MB/s */
-		< MHZ_TO_MBPS(533, 16) >, /*  8132 MB/s */
-		< MHZ_TO_MBPS(600, 16) >, /*  9155 MB/s */
-		< MHZ_TO_MBPS(806, 16) >, /* 12298 MB/s */
-		< MHZ_TO_MBPS(933, 16) >; /* 14236 MB/s */
+&cpu_cpu_llcc_bw {
+	operating-points-v2 = <&llcc_bw_opp_table_v2>;
 };
 
-&devfreq_cpufreq {
-	mincpubw-cpufreq {
-		cpu-to-dev-map-4 =
-			< 1881600 MHZ_TO_MBPS(200, 4) >,
-			< 2400000 MHZ_TO_MBPS(1017, 4) >;
-	};
-};
-
-&devfreq_compute {
+&cpu4_computemon {
 	qcom,core-dev-table =
 		< 1881600 MHZ_TO_MBPS( 200, 4) >,
 		< 2649600 MHZ_TO_MBPS(1017, 4) >,
