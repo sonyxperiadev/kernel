@@ -7350,18 +7350,7 @@ static struct platform_driver fg_gen3_driver = {
 	.shutdown	= fg_gen3_shutdown,
 };
 
-static int __init fg_gen3_init(void)
-{
-	return platform_driver_register(&fg_gen3_driver);
-}
-
-static void __exit fg_gen3_exit(void)
-{
-	return platform_driver_unregister(&fg_gen3_driver);
-}
-
-arch_initcall(fg_gen3_init);
-module_exit(fg_gen3_exit);
+module_platform_driver(fg_gen3_driver);
 
 MODULE_DESCRIPTION("QPNP Fuel gauge GEN3 driver");
 MODULE_LICENSE("GPL v2");
