@@ -134,6 +134,7 @@
 		vdd-supply = <&pm8998_l1>;
 		vdda18-supply = <&pm8998_l12>;
 		vdda33-supply = <&pm8998_l24>;
+		refgen-supply = <&pm8998_l26>;
 		qcom,override-bias-ctrl2;
 		qcom,vdd-voltage-level = <0 880000 880000>;
 		qcom,qusb-phy-reg-offset =
