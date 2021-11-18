@@ -3,6 +3,7 @@
  * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  */
 
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
 #include <dt-bindings/gpio/gpio.h>
 #include "sdm845-pmic-overlay.dtsi"
 #include "sdm845-pinctrl-overlay.dtsi"
@@ -186,13 +187,12 @@
 };
 
 &pmi8998_wled {
+	qcom,string-cfg = <3>;
 	status = "okay";
-	qcom,led-strings-list = [01 02];
 };
 
 &pmi8998_haptics {
 	qcom,vmax-mv = <2400>;
-	qcom,lra-auto-mode;
 	status = "okay";
 };
 
@@ -342,126 +342,90 @@
 };
 
 &pm8998_vadc {
-	chan@83 {
+	vph_pwr@83 {
 		label = "vph_pwr";
-		reg = <0x83>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_VPH_PWR>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@85 {
+	vcoin@85 {
 		label = "vcoin";
-		reg = <0x85>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_VCOIN>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@4c {
+	xo_therm@4c {
 		label = "xo_therm";
-		reg = <0x4c>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <4>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_XO_THERM_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@4d {
+	msm_therm@4d {
 		label = "msm_therm";
-		reg = <0x4d>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_AMUX_THM1_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@4f {
+	pa_therm1@4f {
 		label = "pa_therm1";
-		reg = <0x4f>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_AMUX_THM3_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@51 {
+	quiet_therm@51 {
 		label = "quiet_therm";
-		reg = <0x51>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+		reg = <ADC_AMUX_THM5_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
 	};
 };
 
 &pm8998_adc_tm {
-	chan@83 {
+	io-channels = <&pm8998_vadc ADC_VPH_PWR>,
+			<&pm8998_vadc ADC_XO_THERM_PU2>,
+			<&pm8998_vadc ADC_AMUX_THM1_PU2>,
+			<&pm8998_vadc ADC_AMUX_THM3_PU2>,
+			<&pm8998_vadc ADC_AMUX_THM5_PU2>;
+
+	/* Channel nodes */
+	vph_pwr@83 {
 		label = "vph_pwr";
-		reg = <0x83>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,btm-channel-number = <0x60>;
+		reg = <ADC_VPH_PWR>;
 	};
 
-	chan@4c {
+	xo_therm@4c {
 		label = "xo_therm";
-		reg = <0x4c>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <4>;
-		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x68>;
-		qcom,thermal-node;
+		reg = <ADC_XO_THERM_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 	};
 
-	chan@4d {
+	msm_therm@4d {
 		label = "msm_therm";
-		reg = <0x4d>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x70>;
-		qcom,thermal-node;
+		reg = <ADC_AMUX_THM1_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 	};
 
-	chan@4f {
+	pa_therm1@4f {
 		label = "pa_therm1";
-		reg = <0x4f>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x78>;
-		qcom,thermal-node;
+		reg = <ADC_AMUX_THM3_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 	};
 
-	chan@51 {
+	quiet_therm@51 {
 		label = "quiet_therm";
-		reg = <0x51>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x80>;
-		qcom,thermal-node;
+		reg = <ADC_AMUX_THM5_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 	};
 };
 
