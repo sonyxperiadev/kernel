@@ -316,6 +316,7 @@
 		 * anyways, so using a dummy value is ok.
 		 */
 		iommus = <&kgsl_smmu 0x7>;
+		qcom,iommu-dma = "disabled";
 	};
 
 	apps_iommu_test_device {
@@ -325,6 +326,7 @@
 		 * the apps_smmu device.
 		 */
 		iommus = <&apps_smmu 0x20 0>;
+		qcom,iommu-dma = "disabled";
 	};
 
 	apps_iommu_coherent_test_device {
@@ -334,6 +336,7 @@
 		 * the apps_smmu device.
 		 */
 		iommus = <&apps_smmu 0x20 0>;
+		qcom,iommu-dma = "disabled";
 		dma-coherent;
 	};
 };
