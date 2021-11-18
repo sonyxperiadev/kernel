@@ -27,6 +27,7 @@
 				"ss_phy_irq", "dm_hs_phy_irq";
 
 		USB3_GDSC-supply = <&usb30_prim_gdsc>;
+		dpdm-supply = <&qusb_phy0>;
 		qcom,reset-ep-after-lpm-resume;
 		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
 		qcom,num-gsi-evt-buffs = <0x3>;
