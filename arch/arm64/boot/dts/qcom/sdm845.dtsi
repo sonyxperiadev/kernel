@@ -627,7 +627,16 @@
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			reusable;
 			alignment = <0 0x400000>;
-			size = <0 0x1000000>;
+			size = <0 0xc00000>;
+		};
+
+		sdsp_mem: sdsp_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0 0x400000>;
+
 		};
 
 		qseecom_ta_mem: qseecom_ta_region {
@@ -1845,10 +1854,12 @@
 	qcom,msm-adsprpc-mem {
 		compatible = "qcom,msm-adsprpc-mem-region";
 		memory-region = <&adsp_mem>;
+		restrict-access;
 	};
 
 	qcom,msm_fastrpc {
 		compatible = "qcom,msm-fastrpc-compute";
+		qcom,adsp-remoteheap-vmid = <22 37>;
 		qcom,rpc-latency-us = <611>;
 
 		qcom,msm_fastrpc_compute_cb1 {
