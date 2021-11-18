@@ -155,6 +155,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x1038 0x0>,
 				<&apps_smmu 0x1058 0x0>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			label = "lrme";
 			lrme_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
@@ -182,6 +183,7 @@
 				<&apps_smmu 0x810 0x8>,
 				<&apps_smmu 0xc08 0x0>,
 				<&apps_smmu 0xc10 0x8>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			label = "ife";
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
@@ -208,6 +210,7 @@
 				<&apps_smmu 0x1040 0x8>,
 				<&apps_smmu 0x1030 0x0>,
 				<&apps_smmu 0x1050 0x0>;
+			qcom,iommu-dma-addr-pool = <0x10c00000 0xcf300000>;
 			label = "icp";
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
@@ -262,6 +265,7 @@
 		msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x1000 0x0>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			label = "cpas-cdm0";
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {

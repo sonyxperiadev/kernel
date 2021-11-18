@@ -82,6 +82,9 @@
 			iommus =
 				<&apps_smmu 0x10a0 0x8>,
 				<&apps_smmu 0x10b0 0x0>;
+			qcom,iommu-dma-addr-pool = <0x70800000 0x6f800000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-pagetable = "LLC";
 			buffer-types = <0xfff>;
 			virtual-addr-pool = <0x70800000 0x6f800000>;
 		};
@@ -92,6 +95,10 @@
 			iommus =
 				<&apps_smmu 0x10a1 0x8>,
 				<&apps_smmu 0x10a5 0x8>;
+			qcom,iommu-dma-addr-pool = <0x4b000000 0x25800000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-pagetable = "LLC";
+			qcom,iommu-vmid = <0xB>; /* VMID_CP_BITSTREAM */
 			buffer-types = <0x241>;
 			virtual-addr-pool = <0x4b000000 0x25800000>;
 			qcom,secure-context-bank;
@@ -102,6 +109,10 @@
 			label = "venus_sec_pixel";
 			iommus =
 				<&apps_smmu 0x10a3 0x8>;
+			qcom,iommu-dma-addr-pool = <0x25800000 0x25800000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-pagetable = "LLC";
+			qcom,iommu-vmid = <0xA>; /* VMID_CP_PIXEL */
 			buffer-types = <0x106>;
 			virtual-addr-pool = <0x25800000 0x25800000>;
 			qcom,secure-context-bank;
@@ -113,6 +124,10 @@
 			iommus =
 				<&apps_smmu 0x10a4 0x8>,
 				<&apps_smmu 0x10b4 0x0>;
+			qcom,iommu-dma-addr-pool = <0x1000000 0x24800000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-pagetable = "LLC";
+			qcom,iommu-vmid = <0xB>; /* VMID_CP_NON_PIXEL */
 			buffer-types = <0x480>;
 			virtual-addr-pool = <0x1000000 0x24800000>;
 			qcom,secure-context-bank;

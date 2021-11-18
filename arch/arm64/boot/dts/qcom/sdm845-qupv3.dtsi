@@ -12,12 +12,9 @@
 		reg = <0x8c0000 0x6000>;
 		qcom,bus-mas-id = <MSM_BUS_MASTER_BLSP_1>;
 		qcom,bus-slv-id = <MSM_BUS_SLAVE_EBI_CH0>;
-		qcom,iommu-s1-bypass;
-
-		iommu_qupv3_0_geni_se_cb: qcom,iommu_qupv3_0_geni_se_cb {
-			compatible = "qcom,qupv3-geni-se-cb";
-			iommus = <&apps_smmu 0x003 0x0>;
-		};
+		iommus = <&apps_smmu 0x003 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma = "fastmap";
 	};
 
 	/*
@@ -406,12 +403,9 @@
 		reg = <0xac0000 0x6000>;
 		qcom,bus-mas-id = <MSM_BUS_MASTER_BLSP_2>;
 		qcom,bus-slv-id = <MSM_BUS_SLAVE_EBI_CH0>;
-		qcom,iommu-s1-bypass;
-
-		iommu_qupv3_1_geni_se_cb: qcom,iommu_qupv3_1_geni_se_cb {
-			compatible = "qcom,qupv3-geni-se-cb";
-			iommus = <&apps_smmu 0x6c3 0x0>;
-		};
+		iommus = <&apps_smmu 0x6c3 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma = "fastmap";
 	};
 
 	/* 2-wire UART */
