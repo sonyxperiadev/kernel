@@ -711,8 +711,8 @@ struct sec_ts_data {
 	struct sec_ts_plat_data *plat_data;
 	struct sec_ts_coordinate coord[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 
-	struct timeval time_pressed[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
-	struct timeval time_released[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
+	struct timespec64 time_pressed[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
+	struct timespec64 time_released[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 	struct device virtdev;
 	struct class *sec_class;
 	struct notifier_block drm_notif;
