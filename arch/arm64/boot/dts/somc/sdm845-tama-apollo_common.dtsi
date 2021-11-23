@@ -52,42 +52,8 @@
 };
 
 &pmi8998_wled {
-	linux,name = "wled";
-	qcom,fs-curr-ua = <19500>;
-	qcom,led-strings-list = [00 01 02];
-	somc,area_count_table_size = <24>;
-	somc,area_count_table = <0 117 234 351 468 585 702 819
-				936 1053 1170 1404 1638 1872 2106
-				2340 2574 2808 3042 3276 3510
-				3744 3978 4095>;
-	somc,calc-curr;
-};
-
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		49 511 200
-		50 180 116
-		51 305 180
-		52 180 160>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		49 511 511
-		50 230 323
-		51 400 511
-		52 230 408>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		49 511 340
-		50 511 223
-		51 511 260
-		52 511 258>;
+	qcom,fs-current-limit = <19500>;
+	qcom,string-cfg = <7>;
 };
 
 #include "dsi-panel-apollo.dtsi"

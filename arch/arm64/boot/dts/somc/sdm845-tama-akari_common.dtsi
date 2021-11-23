@@ -58,14 +58,7 @@
 };
 
 &pmi8998_wled {
-	linux,name = "wled";
-	qcom,led-strings-list = [00 01 02];
-	somc,area_count_table_size = <24>;
-	somc,area_count_table = <0 117 234 351 468 585 702 819
-				936 1053 1170 1404 1638 1872 2106
-				2340 2574 2808 3042 3276 3510
-				3744 3978 4095>;
-	somc,bl-scale-enabled;
+	qcom,string-cfg = <7>;
 };
 
 &qusb_phy0 {
@@ -90,33 +83,6 @@
 		    0x01 0x250 /* TUNE5 */
 		    0x00 0x23c /* CHG_CTRL2 */
 		    0x22 0x210>; /* PWR_CTRL1 */
-};
-
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 250 180
-		46 100 69
-		47 220 150
-		48 130 95>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 175 250
-		46 95 129
-		47 160 225
-		48 120 180>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 180
-		46 400 94
-		47 511 150
-		48 511 150>;
 };
 
 #include "dsi-panel-akari.dtsi"

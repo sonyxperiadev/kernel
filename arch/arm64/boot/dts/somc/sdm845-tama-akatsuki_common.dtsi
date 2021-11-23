@@ -386,33 +386,6 @@
 	status = "okay";
 };
 
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		64 60 42
-		65 60 42
-		66 60 42
-		67 60 42>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		64 36 64
-		65 36 64
-		66 36 64
-		67 36 64>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		64 140 28
-		65 140 28
-		66 140 28
-		67 140 28>;
-};
-
 &qusb_phy0 {
 	qcom,efuse-offset = <0x00000000>;
 	qcom,qusb-phy-init-seq =
