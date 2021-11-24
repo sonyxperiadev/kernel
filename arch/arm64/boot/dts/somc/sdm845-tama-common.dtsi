@@ -193,8 +193,8 @@
 
 		pinctrl-0 = <&pm8998_gpio_1 &pm8998_gpio_2 &pm8998_gpio_4 &pm8998_gpio_5
 			    &pm8998_gpio_6 &pm8998_gpio_7 &pm8998_gpio_8 &pm8998_gpio_9 &pm8998_gpio_10
-			    &pm8998_gpio_11 &pm8998_gpio_12 &pm8998_gpio_13 &pm8998_gpio_14 &pm8998_gpio_15
-			    &pm8998_gpio_16 &pm8998_gpio_17 &pm8998_gpio_18 &pm8998_gpio_19 &pm8998_gpio_20
+			    &pm8998_gpio_11 &pm8998_gpio_12 &pm8998_gpio_13 &pm8998_gpio_14
+			    &pm8998_gpio_16 &pm8998_gpio_17 &pm8998_gpio_18 &pm8998_gpio_19
 			    &pm8998_gpio_21
 			    &pmi8998_gpio_1 &pmi8998_gpio_2 &pmi8998_gpio_3 &pmi8998_gpio_5 &pmi8998_gpio_6
 			    &pmi8998_gpio_8 &pmi8998_gpio_9 &pmi8998_gpio_10 &pmi8998_gpio_11
@@ -1025,13 +1025,6 @@
 		bias-high-impedance; /* DISABLE GPIO14 */
 	};
 
-	/* GPIO_15: NC */
-	pm8998_gpio_15: pm8998_gpio_15 {
-		pins = "gpio15";
-		function = "normal";
-		bias-high-impedance; /* DISABLE GPIO15 */
-	};
-
 	/* GPIO_16: NC */
 	pm8998_gpio_16: pm8998_gpio_16 {
 		pins = "gpio16";
@@ -1058,13 +1051,6 @@
 		pins = "gpio19";
 		function = "normal";
 		bias-high-impedance; /* DISABLE GPIO19 */
-	};
-
-	/* GPIO_20: NC */
-	pm8998_gpio_20: pm8998_gpio_20 {
-		pins = "gpio20";
-		function = "normal";
-		bias-high-impedance; /* DISABLE GPIO20 */
 	};
 
 	/* GPIO_21: NFC_CLK_REQ */
