@@ -30,7 +30,6 @@
 		sde-vdd-supply = <&mdss_core_gdsc>;
 
 		/* interrupt config */
-		interrupt-parent = <&pdc>;
 		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
