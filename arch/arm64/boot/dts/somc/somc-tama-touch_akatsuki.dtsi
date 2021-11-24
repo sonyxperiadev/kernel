@@ -4,6 +4,9 @@
  */
 
 &qupv3_se5_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	atmel_mxt640u: atmel_mxt640u@4a {
 		compatible = "atmel,mxt640u";
 		reg = <0x4a>;

@@ -20,20 +20,16 @@
 	pinctrl-1 = <&pmi8998_gpio_8>;
 };
 
-&soc {
-	/* I2C: QUP14 */
-	i2c@a98000 {
-		tcs3490@72 {
-			rgbcir_vdd-supply = <&cam_vio_vreg>;
-			/delete-property/ rgbcir_vio-supply;
-			ams,rgbcir-vio-supply = <0>;
-		};
-		tof_sensor@52 {
-			tof_avdd-supply = <&cam_vio_vreg>;
-			/delete-property/ tof_vio-supply;
-			sony,tof-vio-supply = <0>;
-		};
-	};
+&tcs3490 {
+	rgbcir_vdd-supply = <&cam_vio_vreg>;
+	/delete-property/ rgbcir_vio-supply;
+	ams,rgbcir-vio-supply = <0>;
+};
+
+&tof_sensor {
+	tof_avdd-supply = <&cam_vio_vreg>;
+	/delete-property/ tof_vio-supply;
+	sony,tof-vio-supply = <0>;
 };
 
 &sony_camera_module_1 {

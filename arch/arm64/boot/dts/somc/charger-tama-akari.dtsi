@@ -6,6 +6,9 @@
 &soc {
 	/* I2C: QUP10 - WLC */
 	i2c@a88000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		idtp9221@61 {
 			compatible = "idtp,idtp9221";
 			reg = <0x61>;

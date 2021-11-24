@@ -5,6 +5,9 @@
 
 / {
 	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+
 		debug_region: debug_region@ffb00000 {
 			compatible = "removed-dma-pool", "qcom,debug_memory";
 			no-map;
@@ -22,15 +25,18 @@
 			pmsg-size = <0x20000>;
 			ecc-size = <16>;
 		};
+
+		qseecom_mem: qseecom_region@8ab00000 {
+			reg = <0 0x8ab00000 0 0x1900000>;
+		};
+
+		/delete-node/ camera_region@8bf00000;
+		pil_camera_mem: camera_region@97c00000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0x97c00000 0 0x500000>;
+		};
 	};
-};
-
-&qseecom_mem {
-	reg = <0 0x8ab00000 0 0x1900000>;
-};
-
-&pil_camera_mem {
-	reg = <0 0x97c00000 0 0x500000>;
 };
 
 &cam_cci {
@@ -267,12 +273,14 @@
 
 	/* I2C: QUP14 */
 	i2c@a98000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		pinctrl-0 = <&sdm_gpio_33 &sdm_gpio_34>;
 		pinctrl-1 = <&sdm_gpio_33_suspend &sdm_gpio_34_suspend>;
 		qcom,clk-freq-out = <400000>;
 		status = "okay";
 
-		tcs3490@72 {
+		tcs3490: tcs3490@72 {
 			compatible = "ams,tcs3490";
 			reg = <0x72>;
 			interrupt-parent = <&tlmm>;
@@ -287,7 +295,7 @@
 			ams,rgbcir-vio-supply = <1>;
 		};
 
-		tof_sensor@52 {
+		tof_sensor: tof_sensor@52 {
 			compatible = "tof_sensor";
 			reg = <0x52>;
 			interrupt-parent = <&tlmm>;
@@ -355,9 +363,8 @@
 		pinctrl-2 = <&sdm_gpio_121>;
 	};
 
-	sony_camera_module_0: sony,camera_modules@0 {
+	sony_camera_module_0: sony,camera_modules0 {
 		cell-index = <0>;
-		reg = <0x00>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_0";
@@ -424,9 +431,8 @@
 		};
 	};
 
-	sony_camera_module_1: sony,camera_modules@1 {
+	sony_camera_module_1: sony,camera_modules1 {
 		cell-index = <1>;
-		reg = <0x01>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_1";
@@ -883,49 +889,6 @@
 };
 
 &pm8998_gpios {
-	qcom,gpios-disallowed = <3 15 20 22 24 25 26>;
-
-	interrupts =
-			<0x0 0xc0 0 IRQ_TYPE_NONE>,
-			<0x0 0xc1 0 IRQ_TYPE_NONE>,
-			<0x0 0xc3 0 IRQ_TYPE_NONE>,
-			<0x0 0xc4 0 IRQ_TYPE_NONE>,
-			<0x0 0xc5 0 IRQ_TYPE_NONE>,
-			<0x0 0xc6 0 IRQ_TYPE_NONE>,
-			<0x0 0xc7 0 IRQ_TYPE_NONE>,
-			<0x0 0xc8 0 IRQ_TYPE_NONE>,
-			<0x0 0xc9 0 IRQ_TYPE_NONE>,
-			<0x0 0xca 0 IRQ_TYPE_NONE>,
-			<0x0 0xcb 0 IRQ_TYPE_NONE>,
-			<0x0 0xcc 0 IRQ_TYPE_NONE>,
-			<0x0 0xcd 0 IRQ_TYPE_NONE>,
-			<0x0 0xcf 0 IRQ_TYPE_NONE>,
-			<0x0 0xd0 0 IRQ_TYPE_NONE>,
-			<0x0 0xd1 0 IRQ_TYPE_NONE>,
-			<0x0 0xd2 0 IRQ_TYPE_NONE>,
-			<0x0 0xd4 0 IRQ_TYPE_NONE>,
-			<0x0 0xd6 0 IRQ_TYPE_NONE>;
-	interrupt-names =
-			"pm8998_gpio1",
-			"pm8998_gpio2",
-			"pm8998_gpio4",
-			"pm8998_gpio5",
-			"pm8998_gpio6",
-			"pm8998_gpio7",
-			"pm8998_gpio8",
-			"pm8998_gpio9",
-			"pm8998_gpio10",
-			"pm8998_gpio11",
-			"pm8998_gpio12",
-			"pm8998_gpio13",
-			"pm8998_gpio14",
-			"pm8998_gpio16",
-			"pm8998_gpio17",
-			"pm8998_gpio18",
-			"pm8998_gpio19",
-			"pm8998_gpio21",
-			"pm8998_gpio23";
-
 	/* GPIO_1: NC */
 	pm8998_gpio_1: pm8998_gpio_1 {
 		pins = "gpio1";
@@ -1064,33 +1027,6 @@
 };
 
 &pmi8998_gpios {
-	qcom,gpios-disallowed = <4 7 13>;
-
-	interrupts =
-			<0x2 0xc0 0 IRQ_TYPE_NONE>,
-			<0x2 0xc1 0 IRQ_TYPE_NONE>,
-			<0x2 0xc2 0 IRQ_TYPE_NONE>,
-			<0x2 0xc4 0 IRQ_TYPE_NONE>,
-			<0x2 0xc5 0 IRQ_TYPE_NONE>,
-			<0x2 0xc7 0 IRQ_TYPE_NONE>,
-			<0x2 0xc8 0 IRQ_TYPE_NONE>,
-			<0x2 0xc9 0 IRQ_TYPE_NONE>,
-			<0x2 0xca 0 IRQ_TYPE_NONE>,
-			<0x2 0xcb 0 IRQ_TYPE_NONE>,
-			<0x2 0xcd 0 IRQ_TYPE_NONE>;
-	interrupt-names =
-			"pmi8998_gpio1",
-			"pmi8998_gpio2",
-			"pmi8998_gpio3",
-			"pmi8998_gpio5",
-			"pmi8998_gpio6",
-			"pmi8998_gpio8",
-			"pmi8998_gpio9",
-			"pmi8998_gpio10",
-			"pmi8998_gpio11",
-			"pmi8998_gpio12",
-			"pmi8998_gpio14";
-
 	/* GPIO_1: NC */
 	pmi8998_gpio_1: pmi8998_gpio_1 {
 		pins = "gpio1";
@@ -2992,6 +2928,9 @@
 };
 
 &pm8998_vadc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	ufs_therm@4e {
 		label = "ufs_therm";
 		reg = <ADC_AMUX_THM2_PU2>;
@@ -3018,6 +2957,9 @@
 };
 
 &pm8998_adc_tm {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	io-channels = <&pm8998_vadc ADC_AMUX_THM2_PU2>,
 			<&pm8998_vadc ADC_AMUX_THM4_PU2>,
 			<&pm8998_vadc ADC_GPIO2_PU2>;

@@ -6,7 +6,10 @@
  */
 
 &qupv3_se5_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
+
 	synaptics_tcm@3c {
 		compatible = "synaptics,tcm-i2c";
 		reg = <0x3c>;
