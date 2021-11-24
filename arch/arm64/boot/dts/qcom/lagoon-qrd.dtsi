@@ -3,7 +3,6 @@
 #include <dt-bindings/iio/qcom,spmi-vadc.h>
 #include "lagoon-audio-overlay.dtsi"
 #include "lagoon-sde-display.dtsi"
-#include "lagoon-camera-sensor-mtp.dtsi"
 #include "wl2864c.dtsi"
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include "lagoon-thermal-overlay.dtsi"
