@@ -121,8 +121,6 @@
 	cam_cci: qcom,cci@ac4a000 {
 		cell-index = <0>;
 		compatible = "qcom,cci";
-		#address-cells = <1>;
-		#size-cells = <0>;
 		reg = <0xac4a000 0x4000>;
 		reg-names = "cci";
 		reg-cam-base = <0x4a000>;

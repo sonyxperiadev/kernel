@@ -10,6 +10,8 @@
 #include "sdm845-camera-sensor-mtp.dtsi"
 
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 #include "smb1355.dtsi"
 };
 
@@ -305,6 +307,8 @@
 };
 
 &qupv3_se3_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
 	nq@28 {
 		compatible = "qcom,nq-nci";
@@ -342,6 +346,9 @@
 };
 
 &pm8998_vadc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	vph_pwr@83 {
 		label = "vph_pwr";
 		reg = <ADC_VPH_PWR>;
@@ -388,6 +395,9 @@
 };
 
 &pm8998_adc_tm {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	io-channels = <&pm8998_vadc ADC_VPH_PWR>,
 			<&pm8998_vadc ADC_XO_THERM_PU2>,
 			<&pm8998_vadc ADC_AMUX_THM1_PU2>,
