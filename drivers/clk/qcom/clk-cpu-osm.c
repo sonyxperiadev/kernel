@@ -630,7 +630,6 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	struct cpufreq_frequency_table *table;
 	struct clk_osm *c, *parent;
 	struct clk_hw *p_hw;
-	int ret;
 	unsigned int i;
 
 	c = osm_configure_policy(policy);
@@ -685,12 +684,7 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	}
 	table[i].frequency = CPUFREQ_TABLE_END;
 
-	ret = cpufreq_table_validate_and_show(policy, table);
-	if (ret) {
-		pr_err("%s: invalid frequency table: %d\n", __func__, ret);
-		goto err;
-	}
-
+    policy->freq_table = table;
 	policy->dvfs_possible_from_any_cpu = true;
 	policy->fast_switch_possible = true;
 	policy->driver_data = c;
@@ -698,10 +692,6 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	cpumask_copy(policy->cpus, &c->related_cpus);
 
 	return 0;
-
-err:
-	kfree(table);
-	return ret;
 }
 
 static int osm_cpufreq_cpu_exit(struct cpufreq_policy *policy)
