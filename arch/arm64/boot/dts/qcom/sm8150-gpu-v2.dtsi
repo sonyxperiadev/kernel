@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ */
+
+&soc {
+	gpu_opp_table_v2: gpu_opp_table_v2 {
+		compatible = "operating-points-v2";
+
+		opp-675000000 {
+			opp-hz = /bits/ 64 <675000000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+		};
+
+		opp-585000000 {
+			opp-hz = /bits/ 64 <585000000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_NOM>;
+		};
+
+		opp-499200000 {
+			opp-hz = /bits/ 64 <499200000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_SVS_L2>;
+		};
+
+		opp-427000000 {
+			opp-hz = /bits/ 64 <427000000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_SVS_L1>;
+		};
+
+		opp-345000000 {
+			opp-hz = /bits/ 64 <345000000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_SVS>;
+		};
+
+		opp-257000000 {
+			opp-hz = /bits/ 64 <257000000>;
+			opp-microvolt = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
+		};
+	};
+};

@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ */
+
+#include "sm8150-audio-overlay.dtsi"
+
+&snd_9360 {
+	qcom,wsa-max-devs = <1>;
+};
