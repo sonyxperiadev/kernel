@@ -244,7 +244,7 @@
 		compatible = "qcom,pci-msi";
 		msi-controller;
 		reg = <0x17a00040 0x0>;
-		interrupt-parent = <&pdc>;
+		interrupt-parent = <&intc>;
 		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 770 IRQ_TYPE_EDGE_RISING>,
@@ -567,7 +567,7 @@
 		compatible = "qcom,pci-msi";
 		msi-controller;
 		reg = <0x17a00040 0x0>;
-		interrupt-parent = <&pdc>;
+		interrupt-parent = <&intc>;
 		interrupts = <GIC_SPI 800 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 801 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 802 IRQ_TYPE_EDGE_RISING>,

@@ -30,7 +30,7 @@
 	compatible = "qcom,sm8150";
 	qcom,msm-name = "SM8150 V1";
 	qcom,msm-id = <339 0x10000>;
-	interrupt-parent = <&pdc>;
+	interrupt-parent = <&intc>;
 
 	mem-offline {
 		compatible = "qcom,mem-offline";
@@ -1697,7 +1697,7 @@
 		qcom,complete-ramdump;
 
 		/* Inputs from mss */
-		interrupts-extended = <&pdc GIC_SPI 266 IRQ_TYPE_EDGE_RISING>,
+		interrupts-extended = <&intc GIC_SPI 266 IRQ_TYPE_EDGE_RISING>,
 				<&modem_smp2p_in 0 IRQ_TYPE_LEVEL_HIGH>,
 				<&modem_smp2p_in 2 IRQ_TYPE_LEVEL_HIGH>,
 				<&modem_smp2p_in 1 IRQ_TYPE_LEVEL_HIGH>,
@@ -1742,7 +1742,7 @@
 		qcom,complete-ramdump;
 
 		/* Inputs from lpass */
-		interrupts-extended = <&pdc GIC_SPI 162 IRQ_TYPE_EDGE_RISING>,
+		interrupts-extended = <&intc GIC_SPI 162 IRQ_TYPE_EDGE_RISING>,
 				<&adsp_smp2p_in 0 IRQ_TYPE_LEVEL_HIGH>,
 				<&adsp_smp2p_in 2 IRQ_TYPE_LEVEL_HIGH>,
 				<&adsp_smp2p_in 1 IRQ_TYPE_LEVEL_HIGH>,
@@ -1792,7 +1792,7 @@
 		qcom,complete-ramdump;
 
 		/* Inputs from ssc */
-		interrupts-extended = <&pdc GIC_SPI 494 IRQ_TYPE_EDGE_RISING>,
+		interrupts-extended = <&intc GIC_SPI 494 IRQ_TYPE_EDGE_RISING>,
 				<&dsps_smp2p_in 0 IRQ_TYPE_LEVEL_HIGH>,
 				<&dsps_smp2p_in 2 IRQ_TYPE_LEVEL_HIGH>,
 				<&dsps_smp2p_in 1 IRQ_TYPE_LEVEL_HIGH>,
@@ -1901,7 +1901,7 @@
 			<154 10070 0 1>;
 
 		/* Inputs from turing */
-		interrupts-extended = <&pdc GIC_SPI 578 IRQ_TYPE_EDGE_RISING>,
+		interrupts-extended = <&intc GIC_SPI 578 IRQ_TYPE_EDGE_RISING>,
 				<&cdsp_smp2p_in 0 IRQ_TYPE_LEVEL_HIGH>,
 				<&cdsp_smp2p_in 2 IRQ_TYPE_LEVEL_HIGH>,
 				<&cdsp_smp2p_in 1 IRQ_TYPE_LEVEL_HIGH>,
