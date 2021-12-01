@@ -328,6 +328,7 @@
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_user";
 			iommus = <&kgsl_smmu 0x0 0x401>;
+			qcom,iommu-dma = "disabled";
 			qcom,gpu-offset = <0xa8000>;
 		};
 
@@ -335,6 +336,7 @@
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_secure";
 			iommus = <&kgsl_smmu 0x2 0x400>;
+			qcom,iommu-dma = "disabled";
 		};
 	};
 
@@ -397,11 +399,13 @@
 		gmu_user: gmu_user {
 			compatible = "qcom,smmu-gmu-user-cb";
 			iommus = <&kgsl_smmu 0x4 0x400>;
+			qcom,iommu-dma = "disabled";
 		};
 
 		gmu_kernel: gmu_kernel {
 			compatible = "qcom,smmu-gmu-kernel-cb";
 			iommus = <&kgsl_smmu 0x5 0x400>;
+			qcom,iommu-dma = "disabled";
 		};
 	};
 };
