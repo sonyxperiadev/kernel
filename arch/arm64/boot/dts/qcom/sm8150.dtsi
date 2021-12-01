@@ -588,7 +588,13 @@
 
 		xbl_aop_mem: xbl_aop_mem {
 			no-map;
-			reg = <0x0 0x85e00000 0x0 0x140000>;
+			reg = <0x0 0x85e00000 0x0 0x120000>;
+		};
+
+		cmd_db: reserved-memory@85f20000 {
+			compatible = "qcom,cmd-db";
+			reg = <0x0 0x85f20000 0x0 0x20000>;
+			no-map;
 		};
 
 		smem_region: smem {
@@ -3017,11 +3023,6 @@
 		interrupt-parent = <&sleepstate_smp2p_in>;
 		interrupts = <0 0>;
 		interrupt-names = "smp2p-sleepstate-in";
-	};
-
-	cmd_db: qcom,cmd-db@c3f000c {
-		compatible = "qcom,cmd-db";
-		reg = <0xc3f000c 8>;
 	};
 
 	qcom_seecom: qseecom@87900000 {
