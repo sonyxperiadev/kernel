@@ -562,7 +562,7 @@
 			compatible = "qcom,regulator-cooling-device";
 			regulator-cdev-supply = <&VDD_MX_LEVEL>;
 			regulator-levels = <RPMH_REGULATOR_LEVEL_NOM
-					RPMH_REGULATOR_LEVEL_OFF>;
+					RPMH_REGULATOR_LEVEL_RETENTION>;
 			#cooling-cells = <2>;
 		};
 	};
@@ -619,7 +619,7 @@
 			compatible = "qcom,regulator-cooling-device";
 			regulator-cdev-supply = <&VDD_MMCX_LEVEL_AO>;
 			regulator-levels = <RPMH_REGULATOR_LEVEL_NOM
-					RPMH_REGULATOR_LEVEL_OFF>;
+					RPMH_REGULATOR_LEVEL_RETENTION>;
 			#cooling-cells = <2>;
 		};
 	};
