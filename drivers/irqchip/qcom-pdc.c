@@ -496,6 +496,7 @@ fail:
 }
 
 IRQCHIP_DECLARE(pdc_sdm845, "qcom,sdm845-pdc", qcom_pdc_init);
+IRQCHIP_DECLARE(pdc_sm8150, "qcom,sm8150-pdc", qcom_pdc_init);
 IRQCHIP_DECLARE(pdc_kona,   "qcom,kona-pdc",   qcom_pdc_init);
 IRQCHIP_DECLARE(pdc_lito,   "qcom,lito-pdc",   qcom_pdc_init);
 IRQCHIP_DECLARE(pdc_lagoon,   "qcom,lagoon-pdc",   qcom_pdc_init);
