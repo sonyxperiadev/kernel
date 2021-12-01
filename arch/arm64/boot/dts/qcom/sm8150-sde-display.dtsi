@@ -26,7 +26,7 @@
 #include "dsi-panel-sw43404-amoled-dsc-fhd-plus-cmd.dtsi"
 #include "dsi-panel-nt36850-truly-dualmipi-wqhd-cmd.dtsi"
 #include "dsi-panel-rm69299-visionox-amoled-fhd-plus-video.dtsi"
-#include <dt-bindings/clock/mdss-10nm-pll-clk.h>
+#include <dt-bindings/clock/mdss-7nm-pll-clk.h>
 
 &tlmm {
 	display_panel_avdd_eldo_default: display_panel_avdd_eldo_default {
