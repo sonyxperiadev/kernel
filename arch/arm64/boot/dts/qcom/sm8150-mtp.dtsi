@@ -258,7 +258,7 @@
 		qcom,nq-clkreq = <&tlmm 113 0x00>;
 		qcom,nq-esepwr = <&tlmm 42 0x00>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <47 0>;
+		interrupts = <47 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "nfc_irq";
 		pinctrl-names = "nfc_active", "nfc_suspend";
 		pinctrl-0 = <&nfc_int_active &nfc_enable_active

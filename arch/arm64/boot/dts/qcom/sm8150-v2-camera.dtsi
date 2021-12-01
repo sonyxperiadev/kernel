@@ -12,7 +12,7 @@
 			<0xac42000 0x5000>;
 		reg-cam-base = <0xaf000 0x42000>;
 		interrupt-names = "ife";
-		interrupts = <0 465 0>;
+		interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife0";
 		camss-supply = <&titan_top_gdsc>;
 		ife0-supply = <&ife_0_gdsc>;
@@ -47,7 +47,7 @@
 		reg = <0xacb3000 0x1000>;
 		reg-cam-base = <0xb3000>;
 		interrupt-names = "csid";
-		interrupts = <0 464 0>;
+		interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife0";
 		camss-supply = <&titan_top_gdsc>;
 		ife0-supply = <&ife_0_gdsc>;
@@ -88,7 +88,7 @@
 			<0xac42000 0x5000>;
 		reg-cam-base = <0xb6000 0x42000>;
 		interrupt-names = "ife";
-		interrupts = <0 467 0>;
+		interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife1";
 		camss-supply = <&titan_top_gdsc>;
 		ife1-supply = <&ife_1_gdsc>;
@@ -123,7 +123,7 @@
 		reg = <0xacba000 0x1000>;
 		reg-cam-base = <0xba000>;
 		interrupt-names = "csid";
-		interrupts = <0 466 0>;
+		interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
 		regulator-names = "camss", "ife1";
 		camss-supply = <&titan_top_gdsc>;
 		ife1-supply = <&ife_1_gdsc>;

@@ -8,7 +8,7 @@
 		compatible = "qcom,sm8150-pinctrl";
 		reg = <0x03000000 0xdc2000>, <0x17c000f0 0x60>;
 		reg-names = "pinctrl", "spi_cfg";
-		interrupts = <0 208 0>;
+		interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;

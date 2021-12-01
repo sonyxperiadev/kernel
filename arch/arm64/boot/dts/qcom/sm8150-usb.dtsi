@@ -19,7 +19,10 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <0 489 0>, <0 130 0>, <0 486 0>, <0 488 0>;
+		interrupts = <GIC_SPI 489 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 486 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 488 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dp_hs_phy_irq", "pwr_event_irq",
 				"ss_phy_irq", "dm_hs_phy_irq";
 		qcom,use-pdc-interrupts;
@@ -84,7 +87,7 @@
 		dwc3@a600000 {
 			compatible = "snps,dwc3";
 			reg = <0x0a600000 0xcd00>;
-			interrupts = <0 133 0>;
+			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&usb2_phy0>, <&usb_qmp_dp_phy>;
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
@@ -101,7 +104,7 @@
 		qcom,usbbam@a704000 {
 			compatible = "qcom,usb-bam-msm";
 			reg = <0xa704000 0x17000>;
-			interrupts = <0 132 0>;
+			interrupts = <GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>;
 
 			qcom,usb-bam-fifo-baseaddr = <0x146bb000>;
 			qcom,usb-bam-num-pipes = <4>;
@@ -348,7 +351,10 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <0 491 0>, <0 135 0>, <0 487 0>, <0 490 0>;
+		interrupts = <GIC_SPI 491 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 487 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 490 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dp_hs_phy_irq", "pwr_event_irq",
 				"ss_phy_irq", "dm_hs_phy_irq";
 		qcom,use-pdc-interrupts;
@@ -405,7 +411,7 @@
 		dwc3@a800000 {
 			compatible = "snps,dwc3";
 			reg = <0x0a800000 0xcd00>;
-			interrupts = <0 138 0>;
+			interrupts = <GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&usb2_phy1>, <&usb_qmp_phy>;
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;

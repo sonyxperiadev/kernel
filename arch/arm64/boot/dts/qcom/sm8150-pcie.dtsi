@@ -813,7 +813,7 @@
 		qcom,use-pcie-edma;
 		dmas = <&pcie1_edma 0 0>, <&pcie1_edma 1 0>;
 		dma-names = "tx", "rx";
-		interrupts = <0 440 0>;
+		interrupts = <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "mhi-device-inta";
 		qcom,mhi-ifc-id = <0x010817cb>;
 		qcom,mhi-interrupt;
