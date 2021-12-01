@@ -767,6 +767,22 @@
 		ranges = <0 0 0 0xffffffff>;
 		compatible = "simple-bus";
 	};
+
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			clock-frequency = <38400000>;
+			clock-output-names = "xo_board";
+			#clock-cells = <0>;
+		};
+
+		sleep_clk: sleep-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <32764>;
+			clock-output-names = "sleep_clk";
+			#clock-cells = <0>;
+		};
+	};
 };
 
 #include "sm8150-gdsc.dtsi"
@@ -1403,13 +1419,6 @@
 		qcom,active-only;
 		status = "ok";
 		operating-points-v2 = <&keepalive_opp_table>;
-	};
-
-	clock_rpmh: qcom,rpmhclk {
-		compatible = "qcom,rpmh-clk-sm8150";
-		mboxes = <&apps_rsc 0>;
-		mbox-names = "apps";
-		#clock-cells = <1>;
 	};
 
 	clock_aop: qcom,aopclk {
@@ -2617,6 +2626,11 @@
 
 		system_pm {
 			compatible = "qcom,system-pm";
+		};
+
+		clock_rpmh: qcom,rpmhclk {
+			compatible = "qcom,sm8150-rpmh-clk";
+			#clock-cells = <1>;
 		};
 	};
 
