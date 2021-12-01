@@ -16,8 +16,6 @@
 				<GIC_SPI 368 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "error_irq", "wdg_bite_irq", "ipc_irq";
 		iommus = <&apps_smmu 0x1461 0x0>, <&apps_smmu 0x2061 0x0>;
-		cache-slice-names = "npu";
-		cache-slices = <&llcc 23>;
 		clocks = <&clock_aop QDSS_CLK>,
 				<&clock_gcc GCC_NPU_AT_CLK>,
 				<&clock_gcc GCC_NPU_TRIG_CLK>,
