@@ -307,7 +307,7 @@
 
 	clock_audio_va: va_core_clk  {
 		compatible = "qcom,audio-ref-clk";
-		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK_1>;
+		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK>;
 		qcom,codec-lpass-ext-clk-freq = <19200000>;
 		qcom,codec-lpass-clk-id = <0x30B>;
 		#clock-cells = <1>;
@@ -368,7 +368,7 @@
 		status = "disabled";
 		compatible = "qcom,audio-ref-clk";
 		#clock-cells = <1>;
-		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK_1>;
+		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK>;
 		clock-names = "osr_clk";
 		qcom,lpass-mclk-id = <0x116>;
 		qcom,codec-mclk-clk-freq = <11289600>;
