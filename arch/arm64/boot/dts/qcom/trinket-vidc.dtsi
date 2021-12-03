@@ -5,7 +5,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/msm/msm-bus-ids.h>
-#include <dt-bindings/clock/qcom,videocc-sm6150.h>
+#include <dt-bindings/clock/qcom,videocc-trinket.h>
 
 &soc {
 	msm_vidc: qcom,vidc@5a00000 {
