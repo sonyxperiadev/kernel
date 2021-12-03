@@ -820,7 +820,7 @@
 		compatible = "qcom,sdm845-pdc";
 		reg = <0xb220000 0x400>;
 		qcom,pdc-ranges = <0 480 94>, <94 609 15>, <119 634 7>;
-		#interrupt-cells = <3>;
+		#interrupt-cells = <2>;
 		interrupt-parent = <&intc>;
 		interrupt-controller;
 	};
