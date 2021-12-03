@@ -92,6 +92,8 @@
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,bengal-iot")
 #define early_machine_is_bengalp_iot()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,bengalp-iot")
+#define early_machine_is_trinket()	\
+	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,trinket")
 #else
 #define of_board_is_sim()		0
 #define of_board_is_rumi()		0
@@ -132,6 +134,7 @@
 #define early_machine_is_sdm845()	0
 #define early_machine_is_bengal_iot()	0
 #define early_machine_is_bengalp_iot()	0
+#define early_machine_is_trinket()	0
 #endif
 
 #define PLATFORM_SUBTYPE_MDM	1
@@ -174,6 +177,7 @@ enum msm_cpu {
 	MSM_CPU_SDMMAGPIE,
 	MSM_CPU_BENGAL_IOT,
 	MSM_CPU_BENGALP_IOT,
+	MSM_CPU_TRINKET,
 };
 
 struct msm_soc_info {
