@@ -953,7 +953,7 @@
 		compatible = "qcom,sm8150-pdc";
 		reg = <0xb220000 0x400>;
 		qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>;
-		#interrupt-cells = <3>;
+		#interrupt-cells = <2>;
 		interrupt-parent = <&intc>;
 		interrupt-controller;
 	};
