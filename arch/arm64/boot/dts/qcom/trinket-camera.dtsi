@@ -20,7 +20,7 @@
 		reg = <0x1628000 0x1000>,
 				<0x5C00120 0x4>;
 		reg-names = "csiphy", "csiphy_clk_mux";
-		interrupts = <0 72 0>;
+		interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&camss_top_gdsc>;
 		qcom,cam-vreg-name = "gdscr";
@@ -51,7 +51,7 @@
 		reg = <0x1629000 0x1000>,
 				<0x5c00124 0x4>;
 		reg-names = "csiphy", "csiphy_clk_mux";
-		interrupts = <0 73 0>;
+		interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&camss_top_gdsc>;
 		qcom,cam-vreg-name = "gdscr";
@@ -82,7 +82,7 @@
 		reg = <0x162a000 0x1000>,
 				<0x5c00128 0x4>;
 		reg-names = "csiphy", "csiphy_clk_mux";
-		interrupts = <0 74 0>;
+		interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csiphy";
 		gdscr-supply = <&camss_top_gdsc>;
 		qcom,cam-vreg-name = "gdscr";
@@ -112,7 +112,7 @@
 		compatible = "qcom,csid-v5.0", "qcom,csid";
 		reg = <0x5c30000 0x400>;
 		reg-names = "csid";
-		interrupts = <0 208 0>;
+		interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1232000>;
 		qcom,mipi-csi-vdd-supply = <&L18A>;
@@ -146,7 +146,7 @@
 		compatible = "qcom,csid-v5.0", "qcom,csid";
 		reg = <0x5c30400 0x400>;
 		reg-names = "csid";
-		interrupts = <0 209 0>;
+		interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1232000>;
 		qcom,mipi-csi-vdd-supply = <&L18A>;
@@ -180,7 +180,7 @@
 		compatible = "qcom,csid-v5.0", "qcom,csid";
 		reg = <0x5c30800 0x400>;
 		reg-names = "csid";
-		interrupts = <0 210 0>;
+		interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1232000>;
 		qcom,mipi-csi-vdd-supply = <&L18A>;
@@ -214,7 +214,7 @@
 		compatible = "qcom,csid-v5.0", "qcom,csid";
 		reg = <0x5c30c00 0x400>;
 		reg-names = "csid";
-		interrupts = <0 211 0>;
+		interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1232000>;
 		qcom,mipi-csi-vdd-supply = <&L18A>;
@@ -283,7 +283,7 @@
 			<0x5c18000 0x3000>,
 			<0x014560bc 0x4>;
 		reg-names = "cpp", "cpp_vbif", "cpp_hw", "camss_cpp";
-		interrupts = <0 206 0>;
+		interrupts = <GIC_SPI 206 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "cpp";
 		camss-vdd-supply = <&camss_top_gdsc>;
 		vdd-supply = <&camss_cpp_gdsc>;
@@ -361,7 +361,7 @@
 		reg = <0x5c31000 0xc00>,
 			<0x5c00020 0x4>;
 		reg-names = "ispif", "csi_clk_mux";
-		interrupts = <0 212 0>;
+		interrupts = <GIC_SPI 212 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "ispif";
 		qcom,num-isps = <0x2>;
 		camss-vdd-supply = <&camss_top_gdsc>;
@@ -442,8 +442,8 @@
 			<0x5c40000 0x3000>,
 			<0x5C00000 0x40000>;
 		reg-names = "vfe", "vfe_vbif", "msm-cam";
-		interrupts = <0 214 0>,
-				<0 258 0>;
+		interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "vfe", "dual-vfe-irq";
 		camss-vdd-supply = <&camss_top_gdsc>;
 		vdd-supply = <&camss_vfe0_gdsc>;
@@ -520,8 +520,8 @@
 			<0x5c40000 0x3000>,
 			<0x5C00000 0x40000>;
 		reg-names = "vfe", "vfe_vbif", "msm-cam";
-		interrupts = <0 215 0>,
-				<0 258 0>;
+		interrupts = <GIC_SPI 215 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "vfe", "dual-vfe-irq";
 		camss-vdd-supply = <&camss_top_gdsc>;
 		vdd-supply = <&camss_vfe1_gdsc>;
@@ -603,7 +603,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg-names = "cci";
-		interrupts = <0 207 0>;
+		interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "cci";
 		status = "ok";
 		gdscr-supply = <&camss_top_gdsc>;
@@ -650,7 +650,7 @@
 		reg = <0x05c1c000 0x4000>,
 			<0x5c60000 0x3000>;
 		reg-names = "jpeg_hw", "jpeg_vbif";
-		interrupts = <0 216 0>;
+		interrupts = <GIC_SPI 216 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "jpeg";
 		camss-vdd-supply = <&camss_top_gdsc>;
 		qcom,vdd-names = "camss-vdd";
@@ -695,7 +695,7 @@
 		reg = <0x5ca0000 0x4000>,
 			<0x5c60000 0x3000>;
 		reg-names = "jpeg_hw", "jpeg_vbif";
-		interrupts = <0 217 0>;
+		interrupts = <GIC_SPI 217 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "jpeg";
 		camss-vdd-supply = <&camss_top_gdsc>;
 		qcom,vdd-names = "camss-vdd";

@@ -19,7 +19,9 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <0 302 0>, <0 422 0>, <0 260 0>;
+		interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "pwr_event_irq", "ss_phy_irq", "hs_phy_irq";
 
 		USB3_GDSC-supply = <&usb30_prim_gdsc>;
@@ -79,7 +81,7 @@
 			compatible = "snps,dwc3";
 			reg = <0x4e00000 0xcd00>;
 			interrupt-parent = <&intc>;
-			interrupts = <0 255 0>;
+			interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&qusb_phy0>, <&usb_qmp_phy>;
 			tx-fifo-resize;
 			linux,sysdev_is_parent;
@@ -97,7 +99,7 @@
 		qcom,usbbam@04f04000 {
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x04f04000 0x17000>;
-			interrupts = <0 253 0>;
+			interrupts = <GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH>;
 
 			qcom,usb-bam-fifo-baseaddr = <0xc121000>;
 			qcom,usb-bam-num-pipes = <4>;
