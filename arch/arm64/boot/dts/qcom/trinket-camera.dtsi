@@ -253,6 +253,7 @@
 			iommus = <&apps_smmu 0x420 0x0000>,
 					<&apps_smmu 0x421 0x0002>;
 			iommu-cells = <2>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0x70000000>;
 			label = "vfe";
 			qcom,scratch-buf-support;
 		};
@@ -261,6 +262,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x0000>;
 			iommu-cells = <2>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0x78000000>;
 			label = "cpp";
 		};
 
@@ -268,12 +270,14 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x820 0x0000>;
 			iommu-cells = <2>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0x78000000>;
 			label = "jpeg_enc0";
 		};
 		msm_cam_smmu_cb5 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x821 0x0000>;
 			iommu-cells = <2>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0x78000000>;
 			label = "jpeg_dma";
 		};
 
