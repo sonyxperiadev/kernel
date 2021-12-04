@@ -247,12 +247,12 @@
 		compatible = "qcom,msm-cam-smmu";
 		status = "ok";
 		qcom,camera-secure-sid;
-		qcom,iommu-dma-addr-pool = <0x00020000 0x78000000>;
 
 		msm_cam_smmu_cb1 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x420 0x0000>,
 					<&apps_smmu 0x421 0x0002>;
+			iommu-cells = <2>;
 			label = "vfe";
 			qcom,scratch-buf-support;
 		};
@@ -260,17 +260,20 @@
 		msm_cam_smmu_cb2 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x0000>;
+			iommu-cells = <2>;
 			label = "cpp";
 		};
 
 		msm_cam_smmu_cb4 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x820 0x0000>;
+			iommu-cells = <2>;
 			label = "jpeg_enc0";
 		};
 		msm_cam_smmu_cb5 {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x821 0x0000>;
+			iommu-cells = <2>;
 			label = "jpeg_dma";
 		};
 
