@@ -256,11 +256,13 @@
 	kgsl_iommu_test_device {
 		compatible = "iommu-debug-test";
 		iommus = <&kgsl_smmu 0x7 0>;
+		qcom,iommu-dma = "disabled";
 	};
 
 	apps_iommu_test_device {
 		compatible = "iommu-debug-test";
 		iommus = <&apps_smmu 0x21 0>;
+		qcom,iommu-dma = "disabled";
 	};
 };
 
