@@ -260,6 +260,7 @@
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_user";
 			iommus = <&kgsl_smmu 0 1>;
+			qcom,iommu-dma = "disabled";
 			qcom,gpu-offset = <0xa8000>;
 		};
 
@@ -267,6 +268,7 @@
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_secure";
 			iommus = <&kgsl_smmu 2 0>;
+			qcom,iommu-dma = "disabled";
 		};
 	};
 };
