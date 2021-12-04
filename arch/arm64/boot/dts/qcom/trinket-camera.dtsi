@@ -247,6 +247,7 @@
 		compatible = "qcom,msm-cam-smmu";
 		status = "ok";
 		qcom,camera-secure-sid;
+		qcom,iommu-dma-addr-pool = <0x00020000 0x78000000>;
 
 		msm_cam_smmu_cb1 {
 			compatible = "qcom,msm-cam-smmu-cb";

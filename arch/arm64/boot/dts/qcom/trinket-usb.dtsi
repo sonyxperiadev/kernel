@@ -15,6 +15,9 @@
 		reg-names = "core_base";
 
 		iommus = <&apps_smmu 0x100 0x0>;
+		qcom,iommu-dma = "atomic";
+		qcom,iommu-dma-addr-pool = <0x90000000 0x60000000>;
+
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -314,6 +317,7 @@
 	usb_audio_qmi_dev {
 		compatible = "qcom,usb-audio-qmi-dev";
 		iommus = <&apps_smmu 0x04f 0x0>;
+		qcom,iommu-dma = "disabled";
 		qcom,usb-audio-stream-id = <0xf>;
 		qcom,usb-audio-intr-num = <2>;
 	};

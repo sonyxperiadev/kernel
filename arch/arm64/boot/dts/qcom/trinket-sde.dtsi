@@ -220,6 +220,9 @@
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
 			compatible = "qcom,smmu_sde_sec";
 			iommus = <&apps_smmu 0x401 0x0>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-vmid = <0xa>; /* VMID_CP_PIXEL */
 		};
 
 		/* data and reg bus scale settings */
@@ -312,11 +315,15 @@
 		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
 			compatible = "qcom,smmu_sde_rot_unsec";
 			iommus = <&apps_smmu 0x402 0x0>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+			qcom,iommu-faults = "non-fatal";
 		};
 
 		smmu_rot_sec: qcom,smmu_rot_sec_cb {
 			compatible = "qcom,smmu_sde_rot_sec";
 			iommus = <&apps_smmu 0x403 0x0>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+			qcom,iommu-faults = "non-fatal";
 		};
 	};
 

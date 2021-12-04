@@ -59,7 +59,7 @@
 		      <0x8064000 0x15000>;
 		reg-names = "tmc-base", "bam-base";
 
-		qcom,smmu-s1-bypass;
+		qcom,iommu-dma = "bypass";
 		iommus = <&apps_smmu 0x0c0 0>,
 				<&apps_smmu 0x0a0 0>;
 

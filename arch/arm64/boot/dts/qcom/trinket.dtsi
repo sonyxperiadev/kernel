@@ -1243,7 +1243,7 @@
 		qcom,gpii-mask = <0x1f>;
 		iommus = <&apps_smmu 0x0136 0x0>;
 		qcom,smmu-cfg = <0x1>;
-		qcom,iova-range = <0x0 0x100000 0x0 0x100000>;
+		qcom,iommu-dma-addr-pool = <0x0 0x100000 0x0 0x100000>;
 		status = "ok";
 	};
 
@@ -1263,9 +1263,9 @@
 		qcom,ev-factor = <2>;
 		qcom,max-num-gpii = <8>;
 		qcom,gpii-mask = <0x0f>;
-		qcom,smmu-cfg = <0x1>;
-		qcom,iova-range = <0x0 0x100000 0x0 0x100000>;
 		iommus = <&apps_smmu 0x0156 0x0>;
+		qcom,smmu-cfg = <0x1>;
+		qcom,iommu-dma-addr-pool = <0x0 0x100000 0x0 0x100000>;
 		status = "ok";
 	};
 
@@ -1540,36 +1540,48 @@
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C01 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb2 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C02 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb3 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C03 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb4 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C04 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb5 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C05 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb6 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
 			label = "cdsprpc-smd";
 			iommus = <&apps_smmu 0x0C06 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb9 {
@@ -1577,6 +1589,8 @@
 			label = "cdsprpc-smd";
 			qcom,secure-context-bank;
 			iommus = <&apps_smmu 0x0C09 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 		};
 
 		qcom,msm_fastrpc_compute_cb10 {
@@ -1584,6 +1598,8 @@
 			label = "adsprpc-smd";
 			iommus = <&apps_smmu 0x0043 0x0>,
 				 <&apps_smmu 0x0044 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
 			shared-sid = <2>;
 			shared-cb  = <5>;
 		};
@@ -2051,6 +2067,7 @@
 		qcom,smmu-s1-enable;
 		iommus = <&apps_smmu 0x01A6 0x0011>,
 			 <&apps_smmu 0x01B6 0x0011>;
+		qcom,iommu-dma = "atomic";
 	};
 
 	qcom_msmhdcp: qcom,msm_hdcp {
@@ -2092,6 +2109,7 @@
 		qcom,smmu-s1-enable;
 		iommus = <&apps_smmu 0x01A4 0x0011>,
 			<&apps_smmu 0x01B4 0x0011>;
+		qcom,iommu-dma = "atomic";
 	};
 
 	bluetooth: bt_wcn3990 {
@@ -2122,16 +2140,13 @@
 		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
 		qcom,apps-ch-pipes = <0x7c0000>;
 		qcom,ea-pc = <0x310>;
+		iommus = <&apps_smmu 0x66 0x0>,
+			 <&apps_smmu 0x6d 0x0>,
+			 <&apps_smmu 0x6e 0x1>,
+			 <&apps_smmu 0x70 0x1>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma = "atomic";
 		status = "disabled";
-		qcom,iommu-s1-bypass;
-
-		iommu_slim_aud_ctrl_cb: qcom,iommu_slim_ctrl_cb {
-			compatible = "qcom,iommu-slim-ctrl-cb";
-			iommus = <&apps_smmu 0x66 0x0>,
-				 <&apps_smmu 0x6d 0x0>,
-				 <&apps_smmu 0x6e 0x1>,
-				 <&apps_smmu 0x70 0x1>;
-		};
 	};
 
 	slim_qca: slim@a340000 {
@@ -2142,13 +2157,10 @@
 		reg-names = "slimbus_physical", "slimbus_bam_physical";
 		interrupts = <GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 404 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
-		status = "ok";
 		qcom,iommu-s1-bypass;
-
-		iommu_slim_qca_ctrl_cb: qcom,iommu_slim_ctrl_cb {
-			compatible = "qcom,iommu-slim-ctrl-cb";
-			iommus = <&apps_smmu 0x73 0x0>;
-		};
+		iommus = <&apps_smmu 0x73 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma = "atomic";
 
 		/* Slimbus Slave DT for WCN3990 */
 		btfmslim_codec: wcn3990 {
@@ -2401,9 +2413,10 @@
 	ipa_smmu_ap: ipa_smmu_ap {
 		compatible = "qcom,ipa-smmu-ap-cb";
 		iommus = <&apps_smmu 0x00E0 0x0>;
-		qcom,iova-mapping = <0x10000000 0x30000000>;
+		qcom,iommu-dma-addr-pool = <0x10000000 0x30000000>;
 		/* modem tables in IMEM */
 		qcom,additional-mapping = <0x0c123000 0x0c123000 0x2000>;
+		qcom,iommu-dma = "fastmap";
 	};
 
 	ipa_smmu_wlan: ipa_smmu_wlan {
@@ -2411,12 +2424,13 @@
 		iommus = <&apps_smmu 0x00E1 0x0>;
 		/* ipa-uc ram */
 		qcom,additional-mapping = <0x5860000 0x5860000 0x80000>;
+		qcom,iommu-dma = "atomic";
 	};
 
 	ipa_smmu_uc: ipa_smmu_uc {
 		compatible = "qcom,ipa-smmu-uc-cb";
 		iommus = <&apps_smmu 0x00E2 0x0>;
-		qcom,iova-mapping = <0x40400000 0x1fc00000>;
+		qcom,iommu-dma-addr-pool = <0x40400000 0x1fc00000>;
 	};
 
 	qcom,ipa_fws {
@@ -3008,6 +3022,8 @@
 		      <0xb0000000 0x10000>;
 		reg-names = "membase", "smmu_iova_base", "smmu_iova_ipa";
 		iommus = <&apps_smmu 0x80 0x1>;
+		qcom,iommu-dma = "fastmap";
+		qcom,iommu-faults = "stall-disable", "non-fatal";
 		interrupts = <GIC_SPI 358 IRQ_TYPE_LEVEL_HIGH /* CE0 */ >,
 			     <GIC_SPI 359 IRQ_TYPE_LEVEL_HIGH /* CE1 */ >,
 			     <GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH /* CE2 */ >,
