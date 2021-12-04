@@ -40,7 +40,6 @@
 		interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
-		iommus = <&apps_smmu 0x400 0x0>;
 
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -215,6 +214,14 @@
 				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
 			};
+		};
+
+		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
+			compatible = "qcom,smmu_sde_unsec";
+			iommus = <&apps_smmu 0x400 0x0>;
+			qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-earlymap; /* for cont-splash */
 		};
 
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
