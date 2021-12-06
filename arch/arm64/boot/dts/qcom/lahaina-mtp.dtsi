@@ -162,5 +162,3 @@
 &wil6210 {
 	status = "ok";
 };
-
-#include "lahaina-camera-sensor-mtp.dtsi"

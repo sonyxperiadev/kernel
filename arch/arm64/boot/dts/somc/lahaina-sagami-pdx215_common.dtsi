@@ -190,18 +190,6 @@
 	};
 };
 
-&cam_pmic0_cs {
-	status = "ok";
-};
-
-&dialog_pmic_1 {
-	status = "ok";
-};
-
-&sony_camera_module_4 {
-	status = "ok";
-};
-
 &cs40l25a {
 	cirrus,f0-default = <1736704>;
 	cirrus,f0-min = <1572864>;
