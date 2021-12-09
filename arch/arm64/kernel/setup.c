@@ -294,6 +294,57 @@ u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
 
 void __init __weak init_random_pool(void) { }
 
+/*
+ * HACK: These two functions sets the androidboot.mode=charger based
+ * on the Sony Mobile parameters startup and warmboot.
+ */
+static unsigned long sony_startup;
+
+static int __init sony_param_startup(char *p)
+{
+	if (kstrtoul(p, 16, &sony_startup))
+		return 1;
+	return 0;
+}
+early_param("startup", sony_param_startup);
+
+static int __init sony_param_warmboot(char *p)
+{
+	unsigned long warmboot;
+
+	if (kstrtoul(p, 16, &warmboot))
+		return 1;
+
+	/*
+	 * The bootloader sets the startup parameter to the following values:
+	 * 0x00004000 for USB wall charger
+	 * 0x00000004 for USB PC charger
+	 */
+	if (!warmboot && (sony_startup == 0x4000 || sony_startup == 0x4))
+		strlcat(boot_command_line, " androidboot.mode=charger",
+			COMMAND_LINE_SIZE);
+	return 0;
+}
+early_param("warmboot", sony_param_warmboot);
+ 
+/*
+ * HACK: The following function strips off androidboot.mode=cei_charger
+ * from kernel command line so that parameter set by sony_param_warmboot
+ * will be used instead.
+ */
+static int __init androidboot_mode(char *p)
+{
+	char *offset_addr;
+
+	if (strcmp(p, "cei_charger"))
+		return 1;
+
+	if ((offset_addr = strstr(boot_command_line, "androidboot.mode=cei_charger")))
+		memset(offset_addr, ' ', strlen("androidboot.mode=cei_charger"));
+	return 0;
+}
+early_param("androidboot.mode", androidboot_mode);
+
 void __init setup_arch(char **cmdline_p)
 {
 	init_mm.start_code = (unsigned long) _text;

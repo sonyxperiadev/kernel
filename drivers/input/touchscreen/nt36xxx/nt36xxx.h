@@ -62,7 +62,7 @@
 
 //---Touch info.---
 #define TOUCH_DEFAULT_MAX_WIDTH 1080
-#define TOUCH_DEFAULT_MAX_HEIGHT 1920
+#define TOUCH_DEFAULT_MAX_HEIGHT 2408
 #define TOUCH_MAX_FINGER_NUM 10
 #define TOUCH_KEY_NUM 0
 #if TOUCH_KEY_NUM > 0
@@ -71,7 +71,11 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #define TOUCH_FORCE_NUM 1000
 
 /* Enable only when module have tp reset pin and connected to host */
+#ifdef CONFIG_ARCH_SONY_GANGES
+#define NVT_TOUCH_SUPPORT_HW_RST 0
+#else
 #define NVT_TOUCH_SUPPORT_HW_RST 1
+#endif
 
 //---Customerized func.---
 #define NVT_TOUCH_PROC 1
@@ -82,12 +86,20 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #if WAKEUP_GESTURE
 extern const uint16_t gesture_key_array[];
 #endif
-#define BOOT_UPDATE_FIRMWARE 0
+#define BOOT_UPDATE_FIRMWARE 1
 #define BOOT_UPDATE_FIRMWARE_NAME "novatek_ts_fw.bin"
+#define BOOT_UPDATE_FIRMWARE_NAME_TRULY "SM13_KM_08_PID5403.bin"
+#define BOOT_UPDATE_FIRMWARE_NAME_TIANMA "SM23_TM_08_PID5404.bin"
 
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
+
+#define NVT_BUFFER_SIZE 1025
+
+#define TP_SOURCE_TRULY	0x00
+#define TP_SOURCE_TIANMA	0x01
+#define TP_SOURCE_UNKNOWN	0xFF
 
 struct nvt_ts_data {
 	struct i2c_client *client;
@@ -119,9 +131,10 @@ struct nvt_ts_data {
 	const struct nvt_ts_mem_map *mmap;
 	uint8_t carrier_system;
 	uint16_t nvt_pid;
-	uint8_t xbuf[1025];
+	uint8_t xbuf[NVT_BUFFER_SIZE];
 	struct mutex xbuf_lock;
 	bool irq_enabled;
+	uint8_t tp_source;
 };
 
 #if NVT_TOUCH_PROC

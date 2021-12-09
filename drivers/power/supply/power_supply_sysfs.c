@@ -443,6 +443,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(pd_voltage_max),
 	POWER_SUPPLY_ATTR(pd_voltage_min),
 	POWER_SUPPLY_ATTR(sdp_current_max),
+	POWER_SUPPLY_ATTR(fg_reset_clock),
 	POWER_SUPPLY_ATTR(connector_type),
 	POWER_SUPPLY_ATTR(parallel_batfet_mode),
 	POWER_SUPPLY_ATTR(parallel_fcc_max),
@@ -538,6 +539,11 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(battery_raw_soc),
 	POWER_SUPPLY_ATTR(dcin_en_sts),
 	POWER_SUPPLY_ATTR(reset_dcin_en),
+	POWER_SUPPLY_ATTR(skin_temp),
+	POWER_SUPPLY_ATTR(monotonic_soc),
+	POWER_SUPPLY_ATTR(max_charge_current),
+	POWER_SUPPLY_ATTR(int_cld),
+	POWER_SUPPLY_ATTR(running_status),
 #endif
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
@@ -549,6 +555,9 @@ static struct device_attribute power_supply_attrs[] = {
 #ifdef CONFIG_SOMC_CHARGER_EXTENSION
 	POWER_SUPPLY_ATTR(charger_type),
 	POWER_SUPPLY_ATTR(wireless_status),
+#endif
+#ifdef CONFIG_ARCH_SONY_NILE
+	POWER_SUPPLY_ATTR(recharge_voltage),
 #endif
 	POWER_SUPPLY_ATTR(serial_number),
 	POWER_SUPPLY_ATTR(fcc_mah),

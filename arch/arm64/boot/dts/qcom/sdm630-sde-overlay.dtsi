@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ */ 
+
+/* Remove all legacy MDSS nodes */
+/delete-node/ &mdss_mdp;
+/delete-node/ &mdss_dsi;
+/delete-node/ &mdss_wb;
+/delete-node/ &msm_ext_disp;
+/delete-node/ &mdss_dp_ctrl;
+/delete-node/ &mdss_rotator;
+/delete-node/ &mdss_dsi0_pll;
+/delete-node/ &mdss_dp_pll;
+
+#include "sdm630-sde.dtsi"
+#include "sdm630-sde-pll.dtsi"

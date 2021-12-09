@@ -1,0 +1,63 @@
+&slim_aud {
+	status = "disabled";
+};
+
+&dai_slim {
+	status = "disabled";
+};
+
+&wcd9335 {
+	status = "disabled";
+};
+
+&wcd934x_cdc {
+	status = "disabled";
+};
+
+&clock_audio {
+	status = "disabled";
+};
+
+&wcd_rst_gpio {
+	status = "disabled";
+};
+
+&wcd9xxx_intc {
+	status = "disabled";
+};
+
+&tasha_snd {
+	status = "disabled";
+};
+
+&tavil_snd {
+	status = "disabled";
+};
+
+&spi_7 {
+	status = "disabled";
+};
+
+&wdsp_mgr {
+	status = "disabled";
+};
+
+&wdsp_glink {
+	status = "disabled";
+};
+
+&glink_spi_xprt_wdsp {
+	status = "disabled";
+};
+
+&int_codec {
+	status = "okay";
+};
+
+&pmic_analog_codec {
+	status = "okay";
+};
+
+&msm_sdw_codec {
+	status = "okay";
+};

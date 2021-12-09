@@ -24,7 +24,7 @@
 #include <linux/types.h>
 #include <linux/version.h>
 #include <linux/io.h>
-#include <media/msm_vidc.h>
+#include "msm_vidc.h"
 #include "msm_vidc_common.h"
 #include "msm_vidc_debug.h"
 #include "msm_vidc_internal.h"

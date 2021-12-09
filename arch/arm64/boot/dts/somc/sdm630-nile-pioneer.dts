@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "../qcom/sdm630.dtsi"
+#include "../qcom/sdm630-mtp.dtsi"
+#include "../qcom/sdm660-internal-codec.dtsi"
+#include "../qcom/sdm630-sde-overlay.dtsi"
+#include "sdm630-nile-pioneer.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. Pioneer (SDM630)";
+	compatible = "somc,pioneer", "qcom,sdm630-mtp", "qcom,sdm630", "qcom,mtp";
+	qcom,board-id = <8 0>;
+	qcom,pmic-id = <0x0001001b 0x0101011a 0x0 0x0>,
+			<0x0001001b 0x0201011a 0x0 0x0>;
+};

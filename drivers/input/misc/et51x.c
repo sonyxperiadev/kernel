@@ -50,6 +50,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/uaccess.h>
 
+#ifdef CONFIG_ARCH_SONY_NILE
+#include "cei_fp_detect.h"
+#endif
 
 #define ET51X_VDDANA_ON_US 10000
 #define ET51X_RESET_LOW_US 30000

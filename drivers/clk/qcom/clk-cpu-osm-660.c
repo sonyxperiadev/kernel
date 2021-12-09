@@ -36,7 +36,7 @@
 
 enum {
 	LMH_LITE_CLK_SRC,
-	P_XO,
+	P_BI_TCXO,
 };
 
 enum clk_osm_bases {
@@ -781,12 +781,12 @@ const struct clk_ops clk_ops_cpu_osm_660 = {
 };
 
 static const struct parent_map gcc_parent_map_1[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ LMH_LITE_CLK_SRC, 1 },
 };
 
 static const char * const gcc_parent_names_1[] = {
-	"xo",
+	"bi_tcxo",
 	"hmss_gpll0_clk_src",
 };
 
@@ -824,13 +824,13 @@ static struct clk_fixed_factor sys_apcsaux_clk_gcc = {
 static struct clk_init_data osm_clks_init[] = {
 	[0] = {
 		.name = "pwrcl_clk",
-		.parent_names = (const char *[]){ "cxo_a" },
+		.parent_names = (const char *[]){ "bi_tcxo_ao" },
 		.num_parents = 1,
 		.ops = &clk_ops_cpu_osm_660,
 	},
 	[1] = {
 		.name = "perfcl_clk",
-		.parent_names = (const char *[]){ "cxo_a" },
+		.parent_names = (const char *[]){ "bi_tcxo_ao" },
 		.num_parents = 1,
 		.ops = &clk_ops_cpu_osm_660,
 	},

@@ -21,7 +21,7 @@
 #include <linux/ion_kernel.h>
 #include <linux/slab.h>
 #include <linux/types.h>
-#include "media/msm_vidc.h"
+#include "msm_vidc.h"
 #include "msm_vidc_debug.h"
 #include "msm_vidc_resources.h"
 

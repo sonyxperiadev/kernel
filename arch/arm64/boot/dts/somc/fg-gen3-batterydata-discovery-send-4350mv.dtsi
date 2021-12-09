@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2016-2017, 2021, The Linux Foundation. All rights reserved.
+ */
+
+qcom,discovery_send_4350mv {
+	qcom, = <24>;
+	somc,initial-capacity-uah = <3580000>;
+	qcom,max-voltage-uv = <4350000>;
+	qcom,nom-batt-capacity-mah = <3430>;
+	qcom,fg-cc-cv-threshold-mv = <4340>;
+	qcom,fastchg-current-ma = <2400>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1308-3580";
+	qcom,checksum = <0xE09D>;
+	qcom,gui-version = "PM660GUI - 0.0.0.44";
+
+	qcom,fg-profile-data = [
+		67 1F D9 05
+		37 0A 03 FD
+		F2 1C D1 F2
+		8E 02 6F 0D
+		22 18 B5 22
+		33 3C AE 4B
+		58 00 00 00
+		0F 00 00 00
+		00 00 5B B2
+		A9 CC 07 00
+		23 00 08 00
+		92 E5 97 D5
+		A9 05 67 FA
+		A2 06 C0 0A
+		BB EB EA 32
+		1C 06 09 20
+		27 00 14 00
+		5B 1F 61 FC
+		CE 03 D4 06
+		2C 1D 29 EB
+		F9 0A D2 14
+		96 18 D6 22
+		A1 45 DA 52
+		56 00 00 00
+		0E 00 00 00
+		00 00 47 CD
+		A4 C2 64 BD
+		1D 00 00 00
+		A4 E3 97 D5
+		C6 05 25 FA
+		43 FD D8 03
+		F6 06 0E 1A
+		A2 33 CC FF
+		07 10 00 00
+		FA 0D 99 45
+		1D 00 40 00
+		89 01 0A FA
+		FF 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+		00 00 00 00
+	];
+
+	somc,step-cfg = <
+		(-2550) 50 0 4500    0 4200 1
+		   50  100 0 4500  650 4200 2
+		  100  450 0 4500 2400 4350 3
+		  450  550 0 4500  650 4200 4
+		  550 2550 0 4500    0 4200 5
+	>;
+};

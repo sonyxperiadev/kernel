@@ -46,6 +46,16 @@
 #define FW_IHEX_NAME "synaptics/startup_fw_update.bin"
 #define FW_IMAGE_NAME "synaptics/startup_fw_update.img"
 
+#ifdef CONFIG_ARCH_SONY_NILE
+#define DO_STARTUP_FW_UPDATE
+#endif
+
+#ifdef DO_STARTUP_FW_UPDATE
+#include "firmware/PR2610092-td4322-i2c-truly-sony-00170204.h"
+#include "firmware/PR2610092-td4322-i2c-innolux6p-sony-02170102.h"
+#include "firmware/PR2743968-td4328-i2c-tianma-sony-03170203.h"
+#endif
+
 #define ENABLE_SYS_REFLASH false
 #define FORCE_UPDATE false
 #define DO_LOCKDOWN false
@@ -859,6 +869,14 @@ static unsigned int le_to_uint(const unsigned char *ptr)
 			(unsigned int)ptr[1] * 0x100 +
 			(unsigned int)ptr[2] * 0x10000 +
 			(unsigned int)ptr[3] * 0x1000000;
+}
+
+static unsigned int be_to_uint(const unsigned char *ptr)
+{
+	return (unsigned int)ptr[3] +
+			(unsigned int)ptr[2] * 0x100 +
+			(unsigned int)ptr[1] * 0x10000 +
+			(unsigned int)ptr[0] * 0x1000000;
 }
 
 #ifdef F51_DISCRETE_FORCE
@@ -2712,6 +2730,8 @@ static int fwu_get_device_config_id(void)
 	if (retval < 0)
 		return retval;
 
+	fwu->rmi4_data->config_id = be_to_uint(fwu->config_id);
+
 	return 0;
 }
 
@@ -2732,6 +2752,22 @@ static enum flash_area fwu_go_nogo(void)
 
 	/* Update both UI and config if device is in bootloader mode */
 	if (fwu->bl_mode_device) {
+		flash_area = UI_FIRMWARE;
+		goto exit;
+	}
+
+	/* Detect the mismatch firmware in module */
+	if ((fwu->rmi4_data->tp_source == TP_SOURCE_TRULY &&
+		((fwu->rmi4_data->config_id >> 24) & 0xff) != 0x00) ||
+	    (fwu->rmi4_data->tp_source == TP_SOURCE_INNOLUX &&
+		((fwu->rmi4_data->config_id >> 24) & 0xff) != 0x02) ||
+	    (fwu->rmi4_data->tp_source == TP_SOURCE_TIANMA &&
+		((fwu->rmi4_data->config_id >> 24) & 0xff) != 0x03)) {
+		dev_info(rmi4_data->pdev->dev.parent,
+				"Update reason: Module has a mismatch version. "
+				"tp_source = 0x%02X, but config_id = 0x%08X\n",
+				fwu->rmi4_data->tp_source,
+				fwu->rmi4_data->config_id);
 		flash_area = UI_FIRMWARE;
 		goto exit;
 	}
@@ -4954,9 +4990,9 @@ EXPORT_SYMBOL(synaptics_fw_updater);
 static void fwu_startup_fw_update_work(struct work_struct *work)
 {
 	static unsigned char do_once = 1;
+	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 #ifdef WAIT_FOR_FB_READY
 	unsigned int timeout;
-	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 #endif
 
 	if (!do_once)
@@ -4978,7 +5014,14 @@ static void fwu_startup_fw_update_work(struct work_struct *work)
 	}
 #endif
 
-	synaptics_fw_updater(NULL);
+	if (rmi4_data->tp_source == TP_SOURCE_TRULY)
+		synaptics_fw_updater(FirmwareImage_TRULY);
+	else if (rmi4_data->tp_source == TP_SOURCE_INNOLUX)
+		synaptics_fw_updater(FirmwareImage_INNOLUX);
+	else if (rmi4_data->tp_source == TP_SOURCE_TIANMA)
+		synaptics_fw_updater(FirmwareImage_TIANMA);
+	else
+		synaptics_fw_updater(NULL);
 }
 #endif
 

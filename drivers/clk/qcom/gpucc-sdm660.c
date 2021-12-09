@@ -32,7 +32,7 @@ static DEFINE_VDD_REGULATORS(vdd_mx, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGS_INIT(vdd_gfx, 1);
 
 enum {
-	P_XO,
+	P_BI_TCXO,
 	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0_OUT_MAIN,
 	P_GPLL0_OUT_MAIN_DIV,
@@ -41,7 +41,7 @@ enum {
 };
 
 static const struct parent_map gpucc_parent_map_0[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_GPLL0_OUT_MAIN, 5 },
 	{ P_GPLL0_OUT_MAIN_DIV, 6 },
 	{ P_CORE_BI_PLL_TEST_SE, 7 },
@@ -55,7 +55,7 @@ static const char * const gpucc_parent_names_0[] = {
 };
 
 static const struct parent_map gpucc_parent_map_1[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_GPU_PLL0_PLL_OUT_MAIN, 1 },
 	{ P_GPU_PLL1_PLL_OUT_MAIN, 3 },
 	{ P_GPLL0_OUT_MAIN, 5 },
@@ -63,7 +63,7 @@ static const struct parent_map gpucc_parent_map_1[] = {
 };
 
 static const char * const gpucc_parent_names_1[] = {
-	"xo",
+	"bi_tcxo",
 	"gpu_pll0_pll_out_main",
 	"gpu_pll1_pll_out_main",
 	"gcc_gpu_gpll0_clk",
@@ -103,7 +103,7 @@ static struct clk_alpha_pll gpu_pll0_pll_out_main = {
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpu_pll0_pll_out_main",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 			VDD_GPU_PLL_FMAX_MAP1(LOW_L1, 1500000000),
@@ -121,7 +121,7 @@ static struct clk_alpha_pll gpu_pll1_pll_out_main = {
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpu_pll1_pll_out_main",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 			VDD_GPU_PLL_FMAX_MAP1(LOW_L1, 1500000000),
@@ -207,7 +207,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 };
 
 static const struct freq_tbl ftbl_rbbmtimer_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	{ }
 };
 
@@ -227,7 +227,7 @@ static struct clk_rcg2 rbbmtimer_clk_src = {
 };
 
 static const struct freq_tbl ftbl_rbcpr_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(50000000, P_GPLL0_OUT_MAIN_DIV, 6, 0, 0),
 	{ }
 };
@@ -255,7 +255,7 @@ static struct clk_branch gpucc_cxo_clk = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpucc_cxo_clk",
 			.parent_names = (const char *[]) {
-				"cxo_a",
+				"bi_tcxo_ao",
 			},
 			.num_parents = 1,
 			.ops = &clk_branch2_ops,

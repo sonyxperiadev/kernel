@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "../qcom/sdm636.dtsi"
+#include "../qcom/sdm636-mtp.dtsi"
+#include "../qcom/sdm660-internal-codec.dtsi"
+#include "../qcom/sdm660-sde-overlay.dtsi"
+#include "sdm636-ganges-mermaid.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. Mermaid (SDM636)";
+	compatible = "somc,mermaid", "qcom,sdm636-mtp", "qcom,sdm636", "qcom,mtp";
+	qcom,board-id = <8 1>;
+	qcom,pmic-id = <0x0001001b 0x0101011a 0x0 0x0>,
+			<0x0001001b 0x0201011a 0x0 0x0>,
+			<0x0001001b 0x0102001a 0x0 0x0>;
+};

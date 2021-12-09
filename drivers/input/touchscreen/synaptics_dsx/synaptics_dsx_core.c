@@ -83,9 +83,11 @@ enum subsystem {
 #define F12_DATA_15_WORKAROUND
 
 #define IGNORE_FN_INIT_FAILURE
+#ifndef CONFIG_ARCH_SONY_NILE
 #define FB_READY_RESET
 #define FB_READY_WAIT_MS 100
 #define FB_READY_TIMEOUT_S 30
+#endif
 #ifdef SYNA_TDDI
 #define TDDI_LPWG_WAIT_US 10
 #endif
@@ -3991,7 +3993,7 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	const struct synaptics_dsx_board_data *bdata =
 			rmi4_data->hw_if->board_data;
 
-	if (!get) {
+	if (!get || bdata->pwr_reg_name == NULL || bdata->bus_reg_name == NULL) {
 		retval = 0;
 		goto regulator_put;
 	}
@@ -4588,6 +4590,16 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 				__func__);
 		return -ENOMEM;
 	}
+
+	if (strstr(saved_command_line, "qcom,mdss_dsi_td4322_truly_fhd_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_TRULY;
+	else if (strstr(saved_command_line, "qcom,mdss_dsi_td4322_innolux_fhd_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_INNOLUX;
+	else if (strstr(saved_command_line, "qcom,mdss_dsi_td4328_tianma_fhdplus_cmd"))
+		rmi4_data->tp_source = TP_SOURCE_TIANMA;
+	else
+		/* tp_source default set to 0xFF (unknown) */
+		rmi4_data->tp_source = TP_SOURCE_UNKNOWN;
 
 	rmi4_data->pdev = pdev;
 	rmi4_data->current_page = MASK_8BIT;
@@ -5259,8 +5271,10 @@ exit:
 
 #ifdef CONFIG_PM
 static const struct dev_pm_ops synaptics_rmi4_dev_pm_ops = {
+#ifndef CONFIG_FB
 	.suspend = synaptics_rmi4_suspend,
 	.resume = synaptics_rmi4_resume,
+#endif
 };
 #endif
 

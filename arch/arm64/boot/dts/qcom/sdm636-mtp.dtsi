@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm660-mtp.dtsi"
+#include "sdm636-camera-sensor-mtp.dtsi"
+
+/ {
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_nt35695b_truly_fhd_video>;
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+}; 

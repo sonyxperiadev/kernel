@@ -126,6 +126,11 @@
 #define MASK_2BIT 0x03
 #define MASK_1BIT 0x01
 
+#define TP_SOURCE_TRULY		0x00
+#define TP_SOURCE_INNOLUX		0x01
+#define TP_SOURCE_TIANMA		0x02
+#define TP_SOURCE_UNKNOWN		0xFF
+
 #define PINCTRL_STATE_ACTIVE    "pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND   "pmx_ts_suspend"
 #define PINCTRL_STATE_RELEASE   "pmx_ts_release"
@@ -460,6 +465,8 @@ struct synaptics_rmi4_data {
 	struct clk *core_clk;
 	struct clk *iface_clk;
 #endif
+	unsigned int config_id;
+	unsigned int tp_source;
 };
 
 struct synaptics_dsx_bus_access {

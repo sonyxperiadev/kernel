@@ -14,7 +14,7 @@
 #ifndef _MSM_VENC_H_
 #define _MSM_VENC_H_
 
-#include <media/msm_vidc.h>
+#include "msm_vidc.h"
 #include "msm_vidc_internal.h"
 
 int msm_venc_inst_init(struct msm_vidc_inst *inst);
