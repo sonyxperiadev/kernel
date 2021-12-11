@@ -7,9 +7,13 @@
 
 &mdss_mdp {
 	/* Default */
-	dsi_default_panel: somc,default_cmd_panel{
+	dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "akatsuki default";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-pan-physical-width-dimension = <68>;
 		qcom,mdss-pan-physical-height-dimension = <136>;
@@ -41,7 +45,7 @@
 		qcom,mdss-brightness-max-level = <1023>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <0 10>, <1 20>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+		somc,mdss-dsi-touch-reset-sequence = <1 0>;
 		somc,mdss-dsi-master;
 		somc,pw-off-rst-b-seq = <0 0>;
 		somc,pw-wait-after-on-vdd = <0>;

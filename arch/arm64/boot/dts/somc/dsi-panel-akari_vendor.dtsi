@@ -8,6 +8,10 @@
 	dsi_3: somc,3_panel {
 		qcom,mdss-dsi-panel-name = "3";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-pan-physical-width-dimension = <64>;
 		qcom,mdss-pan-physical-height-dimension = <128>;
@@ -45,9 +49,9 @@
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
 
 		qcom,mdss-dsi-reset-sequence = <1 50>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+		somc,mdss-dsi-touch-reset-sequence = <1 0>;
 		somc,pw-on-rst-seq = "after_power_on";
-
+		somc,dsi-panel-type = "lcd";
 		somc,mdss-dsi-master;
 		somc,pw-off-rst-b-seq = <0 0>;
 		somc,pw-wait-after-on-vdd = <0>;
@@ -149,6 +153,10 @@
 	dsi_7: somc,7_panel {
 		qcom,mdss-dsi-panel-name = "7";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-pan-physical-width-dimension = <64>;
 		qcom,mdss-pan-physical-height-dimension = <128>;
@@ -186,9 +194,9 @@
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
 
 		qcom,mdss-dsi-reset-sequence = <1 0>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 5>;
+		somc,mdss-dsi-touch-reset-sequence = <1 5>;
 		somc,pw-on-rst-seq = "before_power_on";
-
+		somc,dsi-panel-type = "lcd";
 		somc,mdss-dsi-master;
 		somc,pw-off-rst-b-seq = <0 5>;
 		somc,pw-wait-after-on-vdd = <0>;

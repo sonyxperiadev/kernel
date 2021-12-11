@@ -8,6 +8,10 @@
 	dsi_5: somc,5_panel {
 		qcom,mdss-dsi-panel-name = "5";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-pan-physical-width-dimension = <68>;
 		qcom,mdss-pan-physical-height-dimension = <136>;
@@ -40,7 +44,7 @@
 		qcom,mdss-brightness-max-level = <1023>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <1 10>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+		somc,mdss-dsi-touch-reset-sequence = <1 0>;
 		somc,pw-on-rst-seq = "before_power_on";
 		somc,dsi-panel-type = "oled";
 		somc,mdss-dsi-master;

@@ -4,6 +4,9 @@
  */
 
 &dsi_default_panel {
+	somc,start-panel-detection;
+	somc,dsi-panel-list = <&dsi_5>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,panel-supply-entries = <&dsi_panel_oled_akatsuki_pwr_supply>;
 	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
 	/delete-property/ qcom,panel-vspvsn-supply-entries;
@@ -30,6 +33,8 @@
 };
 
 &dsi_5 {
+	somc,dsi-index = <0>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,panel-supply-entries = <&dsi_panel_oled_akatsuki_pwr_supply>;
 	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
 	/delete-property/ qcom,panel-vspvsn-supply-entries;

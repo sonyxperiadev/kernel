@@ -10,6 +10,10 @@
 	dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "akari default";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-pan-physical-width-dimension = <64>;
 		qcom,mdss-pan-physical-height-dimension = <128>;
@@ -40,9 +44,9 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-reset-sequence = <1 50>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+		somc,mdss-dsi-touch-reset-sequence = <1 0>;
 		somc,pw-on-rst-seq = "after_power_on";
-
+		somc,dsi-panel-type = "lcd";
 		somc,mdss-dsi-master;
 		somc,pw-off-rst-b-seq = <0 0>;
 		somc,pw-wait-after-on-vdd = <0>;
