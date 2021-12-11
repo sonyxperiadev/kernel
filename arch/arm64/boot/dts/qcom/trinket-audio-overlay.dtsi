@@ -7,6 +7,9 @@
 #include <dt-bindings/sound/audio-codec-port-types.h>
 
 &bolero {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	qcom,num-macros = <4>;
 	qcom,va-without-decimation;
 	slew_rate_reg1 = <0xD8E000 0x0>;
