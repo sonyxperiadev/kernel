@@ -360,6 +360,14 @@
 	};
 };
 
+&lcdb_ldo_vreg {
+	regulator-boot-on;
+};
+
+&lcdb_ncp_vreg {
+	regulator-boot-on;
+};
+
 &pm660_charger {
 	io-channels = <&pm660_rradc 2>,
 			<&pm660_rradc 3>,
