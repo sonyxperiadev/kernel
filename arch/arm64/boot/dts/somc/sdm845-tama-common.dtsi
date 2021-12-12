@@ -2986,16 +2986,19 @@
 	};
 };
 
-&labibb {
-	qcom,lab@de00 {
-		interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
-				<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
-	};
-	qcom,ibb@dc00 {
-		interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "ibb_vreg_not_ok_interrupt";
-	};
+&lab_regulator {
+	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
+			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
+
+	regulator-boot-on;
+};
+
+&ibb_regulator {
+	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "ibb_vreg_not_ok_interrupt";
+
+	regulator-boot-on;
 };
 
 &pm8998_vadc {
