@@ -15,6 +15,7 @@
 		nxp,irq_gpio = <&tlmm 63 0x00>;
 		nxp,dwld_en = <&tlmm 62 0x00>;
 		nxp,ven = <&tlmm 12 0x01>;
+		nxp,ese-pwr = <&tlmm 116 0x00>;
 		qcom,clk-src = "BBCLK3";
 		qcom,clk-gpio = <&pm8998_gpios 21 0x00>;
 		clock-names = "nfc_clk";
