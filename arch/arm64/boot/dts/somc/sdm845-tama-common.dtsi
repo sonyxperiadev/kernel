@@ -3,39 +3,37 @@
  * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  */
 
-/ {
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
 
-		debug_region: debug_region@ffb00000 {
-			compatible = "removed-dma-pool", "qcom,debug_memory";
-			no-map;
-			reg = <0 0xffb00000 0 0x100000>;
-			label = "debug_mem";
-		};
+	debug_region: debug_region@ffb00000 {
+		compatible = "removed-dma-pool", "qcom,debug_memory";
+		no-map;
+		reg = <0 0xffb00000 0 0x100000>;
+		label = "debug_mem";
+	};
 
-		ramoops: ramoops@ffc00000 {
-			compatible = "removed-dma-pool", "ramoops";
-			no-map;
-			reg = <0 0xffc00000 0 0x00100000>;
-			record-size = <0x10000>;
-			console-size = <0x60000>;
-			ftrace-size = <0x10000>;
-			pmsg-size = <0x20000>;
-			ecc-size = <16>;
-		};
+	ramoops: ramoops@ffc00000 {
+		compatible = "removed-dma-pool", "ramoops";
+		no-map;
+		reg = <0 0xffc00000 0 0x00100000>;
+		record-size = <0x10000>;
+		console-size = <0x60000>;
+		ftrace-size = <0x10000>;
+		pmsg-size = <0x20000>;
+		ecc-size = <16>;
+	};
 
-		qseecom_mem: qseecom_region@8ab00000 {
-			reg = <0 0x8ab00000 0 0x1900000>;
-		};
+	qseecom_mem: qseecom_region@8ab00000 {
+		reg = <0 0x8ab00000 0 0x1900000>;
+	};
 
-		/delete-node/ camera_region@8bf00000;
-		pil_camera_mem: camera_region@97c00000 {
-			compatible = "removed-dma-pool";
-			no-map;
-			reg = <0 0x97c00000 0 0x500000>;
-		};
+	/delete-node/ camera_region@8bf00000;
+	pil_camera_mem: camera_region@97c00000 {
+		compatible = "removed-dma-pool";
+		no-map;
+		reg = <0 0x97c00000 0 0x500000>;
 	};
 };
 
