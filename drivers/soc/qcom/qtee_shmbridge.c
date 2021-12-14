@@ -123,6 +123,10 @@ static int32_t qtee_shmbridge_enable(bool enable)
 		return ret;
 	}
 
+#ifdef CONFIG_ARCH_SDM845
+	return ret;
+#endif
+
 	desc.arginfo = TZ_SHM_BRIDGE_ENABLE_PARAM_ID;
 	ret = scm_call2(TZ_SHM_BRIDGE_ENABLE, &desc);
 	if (ret || desc.ret[0]) {
