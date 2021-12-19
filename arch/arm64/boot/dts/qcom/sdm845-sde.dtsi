@@ -34,9 +34,6 @@
 		interrupt-controller;
 		#interrupt-cells = <1>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		#power-domain-cells = <0>;
 
 		/* hw blocks */
