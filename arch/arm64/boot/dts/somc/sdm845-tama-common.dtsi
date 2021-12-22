@@ -226,6 +226,7 @@
 			debounce-interval = <15>;
 		};
 	};
+
 	somc_pinctrl: somc_pinctrl {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
@@ -284,6 +285,11 @@
 		/* If variant specific PMIC default setting is needed,
 		fill pinctrl-2 value in <variant>.dtsi */
 		pinctrl-2 = <>;
+	};
+
+	sony_ext_uim_ctrl {
+		compatible = "sony,ext-uim-ctrl";
+		uim2_detect_en_gpio = <&tlmm 129 GPIO_ACTIVE_HIGH>;
 	};
 
 	sim_detect {
@@ -3201,5 +3207,4 @@
 
 &sdhc_2 {
 	cd-gpios = <&tlmm 126 GPIO_ACTIVE_HIGH>;
-	uim2-gpios = <&tlmm 129 GPIO_ACTIVE_HIGH>;
 };
