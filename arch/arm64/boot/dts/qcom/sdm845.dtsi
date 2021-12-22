@@ -3164,9 +3164,8 @@
 	qcom,icnss@18800000 {
 		compatible = "qcom,icnss";
 		reg = <0x18800000 0x800000>,
-		      <0xa0000000 0x10000000>,
 		      <0xb0000000 0x10000>;
-		reg-names = "membase", "smmu_iova_base", "smmu_iova_ipa";
+		reg-names = "membase", "smmu_iova_ipa";
 		iommus = <&apps_smmu 0x0040 0x1>;
 		interrupts = <GIC_SPI 414 IRQ_TYPE_LEVEL_HIGH /* CE0 */ >,
 			     <GIC_SPI 415 IRQ_TYPE_LEVEL_HIGH /* CE1 */ >,
@@ -3180,8 +3179,10 @@
 			     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH /* CE9 */ >,
 			     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH /* CE10 */ >,
 			     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH /* CE11 */ >;
+		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "non-fatal";
+		qcom,hyp_enabled;
 		qcom,wlan-msa-memory = <0x100000>;
 
 		vdd-cx-mx-supply = <&pm8998_l5>;
@@ -3193,7 +3194,7 @@
 
 		qcom,smp2p_map_wlan_1_in {
 			interrupts-extended = <&smp2p_wlan_1_in 0 IRQ_TYPE_LEVEL_HIGH>,
-					<&smp2p_wlan_1_in 1 0>;
+					<&smp2p_wlan_1_in 1 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "qcom,smp2p-force-fatal-error",
 					"qcom,smp2p-early-crash-ind";
 		};
