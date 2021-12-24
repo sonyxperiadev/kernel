@@ -22,6 +22,12 @@
 };
 
 &audio_apr {
+	q6core: qcom,q6core-audio {
+		compatible = "qcom,q6core-audio";
+	};
+};
+
+&q6core {
 	snd_934x: sound-tavil {
 		compatible = "qcom,sdm845-asoc-snd-tavil";
 		qcom,model = "sdm845-tavil-snd-card";
