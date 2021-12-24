@@ -2872,6 +2872,7 @@
 			<143 777 0 355>; /* IB defined for IPA clk in MHz*/
 		qcom,bus-vector-names =
 			"MIN", "SVS2", "SVS", "NOMINAL", "TURBO";
+		qcom,throughput-threshold = <310 600 1000>;
 
 		/* smp2p information */
 		qcom,smp2p_map_ipa_1_out {
