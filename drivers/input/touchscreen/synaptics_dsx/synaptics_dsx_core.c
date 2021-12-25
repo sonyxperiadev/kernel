@@ -4008,25 +4008,22 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 			retval = PTR_ERR(rmi4_data->pwr_reg);
 			goto regulator_put;
 		}
-	}
 
-	retval = regulator_set_load(rmi4_data->pwr_reg,
-		20000);
-	if (retval < 0) {
-		dev_err(rmi4_data->pdev->dev.parent,
-			"%s: Failed to set regulator current avdd\n",
-				__func__);
-		goto regulator_put;
-	}
+		retval = regulator_set_load(rmi4_data->pwr_reg, 20000);
+		if (retval < 0) {
+			dev_err(rmi4_data->pdev->dev.parent,
+				"%s: Failed to set regulator current avdd\n",
+					__func__);
+			goto regulator_put;
+		}
 
-	retval = regulator_set_voltage(rmi4_data->pwr_reg,
-			3000000,
-			3008000);
-	if (retval < 0) {
-		dev_err(rmi4_data->pdev->dev.parent,
-				"%s: Failed to set regulator voltage avdd\n",
-				__func__);
-		goto regulator_put;
+		retval = regulator_set_voltage(rmi4_data->pwr_reg, 3000000, 3008000);
+		if (retval < 0) {
+			dev_err(rmi4_data->pdev->dev.parent,
+					"%s: Failed to set regulator voltage avdd\n",
+					__func__);
+			goto regulator_put;
+		}
 	}
 
 	if ((bdata->bus_reg_name != NULL) && (*bdata->bus_reg_name != 0)) {
@@ -4039,25 +4036,22 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 			retval = PTR_ERR(rmi4_data->bus_reg);
 			goto regulator_put;
 		}
-	}
 
-	retval = regulator_set_load(rmi4_data->bus_reg,
-		62000);
-	if (retval < 0) {
-		dev_err(rmi4_data->pdev->dev.parent,
-				"%s: Failed to set regulator current vdd\n",
-				__func__);
-		goto regulator_put;
-	}
+		retval = regulator_set_load(rmi4_data->bus_reg, 62000);
+		if (retval < 0) {
+			dev_err(rmi4_data->pdev->dev.parent,
+					"%s: Failed to set regulator current vdd\n",
+					__func__);
+			goto regulator_put;
+		}
 
-	retval = regulator_set_voltage(rmi4_data->bus_reg,
-			1800000,
-			1800000);
-	if (retval < 0) {
-		dev_err(rmi4_data->pdev->dev.parent,
-				"%s: Failed to set regulator voltage avdd\n",
-				__func__);
-		goto regulator_put;
+		retval = regulator_set_voltage(rmi4_data->bus_reg, 1800000, 1800000);
+		if (retval < 0) {
+			dev_err(rmi4_data->pdev->dev.parent,
+					"%s: Failed to set regulator voltage avdd\n",
+					__func__);
+			goto regulator_put;
+		}
 	}
 
 	return 0;
