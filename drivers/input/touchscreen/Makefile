@@ -117,7 +117,3 @@ obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX) += synaptics_dsx/
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_TCM)	+= synaptics_tcm/
 obj-$(CONFIG_TOUCHSCREEN_FTS)	+= focaltech_touch/
 obj-$(CONFIG_TOUCHSCREEN_NT36XXX)	+= nt36xxx/
-
-obj-$(CONFIG_TOUCHSCREEN_CLEARPAD)	+= clearpad_core.o
-obj-$(CONFIG_TOUCHSCREEN_INCELL_CLEARPAD)+= clearpad_incell_core.o
-obj-$(CONFIG_TOUCHSCREEN_CLEARPAD_I2C)	+= clearpad_i2c.o
