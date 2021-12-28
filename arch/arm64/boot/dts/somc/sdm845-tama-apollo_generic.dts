@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "../qcom/sdm845.dtsi"
+#include "../qcom/sdm845-sde-display.dtsi"
+#include "../qcom/sdm845-mtp.dtsi"
+#include "sdm845-tama-apollo_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. Apollo(SDM845 v1)";
+	compatible = "somc,apollo-row", "qcom,sdm845", "qcom,mtp";
+	qcom,board-id = <8 0>;
+};
+
+&soc {
+	/delete-node/ qcom,msm-cdsp-loader;
+};

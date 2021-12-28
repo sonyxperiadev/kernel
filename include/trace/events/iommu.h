@@ -243,6 +243,20 @@ DEFINE_EVENT(iommu_tlbi, tlbsync_timeout,
 	TP_ARGS(dev, time)
 );
 
+DEFINE_EVENT(iommu_tlbi, tlbi_throttle_start,
+
+	TP_PROTO(struct device *dev, u64 time),
+
+	TP_ARGS(dev, time)
+);
+
+DEFINE_EVENT(iommu_tlbi, tlbi_throttle_end,
+
+	TP_PROTO(struct device *dev, u64 time),
+
+	TP_ARGS(dev, time)
+);
+
 TRACE_EVENT(smmu_init,
 
 	TP_PROTO(u64 time),

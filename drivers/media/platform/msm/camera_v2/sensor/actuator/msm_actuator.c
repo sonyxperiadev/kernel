@@ -241,10 +241,14 @@ static int msm_actuator_bivcm_handle_i2c_ops(
 		reg_setting.size = 1;
 		switch (write_arr[i].reg_write_type) {
 		case MSM_ACTUATOR_WRITE_DAC:
+#ifdef CONFIG_MACH_SONY_KIRIN
+			value = (unsigned short)((0x25 * next_lens_position) + 0xFFFFBC00);
+#else
 			value = (next_lens_position <<
 			write_arr[i].data_shift) |
 			((hw_dword & write_arr[i].hw_mask) >>
 			write_arr[i].hw_shift);
+#endif
 			if (write_arr[i].reg_addr != 0xFFFF) {
 				i2c_byte1 = write_arr[i].reg_addr;
 				i2c_byte2 = value;

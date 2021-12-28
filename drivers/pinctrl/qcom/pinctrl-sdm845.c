@@ -1748,8 +1748,6 @@ static const struct msm_pinctrl_soc_data sdm845_pinctrl = {
 	.ngroups = ARRAY_SIZE(sdm845_groups),
 	.ngpios = 150,
 	.dir_conn = sdm845_dir_conn,
-	.n_dir_conns = ARRAY_SIZE(sdm845_dir_conn),
-	.dir_conn_irq_base = 216,
 };
 
 static int sdm845_pinctrl_probe(struct platform_device *pdev)

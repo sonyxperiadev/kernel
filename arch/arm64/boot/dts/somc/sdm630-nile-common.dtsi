@@ -317,6 +317,7 @@
 		};
 	};
 };
+
 &pm660l_l6 {
 	qcom,regulator-type = <0>;  /* LDO */
 	qcom,init-enable = <0>;
@@ -324,6 +325,14 @@
 	qcom,init-pin-ctrl-enable = <0>;
 	qcom,init-pin-ctrl-mode = <0>;
 	qcom,init-voltage = <3300000>;
+};
+
+&lcdb_ldo_vreg {
+	regulator-boot-on;
+};
+
+&lcdb_ncp_vreg {
+	regulator-boot-on;
 };
 
 /* PM660 */

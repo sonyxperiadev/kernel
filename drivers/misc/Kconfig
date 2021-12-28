@@ -681,3 +681,10 @@ config SONY_EXT_UIM_CTRL
 	default n
 	help
 	  A misc driver related to UIM selector/enabler
+
+config POWERKEY_FORCECRASH
+	tristate "Force a crash on powerkey long press"
+	default n
+	help
+	  Say Y here if you want force crash functionality through power
+	  key. Triggers panic if power key is hold for more than 10secs.

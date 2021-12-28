@@ -73,6 +73,7 @@ out:
 
 static const struct of_device_id somc_pinctrl_dt_match[] = {
 	{ .compatible = "somc-pinctrl", },
+	{ .compatible = "somc-pinctrl-pmic", },
 	{ },
 };
 

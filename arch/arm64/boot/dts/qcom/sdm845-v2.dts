@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "sdm845-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDM845 v2 SoC";
+	compatible = "qcom,sdm845";
+	qcom,board-id = <0 0>;
+};

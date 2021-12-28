@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ */
+
+&pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
+	somc,thermal-fcc-ua = <2050000 2000000 1950000
+				1800000 1500000 1300000
+				1300000 1000000 800000
+				700000 500000 200000
+				100000 0 0>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 500000 200000
+					100000 0 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1000000
+					1000000 1000000 1000000
+					600000 500000 200000
+					100000 0 0>;
+	somc,fake-charging-temp-level = <13>;
+	somc,jeita-use-aux-therm;
+	somc,jeita-aux-thresh-hot = <530>;
+	somc,jeita-aux-thresh-warm = <430>;
+	somc,jeita-warm-fcc-ua = <800000>;
+	somc,jeita-cool-fcc-ua = <800000>;
+	somc,jeita-warm-fv-uv = <4200000>;
+	somc,product-icl-ua = <2000000>;
+	somc,high-voltage-icl-ua = <1700000>;
+	somc,batt-temp-correction = <0>;
+	somc,skin-temp-correction = <20>;
+};
+
+&vendor {
+	tama_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-apollo-tmm-4380mv.dtsi"
+		#include "fg-gen3-batterydata-apollo-tmm-4340mv.dtsi"
+		#include "fg-gen3-batterydata-apollo-tmm-4300mv.dtsi"
+		#include "fg-gen3-batterydata-apollo-tmm-4250mv.dtsi"
+	};
+};
+
+&pmi8998_fg {
+	qcom,battery-data = <&tama_batterydata>;
+	qcom,fg-sys-term-current = <(-160)>;
+	qcom,fg-chg-term-current = <135>;
+};

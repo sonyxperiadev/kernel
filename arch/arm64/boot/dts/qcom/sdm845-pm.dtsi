@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ */
+
+&soc {
+	qcom,lpm-levels {
+		compatible = "qcom,lpm-levels";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,pm-cluster@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			label = "L3";
+			qcom,clstr-tmr-add = <1000>;
+			qcom,psci-mode-shift = <4>;
+			qcom,psci-mode-mask = <0xfff>;
+
+			qcom,pm-cluster-level@0 { /* D1 */
+				reg = <0>;
+				label = "l3-wfi";
+				qcom,psci-mode = <0x1>;
+				qcom,entry-latency-us = <48>;
+				qcom,exit-latency-us = <51>;
+				qcom,min-residency-us = <99>;
+			};
+
+			qcom,pm-cluster-level@1 { /* LLCC off, AOSS sleep */
+				reg = <1>;
+				label = "llcc-off";
+				qcom,psci-mode = <0xC24>;
+				qcom,entry-latency-us = <1562>;
+				qcom,exit-latency-us = <6562>;
+				qcom,min-residency-us = <9987>;
+				qcom,min-child-idx = <2>;
+				qcom,is-reset;
+				qcom,notify-rpm;
+			};
+
+			qcom,pm-cpu@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				qcom,psci-mode-shift = <0>;
+				qcom,psci-mode-mask = <0xf>;
+				qcom,ref-stddev = <500>;
+				qcom,tmr-add = <1000>;
+				qcom,ref-premature-cnt = <1>;
+				qcom,cpu = <&CPU0 &CPU1 &CPU2 &CPU3>;
+
+				qcom,pm-cpu-level@0 { /* C1 */
+					reg = <0>;
+					label = "wfi";
+					qcom,psci-cpu-mode = <0x1>;
+					qcom,entry-latency-us = <57>;
+					qcom,exit-latency-us = <43>;
+					qcom,min-residency-us = <100>;
+				};
+
+				qcom,pm-cpu-level@1 {  /* C3 */
+					reg = <1>;
+					label = "pc";
+					qcom,psci-cpu-mode = <0x3>;
+					qcom,entry-latency-us = <39>;
+					qcom,exit-latency-us = <461>;
+					qcom,min-residency-us = <5990>;
+					qcom,is-reset;
+					qcom,use-broadcast-timer;
+				};
+
+				qcom,pm-cpu-level@2 {  /* C4 */
+					reg = <2>;
+					label = "rail-pc";
+					qcom,psci-cpu-mode = <0x4>;
+					qcom,entry-latency-us = <69>;
+					qcom,exit-latency-us = <531>;
+					qcom,min-residency-us = <3934>;
+					qcom,is-reset;
+					qcom,use-broadcast-timer;
+				};
+			};
+
+			qcom,pm-cpu@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				qcom,psci-mode-shift = <0>;
+				qcom,psci-mode-mask = <0xf>;
+				qcom,ref-stddev = <100>;
+				qcom,tmr-add = <100>;
+				qcom,ref-premature-cnt = <3>;
+				qcom,cpu = <&CPU4 &CPU5 &CPU6 &CPU7>;
+
+				qcom,pm-cpu-level@0 { /* C1 */
+					reg = <0>;
+					label = "wfi";
+					qcom,psci-cpu-mode = <0x1>;
+					qcom,entry-latency-us = <40>;
+					qcom,exit-latency-us = <43>;
+					qcom,min-residency-us = <83>;
+				};
+
+				qcom,pm-cpu-level@1 {  /* C3 */
+					reg = <1>;
+					label = "pc";
+					qcom,psci-cpu-mode = <0x3>;
+					qcom,entry-latency-us = <264>;
+					qcom,exit-latency-us = <621>;
+					qcom,min-residency-us = <1001>;
+					qcom,is-reset;
+					qcom,use-broadcast-timer;
+				};
+
+				qcom,pm-cpu-level@2 {  /* C4 */
+					reg = <2>;
+					label = "rail-pc";
+					qcom,psci-cpu-mode = <0x4>;
+					qcom,entry-latency-us = <61>;
+					qcom,exit-latency-us = <1061>;
+					qcom,min-residency-us = <1001>;
+					qcom,is-reset;
+					qcom,use-broadcast-timer;
+				};
+			};
+		};
+	};
+
+	qcom,rpm-stats@c300000 {
+		compatible = "qcom,rpm-stats";
+		reg = <0xC300000 0x1000>, <0xC3F0004 0x4>;
+		reg-names = "phys_addr_base", "offset_addr";
+	};
+
+	qcom,rpmh-master-stats@b221200 {
+		compatible = "qcom,rpmh-master-stats-v1";
+		reg = <0xb221200 0x60>;
+		qcom,use-alt-unit = <3>;
+	};
+};

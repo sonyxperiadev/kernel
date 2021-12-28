@@ -2883,6 +2883,79 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 
 };
 
+static struct ipa3_mem_partition ipa_3_5_1_mem_part = {
+	.ofst_start				= 0x280,
+	.v4_flt_hash_ofst		= 0x288,
+	.v4_flt_hash_size		=  0x78,
+	.v4_flt_hash_size_ddr		= 0x4000,
+	.v4_flt_nhash_ofst		= 0x308,
+	.v4_flt_nhash_size		= 0x78,
+	.v4_flt_nhash_size_ddr		= 0x4000,
+	.v6_flt_hash_ofst		= 0x388,
+	.v6_flt_hash_size		= 0x78,
+	.v6_flt_hash_size_ddr		= 0x4000,
+	.v6_flt_nhash_ofst		= 0x408,
+	.v6_flt_nhash_size		= 0x78,
+	.v6_flt_nhash_size_ddr		= 0x4000,
+	.v4_rt_num_index		= 0xf,
+	.v4_modem_rt_index_lo		= 0x0,
+	.v4_modem_rt_index_hi		= 0x7,
+	.v4_apps_rt_index_lo		= 0x8,
+	.v4_apps_rt_index_hi		= 0xe,
+	.v4_rt_hash_ofst		= 0x488,
+	.v4_rt_hash_size		= 0x78,
+	.v4_rt_hash_size_ddr		= 0x4000,
+	.v4_rt_nhash_ofst		= 0x508,
+	.v4_rt_nhash_size		= 0x78,
+	.v4_rt_nhash_size_ddr		= 0x4000,
+	.v6_rt_num_index		= 0xf,
+	.v6_modem_rt_index_lo		= 0x0,
+	.v6_modem_rt_index_hi		= 0x7,
+	.v6_apps_rt_index_lo		= 0x8,
+	.v6_apps_rt_index_hi		= 0xe,
+	.v6_rt_hash_ofst		= 0x588,
+	.v6_rt_hash_size		= 0x78,
+	.v6_rt_hash_size_ddr		= 0x4000,
+	.v6_rt_nhash_ofst		= 0x608,
+	.v6_rt_nhash_size		= 0x78,
+	.v6_rt_nhash_size_ddr		= 0x4000,
+	.modem_hdr_ofst			= 0x688,
+	.modem_hdr_size			= 0x140,
+	.apps_hdr_ofst			= 0x7c8,
+	.apps_hdr_size			= 0x0,
+	.apps_hdr_size_ddr		= 0x800,
+	.modem_hdr_proc_ctx_ofst	= 0x7d0,
+	.modem_hdr_proc_ctx_size	= 0x200,
+	.apps_hdr_proc_ctx_ofst		= 0x9d0,
+	.apps_hdr_proc_ctx_size		= 0x200,
+	.apps_hdr_proc_ctx_size_ddr	= 0x0,
+	.modem_comp_decomp_ofst		= 0x0,
+	.modem_comp_decomp_size		= 0x0,
+	.modem_ofst			= 0xbd8,
+	.modem_size			= 0x1024,
+	.apps_v4_flt_hash_ofst		= 0x2000,
+	.apps_v4_flt_hash_size		= 0x0,
+	.apps_v4_flt_nhash_ofst		= 0x2000,
+	.apps_v4_flt_nhash_size		= 0x0,
+	.apps_v6_flt_hash_ofst		= 0x2000,
+	.apps_v6_flt_hash_size		= 0x0,
+	.apps_v6_flt_nhash_ofst		= 0x2000,
+	.apps_v6_flt_nhash_size		= 0x0,
+	.uc_info_ofst			= 0x80,
+	.uc_info_size			= 0x200,
+	.end_ofst			= 0x2000,
+	.apps_v4_rt_hash_ofst		= 0x2000,
+	.apps_v4_rt_hash_size		= 0x0,
+	.apps_v4_rt_nhash_ofst		= 0x2000,
+	.apps_v4_rt_nhash_size		= 0x0,
+	.apps_v6_rt_hash_ofst		= 0x2000,
+	.apps_v6_rt_hash_size		= 0x0,
+	.apps_v6_rt_nhash_ofst		= 0x2000,
+	.apps_v6_rt_nhash_size		= 0x0,
+	.uc_descriptor_ram_ofst		= 0x1c00,
+	.uc_descriptor_ram_size		= 0x400,
+};
+
 static struct ipa3_mem_partition ipa_4_1_mem_part = {
 	.ofst_start				= 0x280,
 	.v4_flt_hash_ofst		= 0x288,
@@ -5623,6 +5696,9 @@ int ipa3_straddle_boundary(u32 start, u32 end, u32 boundary)
 int ipa3_init_mem_partition(enum ipa_hw_type type)
 {
 	switch (type) {
+	case IPA_HW_v3_5_1:
+		ipa3_ctx->ctrl->mem_partition = &ipa_3_5_1_mem_part;
+		break;
 	case IPA_HW_v4_1:
 		ipa3_ctx->ctrl->mem_partition = &ipa_4_1_mem_part;
 		break;
@@ -5645,7 +5721,6 @@ int ipa3_init_mem_partition(enum ipa_hw_type type)
 	case IPA_HW_v3_0:
 	case IPA_HW_v3_1:
 	case IPA_HW_v3_5:
-	case IPA_HW_v3_5_1:
 	case IPA_HW_v4_0:
 		IPAERR("unsupported version %d\n", type);
 		return -EPERM;

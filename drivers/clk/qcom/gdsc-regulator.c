@@ -28,9 +28,17 @@
 #define CLK_DIS_WAIT_MASK	(0xF << 12)
 #define CLK_DIS_WAIT_SHIFT	(12)
 #define RETAIN_FF_ENABLE_MASK	BIT(11)
+#define EN_FEW_WAIT_MASK	(0xF << 16)
+#define EN_FEW_WAIT_SHIFT	(16)
+#define EN_REST_WAIT_MASK	(0xF << 20)
+#define EN_REST_WAIT_SHIFT	(20)
 #define SW_OVERRIDE_MASK	BIT(2)
 #define HW_CONTROL_MASK		BIT(1)
 #define SW_COLLAPSE_MASK	BIT(0)
+
+/* CFG_GDSCR */
+#define GDSC_POWER_UP_COMPLETE		BIT(16)
+#define GDSC_POWER_DOWN_COMPLETE	BIT(15)
 
 /* Domain Address */
 #define GMEM_CLAMP_IO_MASK	BIT(0)
@@ -41,6 +49,7 @@
 
 /* Register Offset */
 #define REG_OFFSET		0x0
+#define CFG_GDSCR_OFFSET	0x4
 
 /* Timeout Delay */
 #define TIMEOUT_US		100
@@ -70,6 +79,7 @@ struct gdsc {
 	bool			allow_clear;
 	bool			reset_aon;
 	bool			is_bus_enabled;
+	bool			poll_cfg_gdscr;
 	int			clock_count;
 	int			reset_count;
 	int			root_clk_idx;
@@ -130,6 +140,31 @@ static int poll_gdsc_status(struct gdsc *sc, enum gdscr_status status)
 		 * of times until the bit is set with the least possible delay
 		 * between successive tries.
 		 */
+		udelay(1);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static int poll_cfg_gdsc_status(struct gdsc *sc, enum gdscr_status status)
+{
+	struct regmap *regmap = sc->regmap;
+	int count = sc->gds_timeout;
+	u32 val;
+
+	for (; count > 0; count--) {
+		regmap_read(regmap, CFG_GDSCR_OFFSET, &val);
+
+		switch (status) {
+		case ENABLED:
+			if (val & GDSC_POWER_UP_COMPLETE)
+				return 0;
+			break;
+		case DISABLED:
+			if (val & GDSC_POWER_DOWN_COMPLETE)
+				return 0;
+			break;
+		}
 		udelay(1);
 	}
 
@@ -209,7 +244,7 @@ end:
 static int gdsc_enable(struct regulator_dev *rdev)
 {
 	struct gdsc *sc = rdev_get_drvdata(rdev);
-	uint32_t regval, hw_ctrl_regval = 0x0;
+	uint32_t regval, cfg_regval, hw_ctrl_regval = 0x0;
 	int i, ret = 0;
 
 	if (sc->skip_disable_before_enable)
@@ -303,7 +338,10 @@ static int gdsc_enable(struct regulator_dev *rdev)
 		gdsc_mb(sc);
 		udelay(1);
 
-		ret = poll_gdsc_status(sc, ENABLED);
+		if (sc->poll_cfg_gdscr)
+			ret = poll_cfg_gdsc_status(sc, ENABLED);
+		else
+			ret = poll_gdsc_status(sc, ENABLED);
 		if (ret) {
 			regmap_read(sc->regmap, REG_OFFSET, &regval);
 
@@ -331,10 +369,21 @@ static int gdsc_enable(struct regulator_dev *rdev)
 					regval);
 				udelay(sc->gds_timeout);
 
-				regmap_read(sc->regmap, REG_OFFSET, &regval);
-				dev_err(&rdev->dev, "%s final state: 0x%x (%d us after timeout)\n",
-					sc->rdesc.name, regval,
-					sc->gds_timeout);
+				if (sc->poll_cfg_gdscr) {
+					regmap_read(sc->regmap, REG_OFFSET,
+							&regval);
+					regmap_read(sc->regmap,
+						CFG_GDSCR_OFFSET, &cfg_regval);
+					dev_err(&rdev->dev, "%s final state: gdscr - 0x%x, cfg_gdscr - 0x%x (%d us after timeout)\n",
+						sc->rdesc.name, regval,
+						cfg_regval, sc->gds_timeout);
+				} else {
+					regmap_read(sc->regmap, REG_OFFSET,
+							&regval);
+					dev_err(&rdev->dev, "%s final state: 0x%x (%d us after timeout)\n",
+						sc->rdesc.name, regval,
+						sc->gds_timeout);
+				}
 				goto end;
 			}
 		}
@@ -423,7 +472,10 @@ static int gdsc_disable(struct regulator_dev *rdev)
 			 */
 			udelay(TIMEOUT_US);
 		} else {
-			ret = poll_gdsc_status(sc, DISABLED);
+			if (sc->poll_cfg_gdscr)
+				ret = poll_cfg_gdsc_status(sc, DISABLED);
+			else
+				ret = poll_gdsc_status(sc, DISABLED);
 			if (ret)
 				dev_err(&rdev->dev, "%s disable timed out: 0x%x\n",
 					sc->rdesc.name, regval);
@@ -585,7 +637,10 @@ static int gdsc_set_mode(struct regulator_dev *rdev, unsigned int mode)
 		 * starts to use SW mode.
 		 */
 		if (sc->is_gdsc_enabled) {
-			ret = poll_gdsc_status(sc, ENABLED);
+			if (sc->poll_cfg_gdscr)
+				ret = poll_cfg_gdsc_status(sc, ENABLED);
+			else
+				ret = poll_gdsc_status(sc, ENABLED);
 			if (ret)
 				dev_err(&rdev->dev, "%s enable timed out\n",
 					sc->rdesc.name);
@@ -659,6 +714,9 @@ static int gdsc_parse_dt_data(struct gdsc *sc, struct device *dev,
 		if (IS_ERR(sc->hw_ctrl))
 			return PTR_ERR(sc->hw_ctrl);
 	}
+
+	sc->poll_cfg_gdscr = of_property_read_bool(dev->of_node,
+						"qcom,poll-cfg-gdscr");
 
 	sc->gds_timeout = TIMEOUT_US;
 	of_property_read_u32(dev->of_node, "qcom,gds-timeout",
@@ -833,6 +891,7 @@ static int gdsc_probe(struct platform_device *pdev)
 	struct regulator_init_data *init_data = NULL;
 	struct gdsc *sc;
 	uint32_t regval, clk_dis_wait_val = 0;
+	uint32_t en_few_wait_val, en_rest_wait_val;
 	int i, ret;
 
 	sc = devm_kzalloc(&pdev->dev, sizeof(*sc), GFP_KERNEL);
@@ -878,13 +937,32 @@ static int gdsc_probe(struct platform_device *pdev)
 		regval |= clk_dis_wait_val;
 	}
 
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-few-wait-val",
+				  &en_few_wait_val)) {
+		en_few_wait_val <<= EN_FEW_WAIT_SHIFT;
+
+		regval &= ~(EN_FEW_WAIT_MASK);
+		regval |= en_few_wait_val;
+	}
+
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-rest-wait-val",
+				  &en_rest_wait_val)) {
+		en_rest_wait_val <<= EN_REST_WAIT_SHIFT;
+
+		regval &= ~(EN_REST_WAIT_MASK);
+		regval |= en_rest_wait_val;
+	}
+
 	regmap_write(sc->regmap, REG_OFFSET, regval);
 
 	if (!sc->toggle_logic) {
 		regval &= ~SW_COLLAPSE_MASK;
 		regmap_write(sc->regmap, REG_OFFSET, regval);
 
-		ret = poll_gdsc_status(sc, ENABLED);
+		if (sc->poll_cfg_gdscr)
+			ret = poll_cfg_gdsc_status(sc, ENABLED);
+		else
+			ret = poll_gdsc_status(sc, ENABLED);
 		if (ret) {
 			dev_err(&pdev->dev, "%s enable timed out: 0x%x\n",
 				sc->rdesc.name, regval);
