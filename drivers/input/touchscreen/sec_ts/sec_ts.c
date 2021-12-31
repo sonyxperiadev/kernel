@@ -680,7 +680,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 				read_event_buff[0][6], read_event_buff[0][7]);
 
 	if (read_event_buff[0][0] == 0) {
-		input_info(true, &ts->client->dev, "%s: event buffer is empty\n", __func__);
+		dev_info_ratelimited(&ts->client->dev, "%s: event buffer is empty\n", __func__);
 		return;
 	}
 
