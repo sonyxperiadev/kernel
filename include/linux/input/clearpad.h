@@ -12,6 +12,7 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <drm/drm_panel.h>
 
 #define CLEARPAD_NAME "clearpad"
 #define CLEARPADI2C_NAME "clearpad-i2c"
@@ -106,6 +107,8 @@ struct clearpad_ioctl_pca_info {
 	u16 block_pos;
 	u8 data[SYN_PCA_BLOCK_SIZE];
 };
+
+extern struct drm_panel *clearpad_active_panel;
 
 #define SYN_PCA_IOCTL_MAGIC	0xCC
 #define SYN_PCA_IOCTL_GET \

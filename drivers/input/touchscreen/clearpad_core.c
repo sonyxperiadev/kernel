@@ -21,7 +21,6 @@
 #include <linux/sched.h>
 #include <linux/time.h>
 #include <linux/timer.h>
-#include <linux/drm_notify.h>
 #ifdef CONFIG_ARM
 #include <asm/mach-types.h>
 #endif
@@ -1028,6 +1027,8 @@ struct clearpad_t {
 	bool access_test_enabled;
 	struct device virtdev;
 };
+
+struct drm_panel *clearpad_active_panel;
 
 /*
  * Function prototypes
@@ -7546,42 +7547,42 @@ err_in_post_probe_done:
 static int clearpad_drm_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
 {
-	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
+	struct drm_panel_notifier *evdata = data;
 	int blank;
 	struct clearpad_t *this = container_of(self, struct clearpad_t, drm_notif);
 
-	if (evdata && evdata->data) {
-		if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
+	if (evdata && evdata->data && this) {
+		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
 			blank = *(int *)evdata->data;
 			HWLOGI(this, "Before: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
+				(blank == DRM_PANEL_BLANK_POWERDOWN) ? "Powerdown" :
+				(blank == DRM_PANEL_BLANK_UNBLANK) ? "Unblank" :
 				 "???");
 			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
+			case DRM_PANEL_BLANK_POWERDOWN:
 				clearpad_cb_early_powerdown_handler(this);
 				if (clearpad_set_suspend_mode(this))
 					LOGE(this, "failed to set suspend mode\n");
 				if (this->watchdog.enabled)
 					cancel_delayed_work(&this->watchdog.work);
 				break;
-			case DRM_BLANK_UNBLANK:
+			case DRM_PANEL_BLANK_UNBLANK:
 				clearpad_cb_early_unblank_handler(this);
 				break;
 			default:
 				break;
 			}
-		} else if (event == DRM_EXT_EVENT_AFTER_BLANK) {
+		} else if (event == DRM_PANEL_EVENT_BLANK) {
 			blank = *(int *)evdata->data;
 			HWLOGI(this, "After: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
+				(blank == DRM_PANEL_BLANK_POWERDOWN) ? "Powerdown" :
+				(blank == DRM_PANEL_BLANK_UNBLANK) ? "Unblank" :
 				 "???");
 			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
+			case DRM_PANEL_BLANK_POWERDOWN:
 				clearpad_cb_powerdown_handler(this);
 				break;
-			case DRM_BLANK_UNBLANK:
+			case DRM_PANEL_BLANK_UNBLANK:
 				clearpad_cb_unblank_handler(this);
 			default:
 				break;
@@ -8975,14 +8976,14 @@ static int clearpad_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&this->pdev->dev, 1);
 
-	/* Execute post probe the first UNBLANK event
-	   TODO : Must update after API update. */
-	HWLOGI(this, "register drm callback\n");
-	this->drm_notif.notifier_call = clearpad_drm_notifier_callback;
-	rc = drm_register_client(&this->drm_notif);
-	if (rc) {
-		HWLOGE(this, "unable to register drm_notifier\n");
-		goto err_in_drm_register_client;
+	if (clearpad_active_panel) {
+		HWLOGI(this, "register drm callback\n");
+		this->drm_notif.notifier_call = clearpad_drm_notifier_callback;
+		rc = drm_panel_notifier_register(clearpad_active_panel, &this->drm_notif);
+		if (rc < 0) {
+			HWLOGE(this, "unable to register drm_notifier\n");
+			goto err_in_drm_register_client;
+		}
 	}
 
 	this->force_sleep = FSMODE_OFF;
@@ -9075,7 +9076,9 @@ err_in_ev_init:
 err_in_input_init:
 err_in_request_threaded_irq_gpio_noise_det:
 err_in_request_threaded_irq:
-	drm_unregister_client(&this->drm_notif);
+	if (clearpad_active_panel)
+		drm_panel_notifier_unregister(clearpad_active_panel,
+				&this->drm_notif);
 err_in_drm_register_client:
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 err_device_put:
@@ -9329,7 +9332,9 @@ static int clearpad_remove(struct platform_device *pdev)
 		devm_free_irq(&this->pdev->dev, this->noise_det.irq, this);
 	sysfs_remove_link(this->input->dev.kobj.parent, symlink_name);
 	clearpad_remove_sysfs_entries(this, clearpad_sysfs_attrs);
-	drm_unregister_client(&this->drm_notif);
+	if (clearpad_active_panel)
+		drm_panel_notifier_unregister(clearpad_active_panel,
+				&this->drm_notif);
 	input_unregister_device(this->input);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	platform_device_unregister(cdata->rmi_dev);

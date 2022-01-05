@@ -198,6 +198,29 @@ static int clearpad_parse_dt(struct device *dev,
 }
 #endif
 
+static int clearpad_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			clearpad_active_panel = panel;
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+
 static int clearpad_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
@@ -211,6 +234,13 @@ static int clearpad_i2c_probe(struct i2c_client *client,
 	};
 	struct clearpad_i2c_t *this;
 	int rc;
+
+	rc = clearpad_get_active_panel(client->dev.of_node);
+	if (rc < 0) {
+		dev_err(&client->dev, "%s: Active panel not found, aborting probe\n", __func__);
+		rc = -ENODEV;
+		goto exit;
+	}
 
 	if (client->dev.of_node) {
 		clearpad_data.pdata = devm_kzalloc(&client->dev,
@@ -333,5 +363,9 @@ static void __exit clearpad_i2c_exit(void)
 MODULE_DESCRIPTION(CLEARPADI2C_NAME "ClearPad I2C Driver");
 MODULE_LICENSE("GPL v2");
 
+#ifndef MODULE
+late_initcall(clearpad_i2c_init);
+#else
 module_init(clearpad_i2c_init);
+#endif
 module_exit(clearpad_i2c_exit);
