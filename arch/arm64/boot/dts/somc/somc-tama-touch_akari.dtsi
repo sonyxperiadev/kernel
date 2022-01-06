@@ -7,7 +7,5 @@
 	synaptics_clearpad@2c {
 		preset_x_max = <1079>;
 		preset_y_max = <2159>;
-		post_probe_start = <0>;
-		access_test = <0>;
 	};
 };
