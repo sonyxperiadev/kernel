@@ -108,6 +108,8 @@ static enum log_level_list *log_level = NULL;
 static int portrait_buffer[MXT_GRIP_REJECTION_BORDER_NUM] = {40, 180, 120, 250};
 static int landscape_buffer[MXT_GRIP_REJECTION_BORDER_NUM] = {200, 30, 300, 80};
 
+struct drm_panel *mxt_active_panel;
+
 inline static void send_uevent(char* string[2])
 {
 	int ret = 0;
@@ -8899,7 +8901,8 @@ skip_fw:
 
 err_free_irq:
 	free_irq(data->irq, data);
-	drm_unregister_client(&data->drm_notif);
+	if (mxt_active_panel)
+		drm_panel_notifier_unregister(mxt_active_panel, &data->drm_notif);
 	if (data)
 		kfree(data);
 unlock:
@@ -8933,6 +8936,29 @@ static int mxt_init_recover(struct i2c_client *client, struct mxt_data *data)
 	return mxt_after_init_work(client, data, fw);
 }
 
+static int mxt_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			mxt_active_panel = panel;
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxt_data *data = NULL;
@@ -8940,6 +8966,12 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	char *path_name = "common_touch";
 
 	pr_notice("%s \n", __func__);
+
+	error = mxt_get_active_panel(client->dev.of_node);
+	if (error < 0) {
+		LOGE("Active panel not found, aborting probe\n");
+		return -ENODEV;
+	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("i2c functionality check error\n");
@@ -9035,12 +9067,14 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	/* init notification callbacks */
 	data->drm_notif.notifier_call = drm_notifier_callback;
-
-	error = drm_register_client(&data->drm_notif);
-	if (error) {
-		LOGE("Unable to register drm_notifier: %d\n", error);
-		goto err_free_pdata;
+	if (mxt_active_panel) {
+		error = drm_panel_notifier_register(mxt_active_panel, &data->drm_notif);
+		if (error) {
+			LOGE("Unable to register drm_notifier: %d\n", error);
+			goto err_free_pdata;
+		}
 	}
+
 //	mxt_probe_regulators(data);
 	mxt_regulator_enable(data);
 
@@ -9087,7 +9121,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 						data, mxt_after_init_load_fw);
 		if (error) {
 			LOGE("failed after init on probe\n");
-			drm_unregister_client(&data->drm_notif);
+			if (mxt_active_panel)
+				drm_panel_notifier_unregister(mxt_active_panel, &data->drm_notif);
 			complete(&touch_charge_out_comp);
 		}
 	}
@@ -9097,8 +9132,9 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	return 0;
 
 err_create_sysfs_link:
-	if (drm_unregister_client(&data->drm_notif))
-		LOGE("Error occurred while unregistering drm_notifier\n");
+	if (mxt_active_panel)
+		if (drm_panel_notifier_unregister(mxt_active_panel, &data->drm_notif))
+			LOGE("Error occurred while unregistering drm_notifier\n");
 	sysfs_remove_bin_file(&client->dev.kobj, &data->mem_access_attr);
 	sysfs_remove_bin_file(&data->lge_touch_kobj, &data->rawdata_attr);
 	sysfs_remove_bin_file(&data->lge_touch_kobj, &data->delta_attr);
@@ -9130,8 +9166,9 @@ static int mxt_remove(struct i2c_client *client)
 		if (data->mxt_drv_data->touch_multi_tap_wq)
 			destroy_workqueue(data->mxt_drv_data->touch_multi_tap_wq);
 
-		if (drm_unregister_client(&data->drm_notif))
-			LOGE("Error occurred while unregistering drm_notifier\n");
+		if (mxt_active_panel)
+			if (drm_panel_notifier_unregister(mxt_active_panel, &data->drm_notif))
+				LOGE("Error occurred while unregistering drm_notifier\n");
 
 		mutex_destroy(&data->mxt_drv_data->i2c_suspend_lock);
 		mutex_destroy(&data->mxt_drv_data->irq_lock);
@@ -9417,23 +9454,23 @@ exit:
 
 static int drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
-	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
+	struct drm_panel_notifier *evdata = data;
 	struct mxt_data *ts = container_of(self, struct mxt_data, drm_notif);
 	int blank;
 
-	if (event != DRM_EXT_EVENT_BEFORE_BLANK &&
-	    event != DRM_EXT_EVENT_AFTER_BLANK)
+	if (event != DRM_PANEL_EARLY_EVENT_BLANK &&
+	    event != DRM_PANEL_EVENT_BLANK)
 		return NOTIFY_DONE;
 
-	if (unlikely(!evdata || !evdata->data)) {
+	if (unlikely(!evdata || !evdata->data || !ts)) {
 		LOGN("%s: Bad screen state change notifier call.\n");
 		return NOTIFY_DONE;
 	}
 	blank = *(int *)evdata->data;
 
 	switch (blank) {
-		case DRM_BLANK_POWERDOWN:
-			if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
+		case DRM_PANEL_BLANK_POWERDOWN:
+			if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
 				if (!ts->after_work || !ts->charge_out) {
 					LOGN("not already sleep out\n");
 					return 0;
@@ -9443,8 +9480,8 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 					LOGE("Failed mxt_drm_suspend\n");
 				break;
 			}
-		case DRM_BLANK_UNBLANK:
-			if (event == DRM_EXT_EVENT_AFTER_BLANK) {
+		case DRM_PANEL_BLANK_UNBLANK:
+			if (event == DRM_PANEL_EVENT_BLANK) {
 				if (!ts->after_work) {
 					if (mxt_init_recover(ts->client, ts))
 						return 0;
