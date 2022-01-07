@@ -36,5 +36,7 @@
 		atmel,aod_mode_supported = <1>;
 		atmel,stamina_mode_supported = <1>;
 		atmel,sod_mode_supported = <1>;
+
+		panel = <&dsi_5>;
 	};
 };

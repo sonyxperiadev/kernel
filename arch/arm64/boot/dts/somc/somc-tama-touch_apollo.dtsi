@@ -7,5 +7,11 @@
 	synaptics_clearpad@2c {
 		preset_x_max = <1079>;
 		preset_y_max = <2159>;
+
+		panel = <&dsi_4>;
+	};
+
+	synaptics_tcm@3c {
+		parent = <&dsi_8>;
 	};
 };
