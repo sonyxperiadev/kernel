@@ -20,6 +20,10 @@
 	pinctrl-1 = <&pmi8998_gpio_8>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_5>;
+};
+
 &tcs3490 {
 	rgbcir_vdd-supply = <&cam_vio_vreg>;
 	/delete-property/ rgbcir_vio-supply;

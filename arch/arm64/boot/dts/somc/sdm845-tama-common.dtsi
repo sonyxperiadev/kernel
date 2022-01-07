@@ -302,6 +302,14 @@
 		};
 	};
 
+	somc_water_detection: somc_water_detection {
+		compatible = "somc,water-detection";
+
+		dvdt_enable_gpio = <&tlmm 28 0>;
+		dvdt_wrt_det_and = <&tlmm 29 0>;
+		dvdt_wrt_det_or = <&tlmm 30 0>;
+	};
+
 	bu520x1nvx {
 		compatible = "rohm,bu520x1nvx";
 
@@ -671,10 +679,6 @@
 
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;
-
-	dvdt_enable_gpio = <&tlmm 28 0>;
-	dvdt_wrt_det_and = <&tlmm 29 0>;
-	dvdt_wrt_det_or = <&tlmm 30 0>;
 };
 
 &pmi8998_charger {

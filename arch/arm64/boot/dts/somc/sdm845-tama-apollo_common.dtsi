@@ -9,6 +9,11 @@
 	pinctrl-1 = <&pmi8998_gpio_5>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_4 &dsi_8>;
+};
+
+
 &soc {
 	ldo_vibrator {
 		compatible = "ldo-vibrator";
