@@ -27,6 +27,10 @@
 	pinctrl-1 = <&pm8150b_gpio_10>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_9>;
+};
+
 &qupv3_se3_i2c {
 	pinctrl-0 = <&sm_gpio_119 &sm_gpio_120>;
 	pinctrl-1 = <&sm_gpio_119_suspend &sm_gpio_120_suspend>;

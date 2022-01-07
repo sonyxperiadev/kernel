@@ -61,6 +61,10 @@
 	pinctrl-1 = <&pm8150_gpio_6 &pm8150l_gpio_10 &pm8150l_gpio_11 &pm8009_gpio_2>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_1>;
+};
+
 /* Regulator config */
 &pm8009_l2 {
 	qcom,regulator-type = <0>;      /* LDO */
