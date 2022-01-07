@@ -1,4 +1,4 @@
-/* arch/arm64/boot/dts/vendor/somc/sec_touchscreen_pdx206.dtsi
+/* arch/arm64/boot/dts/vendor/somc/sec_touchscreen_pdx203.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,16 +12,6 @@
 
 &qupv3_se13_i2c {
 	touchscreen@48 {
-		sec,platform-touch-reset-gpio = <&tlmm 38 0>;
-		sec,device_id = /bits/ 8 <0xAC 0x37 0x91>;
-		sec,max_coords = <1080 2520>;   /* x y */
-		sec,firmware_name = "touch_module_id_0x94.img";
-		sec,rejection_area_portrait = <25 150 60 200>;
-		sec,rejection_area_landscape = <150 20 200 60>;
-
-		/* feature */
-		sec,side_touch_supported = <0>;
-
-		panel = <&dsi_1>;
+		panel = <&dsi_9>;
 	};
 };

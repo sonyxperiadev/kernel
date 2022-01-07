@@ -300,6 +300,7 @@
 	};
 };
 
+#include "sec_touchscreen_pdx203.dtsi"
 #include "charger-edo-common.dtsi"
 #include "charger-edo-pdx203.dtsi"
 #include "usb-dp-edo-pdx203.dtsi"
