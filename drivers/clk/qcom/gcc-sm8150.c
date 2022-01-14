@@ -4325,19 +4325,22 @@ static int gcc_sm8150_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	/* DFS clock registration */
+	ret = qcom_cc_register_rcg_dfs(regmap, gcc_dfs_clocks,
+			ARRAY_SIZE(gcc_dfs_clocks));
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register with DFS!\n");
+		return ret;
+	}
+
 	ret = qcom_cc_really_probe(pdev, &gcc_sm8150_desc, regmap);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
 		return ret;
 	}
 
-	/* DFS clock registration */
-	ret = qcom_cc_register_rcg_dfs(regmap, gcc_dfs_clocks,
-			ARRAY_SIZE(gcc_dfs_clocks));
-	if (ret)
-		dev_err(&pdev->dev, "Failed to register with DFS!\n");
-
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
+
 	return ret;
 }
 
