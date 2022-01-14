@@ -959,6 +959,9 @@ int fg_get_msoc(struct fg_dev *fg, int *msoc)
 	if (rc < 0)
 		return rc;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY, FULL_SOC_RAW);
+#else
 	/*
 	 * To have better endpoints for 0 and 100, it is good to tune the
 	 * calculation discarding values 0 and 255 while rounding off. Rest
@@ -972,6 +975,7 @@ int fg_get_msoc(struct fg_dev *fg, int *msoc)
 	else
 		*msoc = DIV_ROUND_CLOSEST((*msoc - 1) * (FULL_CAPACITY - 2),
 				FULL_SOC_RAW - 2) + 1;
+#endif
 	return 0;
 }
 
@@ -987,8 +991,16 @@ const char *fg_get_battery_type(struct fg_dev *fg)
 	case PROFILE_SKIPPED:
 		return SKIP_BATT_TYPE;
 	case PROFILE_LOADED:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		if (strlen(fg->org_batt_type_str) ==
+						ORG_BATT_TYPE_SIZE)
+			return fg->org_batt_type_str;
+		else
+			return fg->bp.batt_type_str;
+#else
 		if (fg->bp.batt_type_str)
 			return fg->bp.batt_type_str;
+#endif
 		break;
 	case PROFILE_NOT_LOADED:
 		return MISSING_BATT_TYPE;
