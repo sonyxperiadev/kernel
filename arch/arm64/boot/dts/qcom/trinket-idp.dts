@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "trinket.dtsi"
+#include "trinket-idp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. TRINKET IDP";
+	compatible = "qcom,trinket-idp", "qcom,trinket", "qcom,idp";
+	qcom,board-id = <34 0>;
+};

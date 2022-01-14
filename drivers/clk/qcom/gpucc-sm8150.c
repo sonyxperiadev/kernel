@@ -494,7 +494,7 @@ static int gpu_cc_sm8150_probe(struct platform_device *pdev)
 			return PTR_ERR(clk);
 	}
 
-	clk_alpha_pll_trion_configure(&gpu_cc_pll1, regmap, gpu_cc_pll1.config);
+	clk_trion_pll_configure(&gpu_cc_pll1, regmap, gpu_cc_pll1.config);
 
 	ret = qcom_cc_really_probe(pdev, &gpu_cc_sm8150_desc, regmap);
 	if (ret) {
