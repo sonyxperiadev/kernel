@@ -19,6 +19,9 @@
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #include <linux/input.h>
+#if defined(CONFIG_ARCH_SONY_TAMA)
+#include <linux/module.h>
+#endif
 #endif
 
 #define smblib_err(chg, fmt, ...)		\
@@ -34,6 +37,13 @@
 			pr_debug("%s: %s: " fmt, chg->name,	\
 				__func__, ##__VA_ARGS__);	\
 	} while (0)
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+/* switch of APSD result to change SDP */
+static int apsd_result_force_sdp;
+module_param(apsd_result_force_sdp, int, 0644);
+MODULE_PARM_DESC(apsd_result_force_sdp, "APSD result force SDP");
+#endif
 
 static bool is_secure(struct smb_charger *chg, int addr)
 {
@@ -102,6 +112,13 @@ static int smblib_get_jeita_cc_delta(struct smb_charger *chg, int *cc_delta_ua)
 {
 	int rc, cc_minus_ua;
 	u8 stat;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->jeita_sw_ctl_en) {
+		*cc_delta_ua = 0;
+		return 0;
+	}
+#endif
 
 	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_2_REG, &stat);
 	if (rc < 0) {
@@ -213,7 +230,7 @@ enum {
 	FLOAT,
 	HVDCP2,
 	HVDCP3,
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	PD,
 #endif
 	MAX_TYPES
@@ -261,11 +278,13 @@ static const struct apsd_result const smblib_apsd_results[] = {
 		.bit	= DCP_CHARGER_BIT | QC_3P0_BIT,
 		.pst	= POWER_SUPPLY_TYPE_USB_HVDCP_3,
 	},
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	[PD] = {
 		.name	= "USB_PD_CHARGER",
 		.bit	= 0xff,
 		.pst	= POWER_SUPPLY_TYPE_USB_PD,
 	},
+#endif
 };
 #else
 static const struct apsd_result const smblib_apsd_results[] = {
@@ -312,32 +331,6 @@ static const struct apsd_result const smblib_apsd_results[] = {
 };
 #endif
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-const char *smblib_somc_get_charger_type(struct smb_charger *chg)
-{
-	const char *charger_type = NULL;
-	int i;
-
-	for (i = UNKNOWN; i < MAX_TYPES; i++) {
-		if (smblib_apsd_results[i].bit ==
-					chg->usb_params.apsd_result_bit) {
-			charger_type = smblib_apsd_results[i].name;
-			break;
-		}
-	}
-	if (!charger_type)
-		charger_type = smblib_apsd_results[UNKNOWN].name;
-
-	return charger_type;
-}
-
-static void determine_charger_type(struct smb_charger *chg)
-{
-	chg->charger_type_determined = true;
-	power_supply_changed(chg->batt_psy);
-}
-#endif
-
 static const struct apsd_result *smblib_get_apsd_result(struct smb_charger *chg)
 {
 	int rc, i;
@@ -373,8 +366,60 @@ static const struct apsd_result *smblib_get_apsd_result(struct smb_charger *chg)
 			result = &smblib_apsd_results[HVDCP2];
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
+		result = &smblib_apsd_results[FLOAT];
+
+	if (apsd_result_force_sdp) {
+		if (result->bit != SDP_CHARGER_BIT &&
+				result->bit != CDP_CHARGER_BIT) {
+			smblib_err(chg, "APSD recognized as %s but read as SDP !!!!!!!\n",
+					result->name);
+			result = &smblib_apsd_results[SDP];
+		}
+	}
+#endif
+
 	return result;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+const char *smblib_somc_get_charger_type(struct smb_charger *chg)
+{
+	const char *charger_type = NULL;
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	const char *charger_type_pd_name = "USB_PD_CHARGER";
+	const struct apsd_result *apsd_result;
+
+	if (chg->pd_active) {
+		charger_type = charger_type_pd_name;
+	} else {
+		apsd_result = smblib_get_apsd_result(chg);
+		charger_type = apsd_result->name;
+	}
+#else
+	int i;
+
+	for (i = UNKNOWN; i < MAX_TYPES; i++) {
+		if (smblib_apsd_results[i].bit ==
+					chg->usb_params.apsd_result_bit) {
+			charger_type = smblib_apsd_results[i].name;
+			break;
+		}
+	}
+	if (!charger_type)
+		charger_type = smblib_apsd_results[UNKNOWN].name;
+#endif
+
+	return charger_type;
+}
+
+static void determine_charger_type(struct smb_charger *chg)
+{
+	chg->charger_type_determined = true;
+	power_supply_changed(chg->batt_psy);
+}
+#endif
 
 /********************
  * REGISTER SETTERS *
@@ -507,6 +552,17 @@ int smblib_set_usb_suspend(struct smb_charger *chg, bool suspend)
 int smblib_set_dc_suspend(struct smb_charger *chg, bool suspend)
 {
 	int rc = 0;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	/* WA for outbreak of icl charge irq during suspneded */
+	rc = smblib_masked_write(chg, DCIN_AICL_OPTIONS_CFG_REG,
+				 DCIN_AICL_RERUN_EN_BIT,
+				 suspend ? 0 : DCIN_AICL_RERUN_EN_BIT);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't set AICL rerun en bit rc=%d\n", rc);
+		return rc;
+	}
+#endif
 
 	rc = smblib_masked_write(chg, DCIN_CMD_IL_REG, DCIN_SUSPEND_BIT,
 				 suspend ? DCIN_SUSPEND_BIT : 0);
@@ -709,7 +765,7 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 			chg->real_charger_type = apsd_result->pst;
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	if (chg->pd_active)
 		chg->usb_params.apsd_result_bit = 0xff;
 	else
@@ -1323,7 +1379,7 @@ static int __smblib_set_prop_typec_power_role(struct smb_charger *chg,
 		power_role = 0;
 		break;
 	case POWER_SUPPLY_TYPEC_PR_SINK:
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_TYPEC_PR_SINK_DELAY:
 #endif
 		power_role = UFP_EN_CMD_BIT;
@@ -1359,7 +1415,7 @@ static int __smblib_set_prop_typec_power_role(struct smb_charger *chg,
 		}
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	if (val->intval == POWER_SUPPLY_TYPEC_PR_SINK_DELAY) {
 		smblib_dbg(chg, PR_SOMC, "power role set to SINK, delay 120ms\n");
 		msleep(120);
@@ -1417,7 +1473,11 @@ static int smblib_dc_icl_vote_callback(struct votable *votable, void *data,
 	}
 
 suspend:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	rc = vote(chg->dc_suspend_votable, DC_ICL_VOTER, suspend, 0);
+#else
 	rc = vote(chg->dc_suspend_votable, USER_VOTER, suspend, 0);
+#endif
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't vote to %s DC rc=%d\n",
 			suspend ? "suspend" : "resume", rc);
@@ -1673,8 +1733,7 @@ int somc_usb_register(struct smb_charger *chg)
 	return 0;
 }
 
-void somc_usb_unregister(struct smb_charger *chg)
-{}
+void somc_usb_unregister(struct smb_charger *chg) {}
 #endif
 
 /*******************
@@ -1928,10 +1987,20 @@ static int _smblib_vbus_regulator_enable(struct regulator_dev *rdev)
 	return rc;
 }
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+#define SLEEP_TIME_AFTER_DC_SUSPEND_MS			500
+#define SLEEP_TIME_AFTER_DISABLING_WIRELESS_MS		25
+#define SLEEP_LIMIT_COUNT_AFTER_DISABLING_WIRELESS	80
+#endif
 int smblib_vbus_regulator_enable(struct regulator_dev *rdev)
 {
 	struct smb_charger *chg = rdev_get_drvdata(rdev);
 	int rc = 0;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	int cnt = 0;
+	u8 stat = 0;
+	bool dc_present;
+#endif
 
 	mutex_lock(&chg->otg_oc_lock);
 	if (chg->otg_en)
@@ -1947,11 +2016,64 @@ int smblib_vbus_regulator_enable(struct regulator_dev *rdev)
 	}
 	vote(chg->usb_icl_votable, USBIN_USBIN_BOOST_VOTER, true, 0);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable) {
+		vote(chg->dc_icl_votable, DC_OV_BY_OTG_VOTER, true, 0);
+
+		rc = smblib_read(chg, DCIN_BASE + INT_RT_STS_OFFSET, &stat);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't read DCIN_INT_RT_STS rc=%d\n",
+									rc);
+
+		dc_present = (bool)(stat & DCIN_PLUGIN_RT_STS_BIT);
+		if (dc_present) {
+			smblib_dbg(chg, PR_SOMC, "wait for preventing DC OV\n");
+			msleep(SLEEP_TIME_AFTER_DC_SUSPEND_MS);
+		}
+
+		chg->vbus_reg_en = true;
+		smblib_dbg(chg, PR_SOMC,
+				"Disable WLC due to VBUS regulator enable\n");
+		smblib_somc_handle_wireless_exclusion(chg);
+
+		while (cnt < SLEEP_LIMIT_COUNT_AFTER_DISABLING_WIRELESS) {
+			cnt++;
+			rc = smblib_read(chg, DCIN_BASE + INT_RT_STS_OFFSET,
+									&stat);
+			if (rc < 0)
+				smblib_err(chg,
+					"Couldn't read DCIN_INT_RT_STS rc=%d\n",
+					rc);
+
+			dc_present = (bool)(stat & DCIN_PLUGIN_RT_STS_BIT);
+			if (dc_present) {
+				smblib_dbg(chg, PR_MISC,
+					   "wait for VBUS stability %d\n", cnt);
+				msleep(SLEEP_TIME_AFTER_DISABLING_WIRELESS_MS);
+			} else {
+				smblib_dbg(chg, PR_SOMC,
+					   "wait done for VBUS stability\n");
+				break;
+			}
+		}
+	}
+#endif
+
 	rc = _smblib_vbus_regulator_enable(rdev);
 	if (rc >= 0)
 		chg->otg_en = true;
 	else
 		vote(chg->usb_icl_votable, USBIN_USBIN_BOOST_VOTER, false, 0);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable && !chg->otg_en) {
+		vote(chg->dc_icl_votable, DC_OV_BY_OTG_VOTER, false, 0);
+		chg->vbus_reg_en = false;
+		smblib_dbg(chg, PR_SOMC,
+			  "Enable WLC due to error of VBUS regulator enable\n");
+		smblib_somc_handle_wireless_exclusion(chg);
+	}
+#endif
 
 unlock:
 	mutex_unlock(&chg->otg_oc_lock);
@@ -1988,6 +2110,16 @@ static int _smblib_vbus_regulator_disable(struct regulator_dev *rdev)
 		smblib_err(chg, "Couldn't set OTG_ENG_OTG_CFG_REG rc=%d\n", rc);
 		return rc;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable) {
+		vote(chg->dc_icl_votable, DC_OV_BY_OTG_VOTER, false, 0);
+		chg->vbus_reg_en = false;
+		smblib_dbg(chg, PR_SOMC,
+				"Enable WLC due to vbus regulator disable\n");
+		smblib_somc_handle_wireless_exclusion(chg);
+	}
+#endif
 
 	return 0;
 }
@@ -2133,6 +2265,7 @@ int smblib_get_prop_batt_capacity(struct smb_charger *chg,
 	smblib_somc_lrc_check(chg);
 	val->intval = smblib_somc_lrc_get_capacity(chg, val->intval);
 #endif
+
 	return rc;
 }
 
@@ -2164,9 +2297,14 @@ enum {
 	FAKED_STATUS_SMART,
 	FAKED_STATUS_DURING_WARM_FULL,
 	FAKED_STATUS_RB_WA,
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	FAKED_STATUS_PROFILE_RB_WA,
+#endif
 	FAKED_STATUS_WA_FOR_WARM_FULL,
 	FAKED_STATUS_STSTEM_TEMP_LEVEL,
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	FAKED_STATUS_WA_FOR_WIRELESS,
+#endif
 	FAKED_STATUS_MAX,
 };
 
@@ -2176,9 +2314,14 @@ static const char * const smblib_fake_status_name[] = {
 	"Suspending chg due to smart charge",
 	"Detected Full with warm",
 	"Running JEITA Reverse Boost WA",
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	"Running PROFILE Reverse Boost WA",
+#endif
 	"Back to normal from warm(Full)",
 	"Thermal Lv13",
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	"Wireless charger short break WA",
+#endif
 };
 
 #define ERROR_FAKED_STATUS_NAME "Invalid"
@@ -2324,6 +2467,7 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		return 0;
 	}
 
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	if (chg->profile_fv_rb_en &&
 		!get_effective_result(chg->chg_disable_votable)) {
 		smblib_dbg(chg, PR_SOMC,
@@ -2333,6 +2477,7 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		chg->faked_status = FAKED_STATUS_PROFILE_RB_WA;
 		return 0;
 	}
+#endif
 
 	if (chg->jeita_rb_warm_hi_vbatt_en &&
 		!get_effective_result(chg->chg_disable_votable)) {
@@ -2352,6 +2497,18 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		chg->faked_status = FAKED_STATUS_WA_FOR_WARM_FULL;
 		return 0;
 	}
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_wa_fake_charging) {
+		smblib_dbg(chg, PR_MISC,
+				"Fake charging for wireless (%d)\n",
+								val->intval);
+		val->intval = POWER_SUPPLY_STATUS_CHARGING;
+		chg->faked_status = FAKED_STATUS_WA_FOR_WIRELESS;
+		return 0;
+	}
+#endif
+
 	chg->faked_status = FAKED_STATUS_NONE;
 #endif
 
@@ -2464,6 +2621,38 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 	}
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->jeita_sw_ctl_en) {
+		switch (chg->jeita_synth_condition) {
+		case TEMP_CONDITION_HOT:
+			val->intval = POWER_SUPPLY_HEALTH_OVERHEAT;
+			break;
+		case TEMP_CONDITION_WARM:
+			val->intval = POWER_SUPPLY_HEALTH_WARM;
+			break;
+		case TEMP_CONDITION_COOL:
+			val->intval = POWER_SUPPLY_HEALTH_COOL;
+			break;
+		case TEMP_CONDITION_COLD:
+			val->intval = POWER_SUPPLY_HEALTH_COLD;
+			break;
+		default:
+			val->intval = POWER_SUPPLY_HEALTH_GOOD;
+			break;
+		}
+	} else {
+		if (stat & BAT_TEMP_STATUS_TOO_COLD_BIT)
+			val->intval = POWER_SUPPLY_HEALTH_COLD;
+		else if (stat & BAT_TEMP_STATUS_TOO_HOT_BIT)
+			val->intval = POWER_SUPPLY_HEALTH_OVERHEAT;
+		else if (stat & BAT_TEMP_STATUS_COLD_SOFT_LIMIT_BIT)
+			val->intval = POWER_SUPPLY_HEALTH_COOL;
+		else if (stat & BAT_TEMP_STATUS_HOT_SOFT_LIMIT_BIT)
+			val->intval = POWER_SUPPLY_HEALTH_WARM;
+		else
+			val->intval = POWER_SUPPLY_HEALTH_GOOD;
+	}
+#else
 	if (chg->jeita_condition) {
 		if (stat & BAT_TEMP_STATUS_TOO_COLD_BIT) {
 			val->intval = POWER_SUPPLY_HEALTH_COLD;
@@ -2500,6 +2689,7 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 		else
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
 	}
+#endif
 #else
 	if (stat & BAT_TEMP_STATUS_TOO_COLD_BIT)
 		val->intval = POWER_SUPPLY_HEALTH_COLD;
@@ -2527,7 +2717,11 @@ int smblib_get_prop_system_temp_level(struct smb_charger *chg,
 int smblib_get_prop_system_temp_level_max(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	val->intval = chg->thermal_fcc_levels;
+#else
 	val->intval = chg->thermal_levels;
+#endif
 	return 0;
 }
 
@@ -2552,6 +2746,74 @@ int smblib_get_prop_input_current_limited(struct smb_charger *chg,
 }
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_ARCH_SONY_TAMA)
+#define ECELSIUS_DEGREE (-2730)
+int smblib_get_prop_real_temp(struct smb_charger *chg,
+			      union power_supply_propval *val)
+{
+	union power_supply_propval pval = {0, };
+	int rc;
+	int batt_temp = ECELSIUS_DEGREE;
+	int skin_temp = ECELSIUS_DEGREE;
+	int wlc_temp = ECELSIUS_DEGREE;
+	int corrected_batt_temp = ECELSIUS_DEGREE;
+	int corrected_skin_temp = ECELSIUS_DEGREE;
+	int corrected_wlc_temp = ECELSIUS_DEGREE;
+	int real_temp = 0;
+
+	rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP, &pval);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get batt temp rc=%d\n", rc);
+		return rc;
+	} else {
+		batt_temp = pval.intval;
+		corrected_batt_temp = batt_temp + chg->batt_temp_correctton;
+	}
+
+	if (chg->real_temp_use_aux) {
+		rc = smblib_get_prop_skin_temp(chg, &pval);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't get skin temp rc=%d\n", rc);
+		} else {
+			skin_temp = pval.intval;
+			corrected_skin_temp =
+					skin_temp + chg->skin_temp_correctton;
+		}
+	}
+
+	if (chg->real_temp_use_wlc) {
+		if (!chg->wireless_psy)
+			chg->wireless_psy =
+					power_supply_get_by_name("wireless");
+
+		if (chg->wireless_psy) {
+			rc = power_supply_get_property(chg->wireless_psy,
+							POWER_SUPPLY_PROP_TEMP,
+							&pval);
+			if (rc) {
+				smblib_dbg(chg, PR_MISC,
+					   "Couldn't get wlc_temp rc = %d\n",
+					   rc);
+			} else {
+				wlc_temp = pval.intval;
+				corrected_wlc_temp =
+					wlc_temp + chg->wlc_temp_correctton;
+			}
+		} else {
+			smblib_err(chg, "Couldn't get wireless_psy\n");
+		}
+	}
+
+	real_temp = max(corrected_batt_temp,
+				max(corrected_skin_temp, corrected_wlc_temp));
+
+	smblib_dbg(chg, PR_MISC,
+			"battery temp: batt=%d aux=%d wlc=%d real_temp=%d\n",
+			batt_temp, skin_temp, wlc_temp, real_temp);
+	val->intval = real_temp;
+	return 0;
+}
+#else
 int smblib_get_prop_real_temp(struct smb_charger *chg,
 			      union power_supply_propval *val)
 {
@@ -2564,6 +2826,7 @@ int smblib_get_prop_real_temp(struct smb_charger *chg,
 				       POWER_SUPPLY_PROP_REAL_TEMP, val);
 	return rc;
 }
+#endif
 #endif
 
 int smblib_get_prop_batt_charge_done(struct smb_charger *chg,
@@ -2958,6 +3221,14 @@ int smblib_get_prop_dc_online(struct smb_charger *chg,
 {
 	int rc = 0;
 	u8 stat;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	int org_online;
+
+	if (get_client_vote(chg->dc_suspend_votable, LOW_BATT_EN_VOTER)) {
+		val->intval = false;
+		return rc;
+	}
+#endif
 
 	if (get_client_vote(chg->dc_suspend_votable, USER_VOTER)) {
 		val->intval = false;
@@ -2975,6 +3246,26 @@ int smblib_get_prop_dc_online(struct smb_charger *chg,
 
 	val->intval = (stat & USE_DCIN_BIT) &&
 		      (stat & VALID_INPUT_POWER_SOURCE_STS_BIT);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (!val->intval && chg->wireless_wa_fake_charging) {
+		smblib_dbg(chg, PR_SOMC,
+				"Fake online for wireless (%d)\n",
+								val->intval);
+		val->intval = 1;
+		return 0;
+	}
+	org_online = val->intval;
+	rc = smblib_get_prop_dc_present(chg, val);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get present rc=%d\n", rc);
+		return rc;
+	}
+	if (!!val->intval != !!org_online)
+		smblib_dbg(chg, PR_MISC,
+			"online mismatch: ret=%d, POWER_PATH_STATUS=0x%02x\n",
+							val->intval, stat);
+#endif
 
 	return rc;
 }
@@ -2998,6 +3289,155 @@ int smblib_set_prop_dc_current_max(struct smb_charger *chg,
 	rc = vote(chg->dc_icl_votable, USER_VOTER, true, val->intval);
 	return rc;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+#define WIRELESS_MODE_OFF	0
+#define WIRELESS_MODE_5V	1
+#define WIRELESS_MODE_9V	2
+#define WIRELESS_5V_ICL		700000
+#define WIRELESS_9V_ICL		1000000
+#define WIRELESS_5V_AICL_TRESH	0x00
+#define WIRELESS_9V_AICL_TRESH	0x00 /* 4.0V (instead of 0x1c/8.0V) */
+#define WIRELESS_AICL_TRESH_MIN	0x00
+#define WIRELESS_AICL_TRESH_MAX	0x2F
+int smblib_set_dcin_aicl_thresh(struct smb_charger *chg)
+{
+	int rc;
+	u8 val;
+
+	if (chg->debug_dcin_aicl_thresh_enable &&
+		chg->debug_dcin_aicl_thresh_raw >= WIRELESS_AICL_TRESH_MIN &&
+		chg->debug_dcin_aicl_thresh_raw <= WIRELESS_AICL_TRESH_MAX)
+		val = chg->debug_dcin_aicl_thresh_raw;
+	else
+		val = chg->dcin_aicl_thresh_raw;
+
+	smblib_dbg(chg, PR_SOMC, "DCIN_CONT_AICL_THRESHOLD_CFG: 0x%02x\n", val);
+	rc = smblib_masked_write(chg, DCIN_AICL_REF_SEL_CFG_REG,
+					DCIN_CONT_AICL_THRESHOLD_CFG_MASK, val);
+	if (rc < 0)
+		dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+
+	return rc;
+}
+
+#define WIRELESS_WA_1ST_FAKE_TIME_MS 650
+#define WIRELESS_WA_2ND_FAKE_TIME_MS 2500
+static void smblib_somc_wlc_fake_charging_work(struct work_struct *work)
+{
+	int rc;
+	union power_supply_propval pval = {0, };
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+						wireless_wa_fake_charging_work);
+
+	rc = smblib_get_prop_batt_status(chg, &pval);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read batt_status rc=%d\n", rc);
+		return;
+	}
+	if (pval.intval != POWER_SUPPLY_STATUS_CHARGING &&
+			pval.intval != POWER_SUPPLY_STATUS_FULL) {
+		smblib_dbg(chg, PR_SOMC, "don't enforce wireless fake\n");
+		return;
+	}
+
+	chg->wireless_wa_fake_charging = true;
+	smblib_dbg(chg, PR_SOMC, "wireless fake phase-1 is started.\n");
+	msleep(WIRELESS_WA_1ST_FAKE_TIME_MS);
+	smblib_dbg(chg, PR_SOMC, "wireless fake phase-1 is terminated.\n");
+
+	if (!chg->wireless_psy)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+
+	if (chg->wireless_psy) {
+		rc = power_supply_get_property(chg->wireless_psy,
+					POWER_SUPPLY_PROP_WIRELESS_STATUS,
+					&pval);
+		if (rc) {
+			smblib_dbg(chg, PR_SOMC,
+				   "Couldn't get wireless status rc = %d\n",
+				   rc);
+			goto out;
+		}
+		if (strcmp(pval.strval, "negotiating") == 0) {
+			smblib_dbg(chg, PR_SOMC,
+				"wireless fake phase-2 is started.\n");
+			msleep(WIRELESS_WA_2ND_FAKE_TIME_MS);
+			smblib_dbg(chg, PR_SOMC,
+				"wireless fake phase-2 is terminated.\n");
+		}
+	}
+out:
+	chg->wireless_wa_fake_charging = false;
+	power_supply_changed(chg->batt_psy);
+}
+
+int smblib_set_prop_wireless_mode(struct smb_charger *chg,
+				    const union power_supply_propval *val)
+{
+	int rc;
+	int mode;
+	int current_ua = 0;
+	bool icl_boost = false;
+	union power_supply_propval pval = {0, };
+
+	if (!chg->wireless_enable)
+		return 0;
+
+	mode = val->intval;
+
+	/* set AICL Threshold */
+	switch (val->intval) {
+	case WIRELESS_MODE_9V:
+		chg->dcin_aicl_thresh_raw = WIRELESS_9V_AICL_TRESH;
+		break;
+	case WIRELESS_MODE_OFF:
+	case WIRELESS_MODE_5V:
+	default:
+		chg->dcin_aicl_thresh_raw = WIRELESS_5V_AICL_TRESH;
+		break;
+	}
+	rc = smblib_set_dcin_aicl_thresh(chg);
+	if (rc < 0)
+		dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+
+	if (!chg->wireless_psy)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+
+	if (chg->wireless_psy) {
+		rc = power_supply_get_property(chg->wireless_psy,
+						POWER_SUPPLY_PROP_AUTH, &pval);
+		if (rc < 0)
+			smblib_dbg(chg, PR_SOMC,
+				   "Couldn't get wireless auth rc = %d\n",
+				   rc);
+		else
+			icl_boost = (bool)pval.intval;
+	}
+
+	/* set ICL */
+	switch (mode) {
+	case WIRELESS_MODE_5V:
+		if (chg->dc_l_volt_icl_ua)
+			current_ua = chg->dc_l_volt_icl_ua;
+		break;
+	case WIRELESS_MODE_9V:
+		if (icl_boost && chg->dc_h_volt_boost_icl_ua)
+			current_ua = chg->dc_h_volt_boost_icl_ua;
+		else if (chg->dc_h_volt_icl_ua)
+			current_ua = chg->dc_h_volt_icl_ua;
+		break;
+	case WIRELESS_MODE_OFF:
+	default:
+		current_ua = 0;
+		break;
+	}
+	smblib_dbg(chg, PR_SOMC, "DCIN icl: %d, mode:%d, icl_boost:%d\n",
+					current_ua, mode, (int)icl_boost);
+	rc = vote(chg->dc_icl_votable, WIRELESS_VOTER, true, current_ua);
+	return rc;
+}
+#endif
 
 /*******************
  * USB PSY GETTERS *
@@ -3093,11 +3533,7 @@ int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
 		if (chg->chg_param.smb_version == PM660_SUBTYPE)
 			val->intval = MICRO_9V;
 		else
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-			val->intval = MICRO_9V;
-#else
 			val->intval = MICRO_12V;
-#endif
 		break;
 	case POWER_SUPPLY_TYPE_USB_PD:
 		val->intval = chg->voltage_max_uv;
@@ -3120,7 +3556,11 @@ int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
 		if (chg->chg_param.smb_version == PM660_SUBTYPE)
 			val->intval = MICRO_9V;
 		else
+#if defined(CONFIG_ARCH_SONY_TAMA)
+			val->intval = MICRO_9V;
+#else
 			val->intval = MICRO_12V;
+#endif
 		break;
 	default:
 		val->intval = MICRO_5V;
@@ -3180,6 +3620,46 @@ int smblib_get_prop_skin_temp(struct smb_charger *chg,
 	val->intval /= 100;
 	return rc;
 }
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+int smblib_get_prop_dc_voltage_now(struct smb_charger *chg,
+				    union power_supply_propval *val)
+{
+	int rc = 0;
+
+	rc = smblib_get_prop_dc_present(chg, val);
+	if (rc < 0 || !val->intval)
+		return rc;
+
+	if (!chg->iio.dcin_v_chan ||
+		PTR_ERR(chg->iio.dcin_v_chan) == -EPROBE_DEFER)
+		chg->iio.dcin_v_chan = iio_channel_get(chg->dev, "dcin_v");
+
+	if (IS_ERR(chg->iio.dcin_v_chan))
+		return PTR_ERR(chg->iio.dcin_v_chan);
+
+	return iio_read_channel_processed(chg->iio.dcin_v_chan, &val->intval);
+}
+
+int smblib_get_prop_dc_current_now(struct smb_charger *chg,
+				    union power_supply_propval *val)
+{
+	int rc = 0;
+
+	rc = smblib_get_prop_dc_present(chg, val);
+	if (rc < 0 || !val->intval)
+		return rc;
+
+	if (!chg->iio.dcin_i_chan ||
+		PTR_ERR(chg->iio.dcin_i_chan) == -EPROBE_DEFER)
+		chg->iio.dcin_i_chan = iio_channel_get(chg->dev, "dcin_i");
+
+	if (IS_ERR(chg->iio.dcin_i_chan))
+		return PTR_ERR(chg->iio.dcin_i_chan);
+
+	return iio_read_channel_processed(chg->iio.dcin_i_chan, &val->intval);
+}
+#endif
 #endif
 
 int smblib_get_prop_charger_temp(struct smb_charger *chg,
@@ -3733,6 +4213,8 @@ static int __smblib_set_prop_pd_active(struct smb_charger *chg, bool pd_active)
 	smblib_update_usb_type(chg);
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	smblib_somc_thermal_icl_change(chg);
+	smblib_dbg(chg, PR_SOMC, "%s PD\n",
+				chg->pd_active ? "enabling" : "disabling");
 #endif
 	power_supply_changed(chg->usb_psy);
 	return rc;
@@ -3922,6 +4404,11 @@ static int smblib_recover_from_soft_jeita(struct smb_charger *chg)
 	u8 stat_1, stat_2;
 	int rc;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->jeita_sw_ctl_en)
+		return 0;
+#endif
+
 	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat_1);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read BATTERY_CHARGER_STATUS_1 rc=%d\n",
@@ -4106,6 +4593,58 @@ irqreturn_t smblib_handle_debug(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+irqreturn_t smblib_handle_dcin_debug(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+	int rc;
+	u8 int_rt_sts, aicl_sts;
+
+	/* Get dc_int_rt_sts to log */
+	rc = smblib_read(chg, 0x1410, &int_rt_sts);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read DC_INT_RT_STS rc=%d\n", rc);
+		return IRQ_HANDLED;
+	}
+
+	/* Read AICL_STATUS to log */
+	rc = smblib_read(chg, AICL_STATUS_REG, &aicl_sts);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read AICL_STATUS rc=%d\n", rc);
+		return IRQ_HANDLED;
+	}
+
+	smblib_dbg(chg, PR_SOMC,
+			"IRQ: %s, dc_int_rt_sts: 0x%02x, aicl_status: 0x%02x\n",
+			irq_data->name, int_rt_sts, aicl_sts);
+	return IRQ_HANDLED;
+}
+
+irqreturn_t smblib_handle_dcin_uv(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+	int rc;
+	u8 reg = 0;
+	bool dcin_uv;
+
+	rc = smblib_read(chg, DCIN_BASE + INT_RT_STS_OFFSET, &reg);
+	smblib_dbg(chg, PR_SOMC, "IRQ: %s reg: 0x%02x\n", irq_data->name, reg);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't read DC_INT_RT_STS rc=%d\n", rc);
+		return IRQ_HANDLED;
+	}
+	dcin_uv = (bool)(reg & DCIN_UV_RT_STS_BIT);
+
+	if (dcin_uv && !chg->dcin_uv)
+		schedule_work(&chg->wireless_wa_fake_charging_work);
+
+	chg->dcin_uv = dcin_uv;
+	return IRQ_HANDLED;
+}
+#endif
+
 irqreturn_t smblib_handle_otg_overcurrent(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
@@ -4120,9 +4659,8 @@ irqreturn_t smblib_handle_otg_overcurrent(int irq, void *data)
 	}
 
 	if (chg->wa_flags & OTG_WA) {
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 		schedule_work(&chg->ocp_otg_wa_work);
-#endif
+
 		if (stat & OTG_OC_DIS_SW_STS_RT_STS_BIT)
 			smblib_err(chg, "OTG disabled by hw\n");
 
@@ -4153,6 +4691,10 @@ irqreturn_t smblib_handle_chg_state_change(int irq, void *data)
 	}
 
 	stat = stat & BATTERY_CHARGER_STATUS_MASK;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	smblib_dbg(chg, PR_SOMC, "current charge state: %s\n",
+				smblib_somc_get_battery_charger_status(chg));
+#endif
 	power_supply_changed(chg->batt_psy);
 	return IRQ_HANDLED;
 }
@@ -4172,6 +4714,12 @@ irqreturn_t smblib_handle_batt_temp_changed(int irq, void *data)
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	smblib_dbg(chg, PR_SOMC, "IRQ: %s\n", irq_data->name);
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->jeita_sw_ctl_en) {
+		cancel_delayed_work_sync(&chg->jeita_work);
+		schedule_delayed_work(&chg->jeita_work, msecs_to_jiffies(0));
+	}
+#endif
 #endif
 	rerun_election(chg->fcc_votable);
 	power_supply_changed(chg->batt_psy);
@@ -4203,11 +4751,16 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	struct storm_watch *wdata;
-	const struct apsd_result *apsd = smblib_get_apsd_result(chg);
-	int rc;
-	u8 stat = 0, max_pulses = 0;
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	const struct apsd_result *apsd_result = smblib_get_apsd_result(chg);
+#else
 	const struct apsd_result *apsd_result = smblib_update_usb_type(chg);
+#endif
+#else
+	int rc;
+	const struct apsd_result *apsd = smblib_get_apsd_result(chg);
+	u8 stat = 0, max_pulses = 0;
 #endif
 
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
@@ -4226,6 +4779,7 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 	wdata = &chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data->storm_data;
 	reset_storm_count(wdata);
 
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	if (!chg->non_compliant_chg_detected &&
 			apsd->pst == POWER_SUPPLY_TYPE_USB_HVDCP) {
 		rc = smblib_read(chg, QC_CHANGE_STATUS_REG, &stat);
@@ -4272,6 +4826,7 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 
 		smblib_rerun_apsd(chg);
 	}
+#endif
 
 	return IRQ_HANDLED;
 }
@@ -4288,6 +4843,33 @@ static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 		smblib_uusb_removal(chg);
 	}
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+static int smblib_somc_report_wireless_thermal_limit(struct smb_charger *chg,
+								int max_voltage)
+{
+	int rc;
+	union power_supply_propval pval = {0, };
+
+	if (!chg->wireless_enable)
+		return -EINVAL;
+
+	if (!chg->wireless_psy)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+
+	if (!chg->wireless_psy) {
+		smblib_err(chg,
+			   "Couldn't set property: WIRELESS_THERMAL_V_LIMIT\n");
+		return -EINVAL;
+	}
+
+	pval.intval = max_voltage;
+	rc = power_supply_set_property(chg->wireless_psy,
+				POWER_SUPPLY_PROP_WIRELESS_THERMAL_V_LIMIT,
+				&pval);
+	return rc;
+}
+#endif
 
 void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 {
@@ -4360,19 +4942,32 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	smblib_set_opt_freq_buck(chg, vbus_rising ? chg->chg_freq.freq_5V :
 						chg->chg_freq.freq_removal);
 
-	if (vbus_rising) {
-		if (smblib_get_prop_dfp_mode(chg) != POWER_SUPPLY_TYPEC_NONE) {
-			chg->fake_usb_insertion = true;
-			return;
-		}
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->jeita_sw_ctl_en) {
+		cancel_delayed_work_sync(&chg->jeita_work);
+		schedule_delayed_work(&chg->jeita_work, msecs_to_jiffies(0));
+	}
+#endif
 
+	if (vbus_rising) {
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_ARCH_SONY_TAMA)
+		if (chg->wireless_enable)
+			vote(chg->dc_icl_votable, DC_OV_BY_PLUGIN_VOTER,
+								true, 0);
+#endif
+
 		smblib_cc2_sink_removal_exit(chg);
 
 		if (chg->typec_en_dis_active) {
 			smblib_dbg(chg, PR_SOMC,
 				"start fake charging by typec_en_dis_active\n");
 			schedule_work(&chg->fake_charging_work);
+		}
+#else
+		if (smblib_get_prop_dfp_mode(chg) != POWER_SUPPLY_TYPEC_NONE) {
+			chg->fake_usb_insertion = true;
+			return;
 		}
 #endif
 
@@ -4393,10 +4988,12 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 				!chg->pd_active)
 			pr_err("APSD disabled on vbus rising without PD\n");
 	} else {
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 		if (chg->fake_usb_insertion) {
 			chg->fake_usb_insertion = false;
 			return;
 		}
+#endif
 
 		if (chg->wa_flags & BOOST_BACK_WA) {
 			data = chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data;
@@ -4419,14 +5016,29 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		rc = smblib_request_dpdm(chg, false);
 		if (rc < 0)
 			smblib_err(chg, "Couldn't disable DPDM rc=%d\n", rc);
+
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 		smblib_somc_lrc_check(chg);
+#if defined(CONFIG_ARCH_SONY_TAMA)
+		if (chg->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
+			vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER,
+								true, 0);
+
+#endif
 		__pm_wakeup_event(
 			chg->usb_removal_wakelock.lock, REMOVAL_WAKE_PERIOD);
 		schedule_delayed_work(&chg->usb_removal_work,
 					msecs_to_jiffies(REMOVAL_DELAY_MS));
 		if (chg->pd_hard_reset)
 			smblib_cc2_sink_removal_enter(chg);
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+		if (chg->wireless_enable) {
+			vote(chg->dc_icl_votable, DC_OV_BY_PLUGIN_VOTER,
+								false, 0);
+			smblib_somc_handle_wireless_exclusion(chg);
+		}
+#endif
 #endif
 	}
 
@@ -4700,11 +5312,13 @@ static void smblib_somc_force_legacy_icl(struct smb_charger *chg,
 		return;
 	}
 
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	if (chg->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true,
 								USBIN_500MA);
 		return;
 	}
+#endif
 
 	switch (apsd_result_bit) {
 	case SDP_CHARGER_BIT:
@@ -4852,6 +5466,12 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	if (!rising)
 		return;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable)
+		smblib_somc_handle_wireless_exclusion(chg);
+
+#endif
+
 	apsd_result = smblib_update_usb_type(chg);
 
 	if (!chg->typec_legacy_valid)
@@ -4915,10 +5535,10 @@ irqreturn_t smblib_handle_usb_source_change(int irq, void *data)
 			"ignored handler during typec_en_dis_active\n");
 		return IRQ_HANDLED;
 	}
-#endif
-
+#else
 	if (chg->fake_usb_insertion)
 		return IRQ_HANDLED;
+#endif
 
 	rc = smblib_read(chg, APSD_STATUS_REG, &stat);
 	if (rc < 0) {
@@ -5493,15 +6113,24 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 		smblib_handle_typec_removal(chg);
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	/* suspend usb if sink (!audio_adapter) */
+	if ((chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT)
+		&& chg->typec_present
+		&& chg->typec_mode != POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
+#else
 	/* suspend usb if sink */
 	if ((chg->typec_status[3] & UFP_DFP_MODE_STATUS_BIT)
 			&& chg->typec_present)
+#endif
 		vote(chg->usb_icl_votable, OTG_VOTER, true, 0);
 	else
 		vote(chg->usb_icl_votable, OTG_VOTER, false, 0);
 
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: cc-state-change; Type-C %s detected\n",
 				smblib_typec_mode_name[chg->typec_mode]);
+#endif
 }
 
 void smblib_usb_typec_change(struct smb_charger *chg)
@@ -5556,6 +6185,10 @@ irqreturn_t smblib_handle_usb_typec_change(int irq, void *data)
 
 	mutex_lock(&chg->lock);
 	smblib_usb_typec_change(chg);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: typec-change; Type-C %s detected\n",
+				smblib_typec_mode_name[chg->typec_mode]);
+#endif
 	mutex_unlock(&chg->lock);
 	return IRQ_HANDLED;
 }
@@ -5564,6 +6197,42 @@ irqreturn_t smblib_handle_dc_plugin(int irq, void *data)
 {
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	u8 stat;
+	bool dc_present, usb_present;
+	int rc;
+
+	smblib_somc_ctrl_inhibit(chg, false);
+
+	if (chg->jeita_sw_ctl_en) {
+		cancel_delayed_work_sync(&chg->jeita_work);
+		schedule_delayed_work(&chg->jeita_work, msecs_to_jiffies(0));
+	}
+
+	rc = smblib_read(chg, DCIN_BASE + INT_RT_STS_OFFSET, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read DCIN_INT_RT_STS rc=%d\n", rc);
+		goto out;
+	}
+	dc_present = (bool)(stat & DCIN_PLUGIN_RT_STS_BIT);
+	smblib_dbg(chg, PR_SOMC, "IRQ: %s dc_present:%d\n", irq_data->name,
+								dc_present);
+
+	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
+		goto out;
+	}
+	usb_present = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
+
+	if (!dc_present && !usb_present) {
+		__pm_wakeup_event(
+			chg->usb_removal_wakelock.lock, REMOVAL_WAKE_PERIOD);
+		schedule_delayed_work(&chg->usb_removal_work,
+					msecs_to_jiffies(REMOVAL_DELAY_MS));
+	}
+out:
+#endif
 
 	power_supply_changed(chg->dc_psy);
 	return IRQ_HANDLED;
@@ -5728,6 +6397,10 @@ int smblib_set_prop_pr_swap_in_progress(struct smb_charger *chg,
 			val->intval ? TCC_DEBOUNCE_20MS_BIT : 0);
 	if (rc < 0)
 		smblib_err(chg, "Couldn't set tCC debounce rc=%d\n", rc);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (val->intval)
+		smblib_somc_typec_cur_source(chg, false);
+#endif
 	return 0;
 }
 
@@ -5978,7 +6651,7 @@ unlock:
 	mutex_unlock(&chg->otg_oc_lock);
 }
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 static void somc_ocp_otg_wa_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger,
@@ -6117,7 +6790,11 @@ static void smblib_legacy_detection_work(struct work_struct *work)
 	mutex_lock(&chg->lock);
 #endif
 	chg->typec_en_dis_active = true;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	smblib_dbg(chg, PR_SOMC, "running legacy unknown workaround\n");
+#else
 	smblib_dbg(chg, PR_MISC, "running legacy unknown workaround\n");
+#endif
 	rc = smblib_masked_write(chg,
 				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				TYPEC_DISABLE_CMD_BIT,
@@ -6198,6 +6875,370 @@ static void smblib_somc_fake_charging_work(struct work_struct *work)
 	msleep(500);
 	chg->duration_fake_charging = false;
 }
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+static void smblib_somc_wireless_v_chg_work(struct work_struct *work)
+{
+	int rc;
+	int wireless_lim_v;
+	union power_supply_propval pval = {0, };
+	bool dc_online;
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+						wireless_v_chg_work.work);
+	int lv = chg->system_temp_level;
+
+	if (!chg->wireless_enable)
+		return;
+
+	if (!chg->wireless_psy)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+
+	if (!chg->wireless_psy) {
+		/* retry worker*/
+		smblib_dbg(chg, PR_SOMC,
+			   "Reschedule v_chg_work due to wireless_psy error\n");
+		schedule_delayed_work(&chg->wireless_v_chg_work,
+					msecs_to_jiffies(500));
+		return;
+	}
+
+	if (IS_ERR_OR_NULL(chg->thermal_wireless_v_limit) ||
+		lv > chg->thermal_wireless_v_limit_levels - 1) {
+		smblib_err(chg, "Invalid parameter of wireless_v_limit\n");
+		return;
+	}
+	wireless_lim_v = chg->thermal_wireless_v_limit[lv];
+
+	rc = smblib_get_prop_dc_online(chg, &pval);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get dc online property rc=%d\n",
+			rc);
+		return;
+	}
+	dc_online = (bool)pval.intval;
+
+	smblib_dbg(chg, PR_MISC,
+			"wireless_lim_v: %d (from %d) dc_online: %d\n",
+			wireless_lim_v, chg->wireless_thermal_limit_voltage,
+			dc_online);
+	if (wireless_lim_v != chg->wireless_thermal_limit_voltage) {
+		rc = smblib_somc_report_wireless_thermal_limit(chg,
+							wireless_lim_v);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't report therm limit rc=%d\n",
+									rc);
+
+		chg->wireless_thermal_limit_voltage = wireless_lim_v;
+	}
+}
+
+#define FV_JEITA_WARM_RB_WA_EXIT_THRESH_UV	200000
+#define JEITA_WORK_DELAY_RETRY_MS		500
+#define JEITA_WORK_DELAY_CHARGING_MS		5000
+#define JEITA_WORK_DELAY_DISCHARGING_MS		30000
+#define JEITA_FAKE_CARGING_TIME_MS		500
+static void smblib_somc_jeita_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+							jeita_work.work);
+	union power_supply_propval pval = {0, };
+	int rc;
+	int batt_temp = 0;
+	int skin_temp = 0;
+	int wlc_temp = 0;
+	u8 reg;
+	u8 chg_stat;
+	bool usbin_valid = false;
+	bool dcin_valid = false;
+	bool skin_temp_failed = false;
+	bool wlc_temp_failed = false;
+	int interval_ms;
+	int synth_cond;
+	int vbatt;
+	int batt_condition;
+	int skin_condition;
+	int wlc_condition;
+	bool condition_changed = false;
+
+	if (!chg->jeita_sw_ctl_en)
+		return;
+
+	rc = smblib_read(chg, USBIN_BASE + INT_RT_STS_OFFSET, &reg);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't read USB_INT_RT_STS rc=%d\n", rc);
+		return;
+	}
+	usbin_valid = (bool)(reg & USBIN_PLUGIN_RT_STS_BIT);
+
+	if (chg->jeita_use_wlc) {
+		rc = smblib_read(chg, DCIN_BASE + INT_RT_STS_OFFSET, &reg);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't read DC_INT_RT_STS rc=%d\n",
+									rc);
+			return;
+		}
+		dcin_valid = (bool)(reg & DCIN_PLUGIN_RT_STS_BIT);
+	}
+
+	rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP, &pval);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't get batt temp rc=%d\n", rc);
+
+	batt_temp = pval.intval;
+
+	rc = smblib_get_prop_from_bms(chg,
+                               POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't read VBATT rc=%d\n", rc);
+		goto reschedule;
+	}
+	vbatt = pval.intval;
+
+	if (chg->jeita_use_aux) {
+		rc = smblib_get_prop_skin_temp(chg, &pval);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't get skin temp rc=%d\n", rc);
+			skin_temp_failed = true;
+		}
+		skin_temp = pval.intval;
+
+		smblib_dbg(chg, PR_MISC,
+				"usbin_valid=%d batt_temp=%d sikn_temp=%d\n",
+				(int)usbin_valid, batt_temp,
+				skin_temp_failed ? 0 : skin_temp);
+	}
+
+	if (!chg->jeita_use_aux) {
+		chg->jeita_skin_condition = TEMP_CONDITION_DEFAULT;
+	} else if (!skin_temp_failed) {
+		skin_condition = chg->jeita_skin_condition;
+		if (skin_temp > chg->jeita_aux_thresh_hot)
+			chg->jeita_skin_condition = TEMP_CONDITION_HOT;
+		else if (skin_temp > chg->jeita_aux_thresh_warm)
+			chg->jeita_skin_condition = TEMP_CONDITION_WARM;
+		else
+			chg->jeita_skin_condition = TEMP_CONDITION_NORMAL;
+
+		if (skin_condition != chg->jeita_skin_condition)
+			condition_changed = true;
+	}
+
+	/* read wireless charger temp */
+	if (chg->jeita_use_wlc) {
+		if (!chg->wireless_psy)
+			chg->wireless_psy =
+					power_supply_get_by_name("wireless");
+
+		if (chg->wireless_psy) {
+			rc = power_supply_get_property(chg->wireless_psy,
+							POWER_SUPPLY_PROP_TEMP,
+							&pval);
+			if (rc) {
+				smblib_dbg(chg, PR_MISC,
+					   "Couldn't get wlc_temp rc = %d\n",
+					   rc);
+				wlc_temp_failed = true;
+			} else {
+				wlc_temp = pval.intval;
+			}
+			smblib_dbg(chg, PR_MISC,
+					"batt_temp=%d wlc_temp=%d\n",
+					batt_temp,
+					wlc_temp_failed ? 0 : wlc_temp);
+		} else {
+			smblib_err(chg, "Couldn't get wireless_psy\n");
+			wlc_temp_failed = true;
+		}
+	}
+
+	if (!chg->jeita_use_wlc || wlc_temp_failed) {
+		chg->jeita_wlc_condition = TEMP_CONDITION_DEFAULT;
+	} else {
+		wlc_condition = chg->jeita_wlc_condition;
+		if (wlc_temp > chg->jeita_wlc_thresh_hot)
+			chg->jeita_wlc_condition = TEMP_CONDITION_HOT;
+		else if (wlc_temp > chg->jeita_wlc_thresh_warm)
+			chg->jeita_wlc_condition = TEMP_CONDITION_WARM;
+		else
+			chg->jeita_wlc_condition = TEMP_CONDITION_NORMAL;
+
+		if (wlc_condition != chg->jeita_wlc_condition)
+			condition_changed = true;
+	}
+
+	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &chg_stat);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read charger status 1 rc=%d\n", rc);
+		return;
+	}
+
+	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_2_REG, &reg);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't read charger status 2 rc=%d\n", rc);
+		return;
+	}
+	batt_condition = chg->jeita_batt_condition;
+	if (reg & BAT_TEMP_STATUS_TOO_COLD_BIT)
+		chg->jeita_batt_condition = TEMP_CONDITION_COLD;
+	else if (reg & BAT_TEMP_STATUS_TOO_HOT_BIT)
+		chg->jeita_batt_condition = TEMP_CONDITION_HOT;
+	else if (reg & BAT_TEMP_STATUS_COLD_SOFT_LIMIT_BIT)
+		chg->jeita_batt_condition = TEMP_CONDITION_COOL;
+	else if (reg & BAT_TEMP_STATUS_HOT_SOFT_LIMIT_BIT)
+		chg->jeita_batt_condition = TEMP_CONDITION_WARM;
+	else
+		chg->jeita_batt_condition = TEMP_CONDITION_NORMAL;
+
+	if (batt_condition != chg->jeita_batt_condition)
+		condition_changed = true;
+
+	switch (chg->jeita_batt_condition) {
+	case TEMP_CONDITION_HOT:
+		synth_cond = TEMP_CONDITION_HOT;
+		break;
+	case TEMP_CONDITION_WARM:
+		if (chg->jeita_skin_condition == TEMP_CONDITION_HOT ||
+		    chg->jeita_wlc_condition == TEMP_CONDITION_HOT)
+			synth_cond = TEMP_CONDITION_HOT;
+		else
+			synth_cond = TEMP_CONDITION_WARM;
+		break;
+	case TEMP_CONDITION_NORMAL:
+		if (chg->jeita_skin_condition == TEMP_CONDITION_HOT ||
+		    chg->jeita_wlc_condition == TEMP_CONDITION_HOT)
+			synth_cond = TEMP_CONDITION_HOT;
+		else if (chg->jeita_skin_condition == TEMP_CONDITION_WARM ||
+			 chg->jeita_wlc_condition == TEMP_CONDITION_WARM)
+			synth_cond = TEMP_CONDITION_WARM;
+		else
+			synth_cond = TEMP_CONDITION_NORMAL;
+		break;
+	case TEMP_CONDITION_COOL:
+		synth_cond = TEMP_CONDITION_COOL;
+		break;
+	case TEMP_CONDITION_COLD:
+		synth_cond = TEMP_CONDITION_COLD;
+		break;
+	default:
+		synth_cond = TEMP_CONDITION_NORMAL;
+		break;
+	}
+	smblib_dbg(chg, PR_MISC, "batt=%d skin=%d wlc=%d result=%d\n",
+			chg->jeita_batt_condition, chg->jeita_skin_condition,
+			chg->jeita_wlc_condition, synth_cond);
+
+	if (synth_cond == TEMP_CONDITION_HOT ||
+	    synth_cond == TEMP_CONDITION_COLD)
+		vote(chg->chg_disable_votable, SOMC_JEITA_VOTER, true, 0);
+	else
+		vote(chg->chg_disable_votable, SOMC_JEITA_VOTER, false, 0);
+
+	if (synth_cond == TEMP_CONDITION_WARM)
+		vote(chg->fv_votable, SOMC_JEITA_VOTER, true,
+					chg->jeita_warm_fv_uv);
+	else
+		vote(chg->fv_votable, SOMC_JEITA_VOTER, false, 0);
+
+	if (synth_cond == TEMP_CONDITION_WARM && chg->jeita_warm_fcc_ua > 0)
+		vote(chg->fcc_votable, SOMC_JEITA_VOTER, true,
+					chg->jeita_warm_fcc_ua);
+	else if (synth_cond == TEMP_CONDITION_COOL &&
+						chg->jeita_cool_fcc_ua > 0)
+		vote(chg->fcc_votable, SOMC_JEITA_VOTER, true,
+					chg->jeita_cool_fcc_ua);
+	else
+		vote(chg->fcc_votable, SOMC_JEITA_VOTER, false, 0);
+
+	/* WA for Reverse Boost */
+	if (!chg->jeita_rb_warm_hi_vbatt_en &&
+		usbin_valid && synth_cond == TEMP_CONDITION_WARM &&
+		vbatt > chg->jeita_warm_fv_uv) {
+		smblib_dbg(chg, PR_SOMC,
+				"WA for RB after Warm. vbatt=%d\n",
+				vbatt);
+		chg->jeita_rb_warm_hi_vbatt_en = true;
+		vote(chg->usb_icl_votable, SOMC_JEITA_VOTER, true, 0);
+	} else if (chg->jeita_rb_warm_hi_vbatt_en &&
+			(!usbin_valid || synth_cond != TEMP_CONDITION_WARM ||
+			vbatt < chg->jeita_warm_fv_uv
+					- FV_JEITA_WARM_RB_WA_EXIT_THRESH_UV)) {
+		smblib_dbg(chg, PR_SOMC,
+				"Release WA for RB after Warm. vbatt=%d\n",
+				vbatt);
+		vote(chg->usb_icl_votable, SOMC_JEITA_VOTER, false, 0);
+		chg->jeita_rb_warm_hi_vbatt_en = false;
+	}
+
+	/* WA for holding Charge Termination after normal */
+	if (usbin_valid &&
+	    chg->jeita_synth_condition == TEMP_CONDITION_WARM &&
+	    (synth_cond == TEMP_CONDITION_NORMAL ||
+	    synth_cond == TEMP_CONDITION_COOL) &&
+	    !get_effective_result(chg->chg_disable_votable) &&
+	    ((chg_stat & BATTERY_CHARGER_STATUS_MASK) == TERMINATE_CHARGE ||
+	    (chg_stat & BATTERY_CHARGER_STATUS_MASK) == INHIBIT_CHARGE ||
+	    (chg_stat & CC_SOFT_TERMINATE_BIT) == CC_SOFT_TERMINATE_BIT)) {
+		smblib_dbg(chg, PR_SOMC, "Execute WA for holding FULL\n");
+		chg->jeita_keep_fake_charging = true;
+		vote(chg->chg_disable_votable, SOMC_JEITA_VOTER, true, 0);
+		vote(chg->chg_disable_votable, SOMC_JEITA_VOTER, false, 0);
+		msleep(JEITA_FAKE_CARGING_TIME_MS);
+
+		smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &reg);
+		smblib_dbg(chg, PR_SOMC, "waiting done chg_sts1=0x%02x\n", reg);
+		chg->jeita_keep_fake_charging = false;
+	}
+
+	if (synth_cond != chg->jeita_synth_condition || condition_changed ||
+						chg->jeita_debug_log_interval) {
+		power_supply_changed(chg->batt_psy);
+		if (chg->jeita_use_aux && chg->jeita_use_wlc)
+			smblib_dbg(chg, PR_SOMC,
+					"JEITA: batt_temp=%d(%d) skin_temp=%d(%d) wlc=%d(%d) result:%d\n",
+					batt_temp, chg->jeita_batt_condition,
+					skin_temp, chg->jeita_skin_condition,
+					wlc_temp, chg->jeita_wlc_condition,
+					synth_cond);
+		else if (chg->jeita_use_aux)
+			smblib_dbg(chg, PR_SOMC,
+					"JEITA: batt_temp=%d(%d) skin_temp=%d(%d) result:%d\n",
+					batt_temp, chg->jeita_batt_condition,
+					skin_temp, chg->jeita_skin_condition,
+					synth_cond);
+		else if (chg->jeita_use_wlc)
+			smblib_dbg(chg, PR_SOMC,
+					"JEITA: batt_temp=%d(%d) wlc=%d(%d) result:%d\n",
+					batt_temp, chg->jeita_batt_condition,
+					wlc_temp, chg->jeita_wlc_condition,
+					synth_cond);
+		else
+			smblib_dbg(chg, PR_SOMC,
+					"JEITA: batt_temp=%d(%d) result:%d\n",
+					batt_temp, chg->jeita_batt_condition,
+					synth_cond);
+	}
+	chg->jeita_synth_condition = synth_cond;
+
+reschedule:
+	if (chg->jeita_debug_log_interval)
+		interval_ms = chg->jeita_debug_log_interval;
+	else if (usbin_valid && skin_temp_failed)
+		interval_ms = JEITA_WORK_DELAY_RETRY_MS;
+	else if (usbin_valid && !skin_temp_failed)
+		interval_ms = JEITA_WORK_DELAY_CHARGING_MS;
+	else if (dcin_valid)
+		interval_ms = JEITA_WORK_DELAY_CHARGING_MS;
+	else
+		interval_ms = JEITA_WORK_DELAY_DISCHARGING_MS;
+
+	smblib_dbg(chg, PR_MISC, "will schedule delayed worker (%d ms)\n",
+								interval_ms);
+
+	if (chg->jeita_sw_ctl_en)
+		schedule_delayed_work(&chg->jeita_work,
+						msecs_to_jiffies(interval_ms));
+}
+#endif
 
 static void smblib_somc_smart_charge_wdog_work(struct work_struct *work)
 {
@@ -6429,6 +7470,14 @@ static void smblib_iio_deinit(struct smb_charger *chg)
 		iio_channel_release(chg->iio.usbin_v_chan);
 	if (!IS_ERR_OR_NULL(chg->iio.batt_i_chan))
 		iio_channel_release(chg->iio.batt_i_chan);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	if (!IS_ERR_OR_NULL(chg->iio.skin_temp_chan))
+		iio_channel_release(chg->iio.skin_temp_chan);
+	if (!IS_ERR_OR_NULL(chg->iio.dcin_i_chan))
+		iio_channel_release(chg->iio.dcin_i_chan);
+	if (!IS_ERR_OR_NULL(chg->iio.dcin_v_chan))
+		iio_channel_release(chg->iio.dcin_v_chan);
+#endif
 }
 
 int smblib_init(struct smb_charger *chg)
@@ -6452,7 +7501,7 @@ int smblib_init(struct smb_charger *chg)
 	INIT_DELAYED_WORK(&chg->hvdcp_detect_work, smblib_hvdcp_detect_work);
 	INIT_DELAYED_WORK(&chg->clear_hdc_work, clear_hdc_work);
 	INIT_WORK(&chg->otg_oc_work, smblib_otg_oc_work);
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	INIT_WORK(&chg->ocp_otg_wa_work, somc_ocp_otg_wa_work);
 #endif
 	INIT_WORK(&chg->vconn_oc_work, smblib_vconn_oc_work);
@@ -6466,6 +7515,13 @@ int smblib_init(struct smb_charger *chg)
 	INIT_WORK(&chg->fake_charging_work, smblib_somc_fake_charging_work);
 	INIT_WORK(&chg->thermal_fake_charging_work,
 				smblib_somc_thermal_fake_charging_work);
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	INIT_WORK(&chg->wireless_wa_fake_charging_work,
+					smblib_somc_wlc_fake_charging_work);
+	INIT_DELAYED_WORK(&chg->jeita_work, smblib_somc_jeita_work);
+	INIT_DELAYED_WORK(&chg->wireless_v_chg_work,
+					smblib_somc_wireless_v_chg_work);
+#endif
 	INIT_DELAYED_WORK(&chg->smart_charge_wdog_work,
 					smblib_somc_smart_charge_wdog_work);
 	INIT_DELAYED_WORK(&chg->usb_removal_work, smblib_somc_removal_work);
@@ -6535,6 +7591,9 @@ int smblib_init(struct smb_charger *chg)
 				return rc;
 			}
 		}
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+#endif
 		break;
 	case PARALLEL_SLAVE:
 		break;
@@ -6556,7 +7615,7 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->hvdcp_detect_work);
 		cancel_delayed_work_sync(&chg->clear_hdc_work);
 		cancel_work_sync(&chg->otg_oc_work);
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 		cancel_work_sync(&chg->ocp_otg_wa_work);
 #endif
 		cancel_work_sync(&chg->vconn_oc_work);
@@ -6699,6 +7758,7 @@ void smblib_somc_thermal_icl_change(struct smb_charger *chg)
 			icl = chg->thermal_lo_volt_icl_ua[lv];
 
 		smblib_dbg(chg, PR_MISC, "PD: icl=%duA\n", icl);
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	} else if (type == POWER_SUPPLY_TYPE_USB) {
 		if (chg->thermal_lo_volt_icl_ua[lv] == 0)
 			icl = 0;
@@ -6716,12 +7776,47 @@ void smblib_somc_thermal_icl_change(struct smb_charger *chg)
 					chg->thermal_lo_volt_icl_ua[lv], icl);
 
 		smblib_dbg(chg, PR_MISC, "SDP: icl=%duA\n", icl);
+#endif
 	} else {
 		icl = chg->thermal_lo_volt_icl_ua[lv];
-		smblib_dbg(chg, PR_MISC, "DCP/Other: icl=%duA\n", icl);
+		smblib_dbg(chg, PR_MISC, "DCP/SDP/Other: icl=%duA\n", icl);
 	}
 
 	vote(chg->usb_icl_votable, THERMAL_DAEMON_VOTER, true, icl);
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable) {
+		if (!IS_ERR_OR_NULL(chg->thermal_wireless_v_limit)) {
+			cancel_delayed_work_sync(&chg->wireless_v_chg_work);
+			schedule_delayed_work(&chg->wireless_v_chg_work,
+							msecs_to_jiffies(0));
+		}
+
+		if (IS_ERR_OR_NULL(chg->thermal_dcin_icl_ua)) {
+			smblib_dbg(chg, PR_MISC,
+					"thermal dcin icl table is NULL\n");
+			goto unlock;
+		}
+
+		if (lv > chg->thermal_dcin_icl_levels - 1) {
+			smblib_dbg(chg, PR_MISC,
+					"thermal dcin lv is out of range\n");
+			goto unlock;
+		}
+
+		if (chg->thermal_hi_volt_icl_levels !=
+			chg->thermal_dcin_icl_levels) {
+			smblib_dbg(chg, PR_MISC,
+					"thermal dcin table size missmatch\n");
+			goto unlock;
+		}
+
+		icl = chg->thermal_dcin_icl_ua[lv];
+		smblib_dbg(chg, PR_MISC, "DCIN: icl=%duA\n", icl);
+		vote(chg->dc_icl_votable, THERMAL_DAEMON_VOTER, true, icl);
+	}
+#endif
+
 unlock:
 	mutex_unlock(&chg->thermal_lock);
 	return;
@@ -6739,6 +7834,69 @@ void smblib_somc_set_low_batt_suspend_en(struct smb_charger *chg)
 	if (rc < 0)
 		dev_err(chg->dev, "Couldn't set dc suspend rc %d\n", rc);
 }
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+#define INHIBIT_HOLD_MSOC 100
+void smblib_somc_ctrl_inhibit(struct smb_charger *chg, bool en)
+{
+	int rc;
+	int msoc;
+	bool fv_decreased;
+	union power_supply_propval val = {0, };
+
+	if (!chg->bms_psy) {
+		smblib_err(chg, "Couldn't get bms_psy\n");
+		return;
+	}
+
+	rc = power_supply_get_property(chg->bms_psy,
+				POWER_SUPPLY_PROP_MONOTONIC_SOC, &val);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get prop msoc rc=%d\n", rc);
+		return;
+	}
+	msoc = val.intval;
+
+	if (chg->batt_profile_fv_uv < chg->last_batt_profile_fv_uv)
+		fv_decreased = true;
+	else
+		fv_decreased = false;
+
+	smblib_dbg(chg, PR_MISC, "msoc:%d, FV:%d->%d\n",
+				msoc, chg->last_batt_profile_fv_uv,
+				chg->batt_profile_fv_uv);
+
+	if (en) {
+		if (fv_decreased && (msoc == INHIBIT_HOLD_MSOC)) {
+			smblib_dbg(chg, PR_SOMC, "Enable inhibit for RB WA\n");
+			rc = smblib_masked_write(chg, CHGR_CFG2_REG,
+							CHARGER_INHIBIT_BIT,
+							CHARGER_INHIBIT_BIT);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't set inhibit rc=%d\n", rc);
+				return;
+			}
+		} else {
+			smblib_dbg(chg, PR_MISC, "Don't enable inhibit\n");
+		}
+	} else {
+		if (msoc < INHIBIT_HOLD_MSOC) {
+			smblib_dbg(chg, PR_SOMC, "Disable inhibit for RB WA\n");
+			rc = smblib_masked_write(chg, CHGR_CFG2_REG,
+							CHARGER_INHIBIT_BIT, 0);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't set inhibit rc=%d\n", rc);
+				return;
+			}
+		} else {
+			smblib_dbg(chg, PR_MISC, "Don't disable inhibit\n");
+		}
+	}
+	chg->last_batt_profile_fv_uv = chg->batt_profile_fv_uv;
+}
+#endif
 
 const char *smblib_somc_get_battery_charger_status(struct smb_charger *chg)
 {
@@ -7073,4 +8231,44 @@ void smblib_somc_set_prop_jeita_condition(struct smb_charger *chg,
 	if (chg->jeita_condition != temp_condition)
 		power_supply_changed(chg->batt_psy);
 }
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+void smblib_somc_handle_wireless_exclusion(struct smb_charger *chg)
+{
+	union power_supply_propval val = {0, };
+	int rc;
+	bool usb_present;
+
+	if (!chg->wireless_enable)
+		return;
+
+	if (!chg->wireless_psy)
+		chg->wireless_psy = power_supply_get_by_name("wireless");
+
+	if (!chg->wireless_psy) {
+		smblib_err(chg, "will not set wireless property\n");
+		return;
+	}
+
+	rc = smblib_get_prop_usb_present(chg, &val);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get present rc=%d\n", rc);
+		return;
+	}
+	usb_present = val.intval;
+
+	smblib_dbg(chg, PR_MISC,
+			"usb_present:%d, vbus_reg_en:%d, running_status:%d\n",
+			(int)usb_present, (int)chg->vbus_reg_en,
+			chg->running_status);
+
+	if (usb_present || chg->vbus_reg_en)
+		val.intval = 1;
+	else
+		val.intval = 0;
+
+	power_supply_set_property(chg->wireless_psy,
+					POWER_SUPPLY_PROP_USBIN_VALID, &val);
+}
+#endif
 #endif

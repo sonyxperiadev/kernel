@@ -173,7 +173,7 @@ struct smb2 {
 };
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-static int __debug_mask = PR_SOMC;
+static int __debug_mask = PR_INTERRUPT | PR_SOMC;
 #else
 static int __debug_mask;
 #endif
@@ -249,7 +249,9 @@ static struct attribute *smb2_attrs[] = {
 };
 ATTRIBUTE_GROUPS(smb2);
 
-
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define FV_JEITA_WARM_DEFAULT_UV	4200000
+#endif
 #define MICRO_1P5A		1500000
 #define MICRO_P1A		100000
 #define OTG_DEFAULT_DEGLITCH_TIME_MS	50
@@ -337,7 +339,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 	if (rc < 0)
 		chip->dt.wipower_max_uw = -EINVAL;
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	chg->wireless_enable = of_property_read_bool(node,
+						"somc,wireless-support");
+
 	if (of_find_property(node, "somc,thermal-fcc-ua", &byte_len)) {
 		chg->thermal_fcc_ua = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -406,6 +411,91 @@ static int smb2_parse_dt(struct smb2 *chip)
 			"Couldn't read fake charging temp level rc = %d\n", rc);
 		chg->fake_charging_temp_level = -1;
 	}
+
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	if (chg->wireless_enable) {
+		rc = of_property_read_u32(node, "somc,dc-h-volt-icl-ua",
+							&chg->dc_h_volt_icl_ua);
+		if (rc < 0)
+			chg->dc_h_volt_icl_ua = -EINVAL;
+
+		rc = of_property_read_u32(node, "somc,dc-h-volt-boost-icl-ua",
+						&chg->dc_h_volt_boost_icl_ua);
+		if (rc < 0)
+			chg->dc_h_volt_boost_icl_ua = chg->dc_h_volt_icl_ua;
+
+		rc = of_property_read_u32(node, "somc,dc-l-volt-icl-ua",
+							&chg->dc_l_volt_icl_ua);
+		if (rc < 0)
+			chg->dc_l_volt_icl_ua = -EINVAL;
+
+		if (of_find_property(node, "somc,thermal-dcin-icl-ua",
+								&byte_len)) {
+			chg->thermal_dcin_icl_ua = devm_kzalloc(chg->dev,
+								byte_len,
+								GFP_KERNEL);
+
+			if (chg->thermal_dcin_icl_ua == NULL)
+				return -ENOMEM;
+
+			chg->thermal_dcin_icl_levels = byte_len / sizeof(u32);
+			rc = of_property_read_u32_array(node,
+					"somc,thermal-dcin-icl-ua",
+					chg->thermal_dcin_icl_ua,
+					chg->thermal_dcin_icl_levels);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't read threm limits rc = %d\n",
+									rc);
+				return rc;
+			}
+		} else {
+			pr_err("Coudn't find thermal-dcin-icl-ua table\n");
+		}
+
+		if (of_find_property(node, "somc,thermal-wireless-v-limit",
+								&byte_len)) {
+			chg->thermal_wireless_v_limit = devm_kzalloc(chg->dev,
+								byte_len,
+								GFP_KERNEL);
+			if (chg->thermal_wireless_v_limit == NULL)
+				return -ENOMEM;
+
+			chg->thermal_wireless_v_limit_levels =
+							byte_len / sizeof(u32);
+			rc = of_property_read_u32_array(node,
+					"somc,thermal-wireless-v-limit",
+					chg->thermal_wireless_v_limit,
+					chg->thermal_wireless_v_limit_levels);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't read threm vlimits rc = %d\n",
+									rc);
+				return rc;
+			}
+		} else {
+			pr_err("Coudn't find thermal-wireless-v-limit table\n");
+		}
+
+		rc = of_property_read_u32(node, "somc,wlc-temp-correction",
+						&chg->wlc_temp_correctton);
+		if (rc < 0)
+			chg->wlc_temp_correctton = 0;
+
+		chg->real_temp_use_wlc = (rc < 0) ? false : true;
+	}
+	rc = of_property_read_u32(node, "somc,skin-temp-correction",
+					&chg->skin_temp_correctton);
+	if (rc < 0)
+		chg->skin_temp_correctton = 0;
+
+	chg->real_temp_use_aux = (rc < 0) ? false : true;
+
+	rc = of_property_read_u32(node, "somc,batt-temp-correction",
+					&chg->batt_temp_correctton);
+	if (rc < 0)
+		chg->batt_temp_correctton = 0;
+#endif
 #else
 	if (of_find_property(node, "qcom,thermal-mitigation", &byte_len)) {
 		chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
@@ -484,7 +574,98 @@ static int smb2_parse_dt(struct smb2 *chip)
 	if (rc < 0)
 		chg->high_voltage_icl_ua = -EINVAL;
 
-/*safety timer*/
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	chg->jeita_sw_ctl_en = of_property_read_bool(node,
+						"somc,jeita-sw-ctrl-en");
+	chg->jeita_use_aux = of_property_read_bool(node,
+						"somc,jeita-use-aux-therm");
+	chg->jeita_use_wlc = of_property_read_bool(node,
+						"somc,jeita-use-wlc-therm");
+
+	if (chg->jeita_sw_ctl_en) {
+		/* fcc limitation for JEITA */
+		rc = of_property_read_u32(node, "somc,jeita-warm-fcc-ua",
+					&chg->jeita_warm_fcc_ua);
+		if (rc < 0)
+			chg->jeita_warm_fcc_ua = -EINVAL;
+
+		rc = of_property_read_u32(node, "somc,jeita-cool-fcc-ua",
+					&chg->jeita_cool_fcc_ua);
+		if (rc < 0)
+			chg->jeita_cool_fcc_ua = -EINVAL;
+
+		/* fv limitation for JEITA */
+		rc = of_property_read_u32(node, "somc,jeita-warm-fv-uv",
+					&chg->jeita_warm_fv_uv);
+		if (rc < 0) {
+			pr_err("Coudn't find jeita-warm-fv-uv\n");
+			chg->jeita_warm_fv_uv = FV_JEITA_WARM_DEFAULT_UV;
+		}
+	}
+
+	if (chg->jeita_use_aux) {
+		/* JEITA AUX_THERM threshold*/
+		rc = of_property_read_u32(node, "somc,jeita-aux-thresh-hot",
+					&chg->jeita_aux_thresh_hot);
+		if (rc < 0) {
+			pr_err("Coudn't find jeita-aux-thresh-hot\n");
+			chg->jeita_use_aux = false;
+		}
+
+		rc = of_property_read_u32(node, "somc,jeita-aux-thresh-warm",
+				&chg->jeita_aux_thresh_warm);
+		if (rc < 0) {
+			pr_err("Coudn't find jeita-aux-thresh-warm\n");
+			chg->jeita_use_aux = false;
+		}
+
+		if (chg->jeita_aux_thresh_hot <=
+			chg->jeita_aux_thresh_warm) {
+			pr_err("Invalid parameter jeita_aux_thresh_warm/hot\n");
+			chg->jeita_use_aux = false;
+		}
+	}
+
+	if (chg->jeita_use_wlc) {
+		/* JEITA AUX_THERM threshold*/
+		rc = of_property_read_u32(node, "somc,jeita-wlc-thresh-hot",
+						&chg->jeita_wlc_thresh_hot);
+		if (rc < 0) {
+			pr_err("Coudn't find jeita-wlc-thresh-hot\n");
+			chg->jeita_use_wlc = false;
+		}
+
+		rc = of_property_read_u32(node, "somc,jeita-wlc-thresh-warm",
+						&chg->jeita_wlc_thresh_warm);
+		if (rc < 0) {
+			pr_err("Coudn't find jeita-wlc-thresh-warm\n");
+			chg->jeita_use_wlc = false;
+		}
+
+		if (chg->jeita_wlc_thresh_hot <= chg->jeita_wlc_thresh_warm) {
+			pr_err("Invalid parameter jeita_wlc_thresh\n");
+			chg->jeita_use_wlc = false;
+		}
+	}
+
+	if (chg->jeita_sw_ctl_en)
+		pr_debug("JEITA SW Contorol is enabled.\n");
+	else
+		pr_debug("JEITA SW Contorol is disabled.\n");
+
+	if (chg->jeita_use_aux)
+		pr_debug("AUX_THERM Monitoring is enabled.\n");
+	else
+		pr_debug("AUX_THERM Monitoring is disabled.\n");
+
+	if (chg->jeita_use_wlc)
+		pr_debug("Wireless Temp Monitoring is enabled.\n");
+	else
+		pr_debug("Wireless Temp Monitoring is disabled.\n");
+#endif
+
+#if defined(CONFIG_ARCH_SONY_NILE)
+/* safety timer */
 	rc = of_property_read_u32(node, "qcom,prechg-safety-time",
 				&chg->chg_prechg_safety_time);
 	if (rc < 0)
@@ -494,7 +675,8 @@ static int smb2_parse_dt(struct smb2 *chip)
 				&chg->chg_fastchg_safety_time);
 	if (rc < 0)
 		chg->chg_fastchg_safety_time = FAST_CHARGE_SAFETY_TIMER_TMOUT_1536MIN;
-/*safety timer*/
+/* safety timer */
+#endif
 #endif
 
 	return 0;
@@ -699,9 +881,9 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 	if (!chg->typec_present &&
 		psp != POWER_SUPPLY_PROP_TYPEC_POWER_ROLE) {
 		pr_warn("set_prop is inhibited because typec is not present\n");
-		rc = -EINVAL;
 #else
 	if (!chg->typec_present) {
+#endif
 		switch (psp) {
 		case POWER_SUPPLY_PROP_MOISTURE_DETECTED:
 			vote(chg->disable_power_role_switch, MOISTURE_VOTER,
@@ -711,7 +893,6 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 			rc = -EINVAL;
 			break;
 		}
-#endif
 
 		goto unlock;
 	}
@@ -1052,6 +1233,11 @@ static enum power_supply_property smb2_dc_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_REAL_TYPE,
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_INPUT_CURRENT_NOW,
+	POWER_SUPPLY_PROP_WIRELESS_MODE,
+#endif
 };
 
 static int smb2_dc_get_prop(struct power_supply *psy,
@@ -1078,6 +1264,16 @@ static int smb2_dc_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		val->intval = POWER_SUPPLY_TYPE_WIPOWER;
 		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+		rc = smblib_get_prop_dc_voltage_now(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_NOW:
+		rc = smblib_get_prop_dc_current_now(chg, val);
+		break;
+	case POWER_SUPPLY_PROP_WIRELESS_MODE:
+		break;
+#endif
 	default:
 		return -EINVAL;
 	}
@@ -1104,6 +1300,11 @@ static int smb2_dc_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = smblib_set_prop_dc_current_max(chg, val);
 		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	case POWER_SUPPLY_PROP_WIRELESS_MODE:
+		rc = smblib_set_prop_wireless_mode(chg, val);
+		break;
+#endif
 	default:
 		return -EINVAL;
 	}
@@ -1206,10 +1407,12 @@ static enum power_supply_property smb2_batt_props[] = {
 	POWER_SUPPLY_PROP_LRC_SOCMIN,
 	POWER_SUPPLY_PROP_LRC_NOT_STARTUP,
 	POWER_SUPPLY_PROP_MAX_CHARGE_CURRENT,
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	POWER_SUPPLY_PROP_INT_CLD,
 	POWER_SUPPLY_PROP_JEITA_STEP_FCC,
 	POWER_SUPPLY_PROP_JEITA_STEP_FV,
 	POWER_SUPPLY_PROP_JEITA_CONDITION,
+#endif
 	POWER_SUPPLY_PROP_REAL_TEMP,
 	POWER_SUPPLY_PROP_RUNNING_STATUS,
 #endif
@@ -1342,6 +1545,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = smblib_get_prop_charging_enabled(chg, val);
 		break;
+	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
+		rc = smblib_get_prop_system_temp_level(chg, val);
+		break;
 	case POWER_SUPPLY_PROP_SKIN_TEMP:
 		rc = smblib_get_prop_skin_temp(chg, val);
 		break;
@@ -1370,6 +1576,7 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		rc = smblib_get_prop_charge_full_design(chg, val);
 		break;
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_INT_CLD:
 		val->intval = chg->int_cld;
 		break;
@@ -1382,6 +1589,7 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_JEITA_CONDITION:
 		val->intval = chg->jeita_condition;
 		break;
+#endif
 	case POWER_SUPPLY_PROP_REAL_TEMP:
 		rc = smblib_get_prop_real_temp(chg, val);
 		break;
@@ -1420,7 +1628,12 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		rc = smblib_set_prop_input_suspend(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
+#if defined (CONFIG_ARCH_SONY_TAMA)
+		pr_err("set prop %d(charge_control_limit) is not supported.\n",
+									prop);
+#else
 		rc = smblib_set_prop_system_temp_level(chg, val);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = smblib_set_prop_batt_capacity(chg, val);
@@ -1430,7 +1643,13 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_ARCH_SONY_TAMA)
+		chg->batt_profile_fv_uv = val->intval;
+		smblib_somc_ctrl_inhibit(chg, true);
+		vote(chg->fv_votable, BATT_PROFILE_VOTER, true, val->intval);
+#else
 		smblib_somc_handle_profile_fv(chg, val->intval);
+#endif
 #else
 		chg->batt_profile_fv_uv = val->intval;
 		vote(chg->fv_votable, BATT_PROFILE_VOTER, true, val->intval);
@@ -1501,6 +1720,9 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = smblib_set_prop_charging_enabled(chg, val);
 		break;
+	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
+		rc = smblib_set_prop_system_temp_level(chg, val);
+		break;
 	case POWER_SUPPLY_PROP_SMART_CHARGING_ACTIVATION:
 		if (val->intval) {
 			pr_debug("Smart Charging was activated.\n");
@@ -1532,6 +1754,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_MAX_CHARGE_CURRENT:
 		vote(chg->fcc_votable, QNS_VOTER, true, val->intval);
 		break;
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_INT_CLD:
 		chg->int_cld = (int)val->intval;
 		if (chg->int_cld)
@@ -1546,6 +1769,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_JEITA_CONDITION:
 		smblib_somc_set_prop_jeita_condition(chg, val);
 		break;
+#endif
 	case POWER_SUPPLY_PROP_RUNNING_STATUS:
 		if ((val->intval == RUNNING_STATUS_NORMAL) ||
 				(val->intval == RUNNING_STATUS_OFF_CHARGE) ||
@@ -1586,10 +1810,12 @@ static int smb2_batt_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_LRC_SOCMIN:
 	case POWER_SUPPLY_PROP_LRC_NOT_STARTUP:
 	case POWER_SUPPLY_PROP_MAX_CHARGE_CURRENT:
+#if defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_INT_CLD:
 	case POWER_SUPPLY_PROP_JEITA_STEP_FCC:
 	case POWER_SUPPLY_PROP_JEITA_STEP_FV:
 	case POWER_SUPPLY_PROP_JEITA_CONDITION:
+#endif
 	case POWER_SUPPLY_PROP_RUNNING_STATUS:
 #endif
 		return 1;
@@ -1829,6 +2055,16 @@ static int smb2_configure_typec(struct smb_charger *chg)
 	if (rc < 0)
 		dev_err(chg->dev,
 			"Couldn't configure CC threshold voltage rc=%d\n", rc);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	/* enable APSD CC trigger */
+	rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
+				APSD_START_ON_CC_BIT, APSD_START_ON_CC_BIT);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't set Type-C config rc=%d\n", rc);
+		return rc;
+	}
+#endif
 
 	return rc;
 }
@@ -2564,8 +2800,12 @@ static int smb2_init_hw(struct smb2 *chip)
 		smblib_get_charge_param(chg, &chg->param.fv,
 				&chg->batt_profile_fv_uv);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	chg->default_icl_ua = MICRO_1P5A;
+#else
 	smblib_get_charge_param(chg, &chg->param.usb_icl,
 				&chg->default_icl_ua);
+#endif
 	if (chip->dt.usb_icl_ua < 0)
 		chip->dt.usb_icl_ua = chg->default_icl_ua;
 
@@ -2590,6 +2830,34 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't set otg soft start rc=%d\n", rc);
 		return rc;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smblib_masked_write(chg, CHARGE_INHIBIT_THRESHOLD_CFG_REG,
+			CHARGE_INHIBIT_THRESHOLD_MASK,
+			CHARGE_INHIBIT_THRESHOLD_50MV);
+
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure charge inhibit cfg rc=%d\n",
+			rc);
+		return rc;
+	}
+
+	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
+			CHARGER_INHIBIT_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev,
+			"Couldn't configure charge inhibit threshold rc=%d\n",
+			rc);
+		return rc;
+	}
+
+	/* to release inhibit status, suspend usb/dc momentarily */
+	smblib_set_usb_suspend(chg, true);
+	smblib_set_dc_suspend(chg, true);
+	smblib_set_usb_suspend(chg, false);
+	smblib_set_dc_suspend(chg, false);
+#endif
 
 	/* set OTG current limit */
 	rc = smblib_set_charge_param(chg, &chg->param.otg_cl,
@@ -2655,7 +2923,7 @@ static int smb2_init_hw(struct smb2 *chip)
 	vote(chg->pd_disallowed_votable_indirect, PD_NOT_SUPPORTED_VOTER,
 			chip->dt.no_pd, 0);
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	/* ICL is controlled by SW always */
 	rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG,
 			AICL_USE_SW_AFTER_APSD, AICL_USE_SW_AFTER_APSD);
@@ -2767,33 +3035,72 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	/* Disable FVCOMP and CCCOMP with warm and cool */
-	rc = smblib_masked_write(chg, JEITA_EN_CFG_REG,
-				 JEITA_EN_HOT_SL_FCV_BIT |
-				 JEITA_EN_COLD_SL_FCV_BIT |
-				 JEITA_EN_HOT_SL_CCC_BIT |
-				 JEITA_EN_COLD_SL_CCC_BIT, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't disable JEITA comp rc=%d\n",
-								rc);
-		return rc;
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	/* Configure DCIN charge */
+	if (chg->wireless_enable) {
+		rc = smblib_masked_write(chg, DCIN_AICL_REF_SEL_CFG_REG,
+					 DCIN_CONT_AICL_THRESHOLD_CFG_MASK,
+					 0x00);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+			return rc;
+		}
+
+		rc = smblib_masked_write(chg, DCIN_LOAD_CFG_REG,
+					 DCIN_IN_COLLAPSE_GF_SEL_MASK,
+					 DCIN_IN_COLLAPSE_GF_30MS);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+			return rc;
+		}
+
+		rc = smblib_write(chg, WI_PWR_OPTIONS_REG, 0x00);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+			return rc;
+		}
+
+		rc = smblib_masked_write(chg, DCIN_AICL_OPTIONS_CFG_REG,
+					 SUSPEND_ON_COLLAPSE_DCIN_BIT |
+					 DCIN_AICL_START_AT_MAX_BIT |
+					 DCIN_AICL_ADC_EN_BIT,
+					 SUSPEND_ON_COLLAPSE_DCIN_BIT);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't set rc=%d\n", rc);
+			return rc;
+		}
 	}
 
-	/* Disable FVCOMP CFG */
-	rc = smblib_write(chg, JEITA_FVCOMP_CFG_REG, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't disable fvcomp cfg rc=%d\n",
-								rc);
-		return rc;
-	}
+	if (chg->jeita_sw_ctl_en) {
+		/* Disable FVCOMP and CCCOMP with warm and cool */
+		rc = smblib_masked_write(chg, JEITA_EN_CFG_REG,
+					JEITA_EN_HOT_SL_FCV_BIT |
+					JEITA_EN_COLD_SL_FCV_BIT |
+					JEITA_EN_HOT_SL_CCC_BIT |
+					JEITA_EN_COLD_SL_CCC_BIT, 0);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't disable JEITA comp rc=%d\n",
+									rc);
+			return rc;
+		}
 
-	/* Disable CCCOMP CFG */
-	rc = smblib_write(chg, JEITA_CCCOMP_CFG_REG, 0);
-	if (rc < 0) {
-		dev_err(chg->dev, "Couldn't disable cc comp rc=%d\n",
-								rc);
-		return rc;
+		/* Disable FVCOMP CFG */
+		rc = smblib_write(chg, JEITA_FVCOMP_CFG_REG, 0);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't disable fvcomp cfg rc=%d\n",
+									rc);
+			return rc;
+		}
+
+		/* Disable CCCOMP CFG */
+		rc = smblib_write(chg, JEITA_CCCOMP_CFG_REG, 0);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't disable cc comp rc=%d\n",
+									rc);
+			return rc;
+		}
 	}
+#endif
 #endif
 
 	/* Configure charge enable for software control; active high */
@@ -2872,7 +3179,6 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't configue WD config rc=%d\n", rc);
 		return rc;
 	}
-#endif
 
 	/* enable WD BARK and enable it on plugin */
 	rc = smblib_masked_write(chg, WD_CFG_REG,
@@ -2885,6 +3191,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		pr_err("Couldn't configue WD config rc=%d\n", rc);
 		return rc;
 	}
+#endif
 
 	/* configure wipower watts */
 	rc = smb2_config_wipower_input_power(chip, chip->dt.wipower_max_uw);
@@ -2951,27 +3258,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-	rc = smblib_masked_write(chg, CHARGE_INHIBIT_THRESHOLD_CFG_REG,
-			CHARGE_INHIBIT_THRESHOLD_MASK,
-			CHARGE_INHIBIT_THRESHOLD_50MV);
-
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't configure charge inhibit cfg rc=%d\n",
-			rc);
-		return rc;
-	}
-
-	rc = smblib_masked_write(chg, CHGR_CFG2_REG,
-			CHARGER_INHIBIT_BIT, 0);
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't configure charge inhibit threshold rc=%d\n",
-			rc);
-		return rc;
-	}
-#else
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	switch (chip->dt.chg_inhibit_thr_mv) {
 	case 50:
 		rc = smblib_masked_write(chg, CHARGE_INHIBIT_THRESHOLD_CFG_REG,
@@ -3047,8 +3334,8 @@ static int smb2_init_hw(struct smb2 *chip)
 		}
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-/*safety timer*/
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_NILE)
+/* safety timer */
 	rc = smblib_masked_write(chg, SCHG_CHGR_PRE_CHARGE_SAFETY_TIMER_CFG,
 			PRE_CHARGE_SAFETY_TIMER_CFG_MASK,
 			chg->chg_prechg_safety_time);
@@ -3062,7 +3349,7 @@ static int smb2_init_hw(struct smb2 *chip)
 	if (rc < 0) {
 		dev_err(chg->dev,"Couldn't write SCHG_CHGR_FAST_CHARGE_SAFETY_TIMER_CFG rc=%d\n", rc);
 	}
-/*safety timer*/
+/* safety timer */
 #endif
 
 	return rc;
@@ -3310,6 +3597,37 @@ static struct smb_irq_info smb2_irqs[] = {
 		.wake		= true,
 	},
 /* DC INPUT IRQs */
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	[DCIN_COLLAPSE_IRQ] = {
+		.name		= "dcin-collapse",
+		.handler	= smblib_handle_dcin_debug,
+	},
+	[DCIN_LT_3P6V_IRQ] = {
+		.name		= "dcin-lt-3p6v",
+		.handler	= smblib_handle_dcin_debug,
+	},
+	[DCIN_UV_IRQ] = {
+		.name		= "dcin-uv",
+		.handler	= smblib_handle_dcin_uv,
+	},
+	[DCIN_OV_IRQ] = {
+		.name		= "dcin-ov",
+		.handler	= smblib_handle_dcin_debug,
+	},
+	[DCIN_PLUGIN_IRQ] = {
+		.name		= "dcin-plugin",
+		.handler	= smblib_handle_dc_plugin,
+		.wake		= true,
+	},
+	[DIV2_EN_DG_IRQ] = {
+		.name		= "div2-en-dg",
+		.handler	= smblib_handle_dcin_debug,
+	},
+	[DCIN_ICL_CHANGE_IRQ] = {
+		.name		= "dcin-icl-change",
+		.handler	= smblib_handle_dcin_debug,
+	},
+#else
 	[DCIN_COLLAPSE_IRQ] = {
 		.name		= "dcin-collapse",
 		.handler	= smblib_handle_debug,
@@ -3339,6 +3657,7 @@ static struct smb_irq_info smb2_irqs[] = {
 		.name		= "dcin-icl-change",
 		.handler	= smblib_handle_debug,
 	},
+#endif
 /* MISCELLANEOUS IRQs */
 	[WDOG_SNARL_IRQ] = {
 		.name		= "wdog-snarl",
@@ -3611,6 +3930,23 @@ enum smb2_somc_sysfs {
 	ATTR_USBIN_ADAPTER_ALLOW_CFG,
 	ATTR_FAKED_STATUS,
 	ATTR_BATTERY_CHARGER_STATUS,
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	ATTR_JEITA_AUX_THRESH_HOT,
+	ATTR_JEITA_AUX_THRESH_WARM,
+	ATTR_JEITA_WIRELESS_THRESH_HOT,
+	ATTR_JEITA_WIRELESS_THRESH_WARM,
+	ATTR_DEBUG_DCIN_AICL_THRESH_RAW,
+	ATTR_DEBUG_DCIN_AICL_THRESH_ENABLE,
+	ATTR_DC_ICL_VOTER,
+	ATTR_DC_ICL_VOTER_EFFECTIVE,
+	ATTR_DC_H_VOLT_ICL_CFG,
+	ATTR_DC_L_VOLT_ICL_CFG,
+	ATTR_JEITA_BATT_CONDITION,
+	ATTR_JEITA_AUX_CONDITION,
+	ATTR_JEITA_WIRELESS_CONDITION,
+	ATTR_VBUS_REG_EN,
+	ATTR_JEITA_DEBUG_LOG_INTERVAL,
+#endif
 };
 
 static ssize_t smb2_somc_param_show(struct device *dev,
@@ -3668,6 +4004,34 @@ static struct device_attribute smb2_somc_attrs[] = {
 	__ATTR(usbin_adapter_allow_cfg, S_IRUGO, smb2_somc_param_show, NULL),
 	__ATTR(faked_status, S_IRUGO, smb2_somc_param_show, NULL),
 	__ATTR(battery_charger_status, S_IRUGO, smb2_somc_param_show, NULL),
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	__ATTR(jeita_aux_thresh_hot, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(jeita_aux_thresh_warm, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(jeita_wlc_thresh_hot, 0644,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(jeita_wlc_thresh_warm, 0644,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(debug_dcin_aicl_thresh_raw, 0644,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(debug_dcin_aicl_thresh_enable, 0644,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(dc_icl_voter, S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(dc_icl_voter_effective,
+				S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(dc_h_volt_icl_cfg, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(dc_l_volt_icl_cfg, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
+	__ATTR(jeita_batt_condition, S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(jeita_aux_condition, S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(jeita_wireless_condition,
+				S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(vbus_reg_en,	0444, smb2_somc_param_show, NULL),
+	__ATTR(jeita_debug_log_interval, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
+#endif
 };
 
 static ssize_t smb2_somc_param_show(struct device *dev,
@@ -4018,6 +4382,65 @@ static ssize_t smb2_somc_param_show(struct device *dev,
                 size = scnprintf(buf, PAGE_SIZE, "%s\n",
                                smblib_somc_get_battery_charger_status(chg));
 		break;
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	case ATTR_JEITA_AUX_THRESH_HOT:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_aux_thresh_hot);
+		break;
+	case ATTR_JEITA_AUX_THRESH_WARM:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_aux_thresh_warm);
+		break;
+	case ATTR_JEITA_WIRELESS_THRESH_HOT:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_wlc_thresh_hot);
+		break;
+	case ATTR_JEITA_WIRELESS_THRESH_WARM:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_wlc_thresh_warm);
+		break;
+	case ATTR_DEBUG_DCIN_AICL_THRESH_RAW:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->debug_dcin_aicl_thresh_raw);
+		break;
+	case ATTR_DEBUG_DCIN_AICL_THRESH_ENABLE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->debug_dcin_aicl_thresh_enable);
+		break;
+	case ATTR_DC_ICL_VOTER:
+		size = somc_output_voter_param(chg->dc_icl_votable,
+								buf, PAGE_SIZE);
+		break;
+	case ATTR_DC_ICL_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				get_effective_result(chg->dc_icl_votable));
+		break;
+	case ATTR_DC_H_VOLT_ICL_CFG:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_h_volt_icl_ua);
+		break;
+	case ATTR_DC_L_VOLT_ICL_CFG:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->dc_l_volt_icl_ua);
+		break;
+	case ATTR_JEITA_BATT_CONDITION:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_batt_condition);
+		break;
+	case ATTR_JEITA_AUX_CONDITION:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_skin_condition);
+		break;
+	case ATTR_JEITA_WIRELESS_CONDITION:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					chg->jeita_wlc_condition);
+		break;
+	case ATTR_VBUS_REG_EN:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->vbus_reg_en);
+		break;
+	case ATTR_JEITA_DEBUG_LOG_INTERVAL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+						chg->jeita_debug_log_interval);
+		break;
+#endif
 	default:
 		size = 0;
 		break;
@@ -4040,6 +4463,60 @@ static ssize_t smb2_somc_param_store(struct device *dev,
 		if (ret < 0)
 			return ret;
 		break;
+#if defined(CONFIG_ARCH_SONY_TAMA)
+	case ATTR_JEITA_AUX_THRESH_HOT:
+		ret = kstrtoint(buf, 10, &chg->jeita_aux_thresh_hot);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_JEITA_AUX_THRESH_WARM:
+		ret = kstrtoint(buf, 10, &chg->jeita_aux_thresh_warm);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_JEITA_WIRELESS_THRESH_HOT:
+		ret = kstrtoint(buf, 10, &chg->jeita_wlc_thresh_hot);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_JEITA_WIRELESS_THRESH_WARM:
+		ret = kstrtoint(buf, 10, &chg->jeita_wlc_thresh_warm);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_DEBUG_DCIN_AICL_THRESH_RAW:
+		ret = kstrtoint(buf, 10, &chg->debug_dcin_aicl_thresh_raw);
+		if (ret < 0)
+			return ret;
+		ret = smblib_set_dcin_aicl_thresh(chg);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_DEBUG_DCIN_AICL_THRESH_ENABLE:
+		ret = kstrtoint(buf, 10, &chg->debug_dcin_aicl_thresh_enable);
+		if (ret < 0)
+			return ret;
+		ret = smblib_set_dcin_aicl_thresh(chg);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_DC_H_VOLT_ICL_CFG:
+		ret = kstrtoint(buf, 10, &chg->dc_h_volt_icl_ua);
+		if (ret < 0)
+			return ret;
+		chg->dc_h_volt_boost_icl_ua = chg->dc_h_volt_icl_ua;
+		break;
+	case ATTR_DC_L_VOLT_ICL_CFG:
+		ret = kstrtoint(buf, 10, &chg->dc_l_volt_icl_ua);
+		if (ret < 0)
+			return ret;
+		break;
+	case ATTR_JEITA_DEBUG_LOG_INTERVAL:
+		ret = kstrtoint(buf, 10, &chg->jeita_debug_log_interval);
+		if (ret < 0)
+			return ret;
+		break;
+#endif
 	default:
 		break;
 	}
