@@ -3203,7 +3203,7 @@
 	};
 
 	qmi-tmd-devices {
-		compatible = "qcom,qmi_cooling_devices";
+		compatible = "qcom,qmi-cooling-devices";
 
 		modem {
 			qcom,instance-id = <0x0>;
