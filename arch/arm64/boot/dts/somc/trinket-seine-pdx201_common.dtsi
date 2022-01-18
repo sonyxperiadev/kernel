@@ -11,6 +11,10 @@
 	pinctrl-1 = <&pm6125_gpio_8 &pm6125_gpio_9>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_6>;
+};
+
 &soc {
 };
 
