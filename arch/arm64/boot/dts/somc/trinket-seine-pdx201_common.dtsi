@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+#include "trinket-seine-common.dtsi"
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>.dtsi */
+	pinctrl-1 = <&pm6125_gpio_8 &pm6125_gpio_9>;
+};
+
+&soc {
+};
+
+/* GPIO_8: NC */
+&pm6125_gpio_8 {
+	pins = "gpio8";
+	function = "normal";
+	bias-high-impedance; /* DISABLE GPIO_8 */
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ qcom,drive-strength;
+	/delete-property/ power-source;
+};
+
+/* GPIO_9: NC */
+&pm6125_gpio_9 {
+	pins = "gpio9";
+	function = "normal";
+	bias-high-impedance; /* DISABLE GPIO_9 */
+	/delete-property/ output-high;
+	/delete-property/ drive-push-pull;
+	/delete-property/ qcom,drive-strength;
+	/delete-property/ power-source;
+};
+
+#include "somc-seine-display.dtsi"
+#include "somc-seine-display_pdx201.dtsi"
+#include "charger-seine-common.dtsi"
+#include "charger-seine-pdx201.dtsi"

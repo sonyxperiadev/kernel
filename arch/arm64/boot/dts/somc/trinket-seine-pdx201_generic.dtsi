@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+#include "trinket-seine-pdx201_common.dtsi"
+
+&somc_pinctrl {
+	/* If variant specific default setting is needed,
+	fill pinctrl-2 value in <variant>.dtsi */
+	pinctrl-2 = <&sm_gpio_0 &sm_gpio_3>;
+};
+
+&soc {
+};
+
+/* GPIO_0 : NFC_ESE_SPI_MISO */
+&sm_gpio_0 {
+	mux {
+		pins = "gpio0";
+		function = "qup00";
+	};
+
+	config {
+		pins = "gpio0";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+	};
+};
+
+/* GPIO_3 : NFC_ESE_SPI_CS_N */
+&sm_gpio_3 {
+	mux {
+		pins = "gpio3";
+		function = "qup00";
+	};
+
+	config {
+		pins = "gpio3";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		/delete-property/ output-low;
+		bias-pull-down;
+	};
+};

@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+#include "dsi-panel-sofef01_m-fhd_plus.dtsi"
+
+&soc {
+	dsi_panel_cmd_display: qcom,dsi-display@30 {
+		label = "dsi_panel_cmd_display";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_6>;
+	};
+
+	dsi_6_display: qcom,dsi-display@31 {
+		label = "6";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_6>;
+	};
+};
+
+&dsi_6 {
+	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,mdss-dsi-panel-peak-brightness = <4200000>;
+	qcom,mdss-dsi-panel-blackness-level = <3230>;
+	qcom,platform-te-gpio = <&tlmm 89 0>;
+	qcom,platform-reset-gpio = <&tlmm 90 0>;
+	somc,platform-touch-reset-gpio = <&tlmm 97 0>;
+	somc,panel_vci = <&tlmm 54 0>;
+	somc,ts_vddio = <&tlmm 59 0>;
+	somc,ts_vddh = <&tlmm 58 0>;
+	somc,disp-err-flag-gpio = <&tlmm 86 0>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings =
+			[27 21 0A 0B 07 02 04 A0
+			27 21 0A 0B 07 02 04 A0
+			27 21 0A 0B 07 02 04 A0
+			27 21 0A 0B 07 02 04 A0
+			27 22 0A 0B 07 02 04 A0];
+		};
+	};
+};
+
+&pm6125_l12 {
+	qcom,init-enable = <1>;
+};
+
+&sde_dsi {
+	qcom,dsi-display-list =
+		<
+		&dsi_6_display
+		&dsi_panel_cmd_display
+		>;
+};
+
+&dsi_panel_cmd_display {
+	qcom,dsi-display-active;
+};
+
