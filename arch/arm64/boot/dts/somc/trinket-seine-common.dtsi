@@ -179,6 +179,11 @@
 		pinctrl-2 = <>;
 	};
 
+	sony_ext_uim_ctrl {
+		compatible = "sony,ext-uim-ctrl";
+		uim2-gpios = <&tlmm 101 GPIO_ACTIVE_HIGH>;
+	};
+
 	bu520x1nvx {
 		compatible = "rohm,bu520x1nvx";
 
@@ -2035,7 +2040,6 @@
 
 &sdhc_2 {
 	cd-gpios = <&tlmm 98 GPIO_ACTIVE_HIGH>;
-	uim2-gpios = <&tlmm 101 GPIO_ACTIVE_HIGH>;
 
 	qcom,clk-rates = <400000 20000000 25000000 40000000 80000000>;
 	qcom,bus-speed-mode = "DDR50";
