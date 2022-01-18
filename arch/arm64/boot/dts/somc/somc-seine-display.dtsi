@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+&soc {
+	dsi_panel_oled_pwr_supply: dsi_panel_oled_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+};
+
+&sde_dsi {
+	compatible = "somc,dsi-display";
+	qcom,dsi-ctrl = <&mdss_dsi0>;
+	qcom,dsi-phy = <&mdss_dsi_phy0>;
+	clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
+		 <&mdss_dsi0_pll PIX0_MUX_CLK>,
+		 <&mdss_dsi0_pll BYTE0_SRC_CLK>,
+		 <&mdss_dsi0_pll PIX0_SRC_CLK>,
+		 <&mdss_dsi0_pll SHADOW_BYTE0_SRC_CLK>,
+		 <&mdss_dsi0_pll SHADOW_PIX0_SRC_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0";
+	pinctrl-names = "panel_active", "panel_suspend",
+			"somc_ts_int_active", "somc_ts_int_suspend";
+	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+	pinctrl-2 = <&somc_ts_int_active>;
+	pinctrl-3 = <&somc_ts_int_suspend>;
+
+	vddio-supply = <&L12A>;
+};

@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+&qupv3_se2_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 88 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1080 2520>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <0>;
+		sec,firmware_name = "touch_module_id_0x82.img";
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <0>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <0>;
+		sec,aod_mode_supported = <0>;
+		sec,sod_mode_supported = <0>;
+		sec,stamina_mode_supported = <1>;
+		sec,rejection_area_portrait = <25 150 60 200>;
+		sec,rejection_area_landscape = <150 20 200 60>;
+	};
+};
