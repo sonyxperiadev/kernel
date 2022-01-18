@@ -5,35 +5,10 @@
 
 #include "dsi-panel-sofef01_m-fhd_plus.dtsi"
 
-&soc {
-	dsi_panel_cmd_display: qcom,dsi-display@30 {
-		label = "dsi_panel_cmd_display";
-		qcom,display-type = "primary";
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
-		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
-				"src_byte_clk0", "src_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
-
-		qcom,dsi-panel = <&dsi_6>;
-	};
-
-	dsi_6_display: qcom,dsi-display@31 {
-		label = "6";
-		qcom,display-type = "primary";
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
-		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
-				"src_byte_clk0", "src_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
-
-		qcom,dsi-panel = <&dsi_6>;
-	};
-};
-
 &dsi_6 {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
 	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
@@ -66,16 +41,3 @@
 &pm6125_l12 {
 	qcom,init-enable = <1>;
 };
-
-&sde_dsi {
-	qcom,dsi-display-list =
-		<
-		&dsi_6_display
-		&dsi_panel_cmd_display
-		>;
-};
-
-&dsi_panel_cmd_display {
-	qcom,dsi-display-active;
-};
-
