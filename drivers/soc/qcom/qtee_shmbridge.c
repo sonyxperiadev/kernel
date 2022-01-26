@@ -123,7 +123,8 @@ static int32_t qtee_shmbridge_enable(bool enable)
 		return ret;
 	}
 
-#ifdef CONFIG_ARCH_SDM845
+#if defined(CONFIG_ARCH_SDM845) || \
+	defined(CONFIG_ARCH_TRINKET)
 	return ret;
 #endif
 
