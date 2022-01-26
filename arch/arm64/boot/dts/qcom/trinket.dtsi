@@ -18,6 +18,10 @@
 
 #define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
 #define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
+#define BW_OPP_ENTRY_DDR(mhz, w, ddrtype) opp-mhz {\
+				opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;\
+				opp-supported-hw = <ddrtype>;}
+
 #define DDR_TYPE_LPDDR3		5
 #define DDR_TYPE_LPDDR4X	7
 
@@ -2432,77 +2436,49 @@
 		status = "ok";
 	};
 
-	ddr4_bw_opp_table: ddr4-bw-opp-table {
+	ddr_bw_opp_table: ddr-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY( 200, 8); /* 1525 MB/s */
-		BW_OPP_ENTRY( 300, 8); /* 2288 MB/s */
-		BW_OPP_ENTRY( 451, 8); /* 3440 MB/s */
-		BW_OPP_ENTRY( 547, 8); /* 4173 MB/s */
-		BW_OPP_ENTRY( 681, 8); /* 5195 MB/s */
-		BW_OPP_ENTRY( 768, 8); /* 5859 MB/s */
-		BW_OPP_ENTRY(1017, 8); /* 7759 MB/s */
-		BW_OPP_ENTRY(1353, 8); /*10322 MB/s */
-		BW_OPP_ENTRY(1555, 8); /*11863 MB/s */
-		BW_OPP_ENTRY(1804, 8); /*13763 MB/s */
+		BW_OPP_ENTRY_DDR( 200, 8, 0xA0); /* 1525 MB/s */
+		BW_OPP_ENTRY_DDR( 300, 8, 0xA0); /* 2288 MB/s */
+		BW_OPP_ENTRY_DDR( 451, 8, 0xA0); /* 3440 MB/s */
+		BW_OPP_ENTRY_DDR( 547, 8, 0xA0); /* 4173 MB/s */
+		BW_OPP_ENTRY_DDR( 681, 8, 0xA0); /* 5195 MB/s */
+		BW_OPP_ENTRY_DDR( 768, 8, 0xA0); /* 5859 MB/s */
+		BW_OPP_ENTRY_DDR( 931, 8, 0x20); /* 7102 MB/s */
+		BW_OPP_ENTRY_DDR(1017, 8, 0x80); /* 7759 MB/s */
+		BW_OPP_ENTRY_DDR(1353, 8, 0x80); /*10322 MB/s */
+		BW_OPP_ENTRY_DDR(1555, 8, 0x80); /*11863 MB/s */
+		BW_OPP_ENTRY_DDR(1804, 8, 0x80); /*13763 MB/s */
 	};
 
-	suspendable_ddr4_bw_opp_table: suspendable-ddr4-bw-opp-table {
+	suspendable_ddr_bw_opp_table: suspendable-ddr-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY(   0, 8); /*    0 MB/s */
-		BW_OPP_ENTRY( 200, 8); /* 1525 MB/s */
-		BW_OPP_ENTRY( 300, 8); /* 2288 MB/s */
-		BW_OPP_ENTRY( 451, 8); /* 3440 MB/s */
-		BW_OPP_ENTRY( 547, 8); /* 4173 MB/s */
-		BW_OPP_ENTRY( 681, 8); /* 5195 MB/s */
-		BW_OPP_ENTRY( 768, 8); /* 5859 MB/s */
-		BW_OPP_ENTRY(1017, 8); /* 7759 MB/s */
-		BW_OPP_ENTRY(1353, 8); /*10322 MB/s */
-		BW_OPP_ENTRY(1555, 8); /*11863 MB/s */
-		BW_OPP_ENTRY(1804, 8); /*13763 MB/s */
-	};
-
-	ddr3_bw_opp_table: ddr3-bw-opp-table {
-		compatible = "operating-points-v2";
-		BW_OPP_ENTRY( 200, 8); /* 1525 MB/s */
-		BW_OPP_ENTRY( 300, 8); /* 2288 MB/s */
-		BW_OPP_ENTRY( 451, 8); /* 3440 MB/s */
-		BW_OPP_ENTRY( 547, 8); /* 4173 MB/s */
-		BW_OPP_ENTRY( 681, 8); /* 5195 MB/s */
-		BW_OPP_ENTRY( 768, 8); /* 5859 MB/s */
-		BW_OPP_ENTRY( 931, 8); /* 7102 MB/s */
-	};
-
-	suspendable_ddr3_bw_opp_table: suspendable-ddr3-bw-opp-table {
-		compatible = "operating-points-v2";
-		BW_OPP_ENTRY(   0, 8); /*    0 MB/s */
-		BW_OPP_ENTRY( 200, 8); /* 1525 MB/s */
-		BW_OPP_ENTRY( 300, 8); /* 2288 MB/s */
-		BW_OPP_ENTRY( 451, 8); /* 3440 MB/s */
-		BW_OPP_ENTRY( 547, 8); /* 4173 MB/s */
-		BW_OPP_ENTRY( 681, 8); /* 5195 MB/s */
-		BW_OPP_ENTRY( 768, 8); /* 5859 MB/s */
-		BW_OPP_ENTRY( 931, 8); /* 7102 MB/s */
+		BW_OPP_ENTRY_DDR(   0, 8, 0xA0); /*    0 MB/s */
+		BW_OPP_ENTRY_DDR( 200, 8, 0xA0); /* 1525 MB/s */
+		BW_OPP_ENTRY_DDR( 300, 8, 0xA0); /* 2288 MB/s */
+		BW_OPP_ENTRY_DDR( 451, 8, 0xA0); /* 3440 MB/s */
+		BW_OPP_ENTRY_DDR( 547, 8, 0xA0); /* 4173 MB/s */
+		BW_OPP_ENTRY_DDR( 681, 8, 0xA0); /* 5195 MB/s */
+		BW_OPP_ENTRY_DDR( 768, 8, 0xA0); /* 5859 MB/s */
+		BW_OPP_ENTRY_DDR( 931, 8, 0x20); /* 7102 MB/s */
+		BW_OPP_ENTRY_DDR(1017, 8, 0x80); /* 7759 MB/s */
+		BW_OPP_ENTRY_DDR(1353, 8, 0x80); /*10322 MB/s */
+		BW_OPP_ENTRY_DDR(1555, 8, 0x80); /*11863 MB/s */
+		BW_OPP_ENTRY_DDR(1804, 8, 0x80); /*13763 MB/s */
 	};
 
 	cpu_cpu_ddr_bw: qcom,cpu-cpu-ddr-bw {
-		compatible = "qcom,devbw";
+		compatible = "qcom,devbw-ddr";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		ddr3-opp {
-			operating-points-v2 = <&ddr3_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR3>;
-		};
-		ddr4-opp {
-			operating-points-v2 = <&ddr4_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-		};
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	cpu_cpu_ddr_bwmon: qcom,cpu-cpu-ddr-bwmon@01b8e200 {
 		compatible = "qcom,bimc-bwmon4";
-		reg = <0x01b8e200 0x100>, <0x01b8e100 0x100>;
+		reg = <0x01b8e300 0x100>, <0x01b8e200 0x100>;
 		reg-names = "base", "global_base";
 		interrupts = <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,mport = <0>;
@@ -2512,19 +2488,12 @@
 	};
 
 	cpu0_cpu_ddr_lat: qcom,cpu0-cpu-ddr-lat {
-		compatible = "qcom,devbw";
+		compatible = "qcom,devbw-ddr";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		ddr3-opp {
-			operating-points-v2 = <&ddr3_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR3>;
-		};
-		ddr4-opp {
-			operating-points-v2 = <&ddr4_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-		};
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	cpu0_cpu_ddr_latmon: qcom,cpu0-cpu-ddr-latmon {
@@ -2551,19 +2520,12 @@
 	};
 
 	cpu4_cpu_ddr_lat: qcom,cpu4-cpu-ddr-lat {
-		compatible = "qcom,devbw";
+		compatible = "qcom,devbw-ddr";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		ddr3-opp {
-			operating-points-v2 = <&ddr3_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR3>;
-		};
-		ddr4-opp {
-			operating-points-v2 = <&ddr4_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-		};
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	cpu4_cpu_ddr_latmon: qcom,cpu4-cpu-ddr-latmon {
@@ -2591,19 +2553,12 @@
 	};
 
 	cpu0_cpu_ddr_latfloor: qcom,cpu0-cpu-ddr-latfloor {
-		compatible = "qcom,devbw";
+		compatible = "qcom,devbw-ddr";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		ddr3-opp {
-			operating-points-v2 = <&ddr3_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR3>;
-		};
-		ddr4-opp {
-			operating-points-v2 = <&ddr4_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-		};
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	cpu0_computemon: qcom,cpu0-computemon {
@@ -2628,19 +2583,12 @@
 	};
 
 	cpu4_cpu_ddr_latfloor: qcom,cpu4-cpu-ddr-latfloor {
-		compatible = "qcom,devbw";
+		compatible = "qcom,devbw-ddr";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		ddr3-opp {
-			operating-points-v2 = <&ddr3_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR3>;
-		};
-		ddr4-opp {
-			operating-points-v2 = <&ddr4_bw_opp_table>;
-			qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-		};
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	cpu4_computemon: qcom,cpu4-computemon {
