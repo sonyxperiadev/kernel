@@ -5,7 +5,7 @@
 
 &mdss_mdp {
 	/* Samsung FHD OLED ID6 */
-	dsi_6: somc,6_panel {
+	dsi_6: 6 {
 		qcom,mdss-dsi-panel-name = "6";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 
