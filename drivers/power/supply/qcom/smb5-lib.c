@@ -8045,7 +8045,8 @@ irqreturn_t dc_plugin_irq_handler(int irq, void *data)
 	}
 
 out:
-	power_supply_changed(chg->dc_psy);
+	if (chg->dc_psy)
+		power_supply_changed(chg->dc_psy);
 
 	smblib_dbg(chg, (PR_WLS | PR_INTERRUPT),
 			"dc_plugin_irq_handler. dcin_present= %d, usbin_present= %d\n",
