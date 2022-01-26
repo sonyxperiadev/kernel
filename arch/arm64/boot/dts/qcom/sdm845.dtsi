@@ -2361,7 +2361,7 @@
 			qcom,modem_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_adsp>,
-						    <&glink_cdsp>,
+						    <&glink_slpi>,
 							<&glink_cdsp>,
 							<&glink_spss>;
 			};
@@ -2439,7 +2439,7 @@
 		glink_cdsp: cdsp {
 			qcom,remote-pid = <5>;
 			transport = "smem";
-			mboxes = <&apss_shared 28>;
+			mboxes = <&apss_shared 4>;
 			mbox-names = "cdsp_smem";
 			interrupts = <GIC_SPI 574 IRQ_TYPE_EDGE_RISING>;
 
