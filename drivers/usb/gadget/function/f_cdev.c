@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011, 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2013-2021, The Linux Foundation. All rights reserved.
  * Linux Foundation chooses to take subject only to the GPLv2 license terms,
  * and distributes only under these terms.
  *
@@ -86,7 +86,7 @@ struct cserial {
 
 struct f_cdev {
 	struct cdev		fcdev_cdev;
-	struct device		*dev;
+	struct device		dev;
 	unsigned int		port_num;
 	char			name[sizeof(DEVICE_NAME) + 2];
 	int			minor;
@@ -128,6 +128,10 @@ struct f_cdev {
 	unsigned long           nbytes_to_port_bridge;
 	unsigned long		nbytes_from_port_bridge;
 
+	unsigned int		single_packet_mode;
+	unsigned int		rx_buf_size;
+	unsigned int		rx_queue_size;
+
 	struct dentry		*debugfs_root;
 
 	/* To test remote wakeup using debugfs */
@@ -140,6 +144,7 @@ struct f_cdev_opts {
 	char *func_name;
 	u8 port_num;
 	u8 proto;
+	int refcnt;
 };
 
 static int major, minors;
@@ -406,7 +411,14 @@ static void port_complete_set_line_coding(struct usb_ep *ep,
 
 static void usb_cser_free_func(struct usb_function *f)
 {
-	/* Do nothing as cser_alloc() doesn't alloc anything. */
+	unsigned long flags;
+	struct f_cdev_opts *opts = container_of(f->fi, struct f_cdev_opts,
+			func_inst);
+	struct f_cdev *port = opts->port;
+
+	spin_lock_irqsave(&port->port_lock, flags);
+	opts->refcnt--;
+	spin_unlock_irqrestore(&port->port_lock, flags);
 }
 
 static int
@@ -752,7 +764,8 @@ static void usb_cser_free_requests(struct usb_ep *ep, struct list_head *head)
 }
 
 static struct usb_request *
-usb_cser_alloc_req(struct usb_ep *ep, unsigned int len, gfp_t flags)
+usb_cser_alloc_req(struct usb_ep *ep, unsigned int len, size_t extra_sz,
+			gfp_t flags)
 {
 	struct usb_request *req;
 
@@ -763,7 +776,7 @@ usb_cser_alloc_req(struct usb_ep *ep, unsigned int len, gfp_t flags)
 	}
 
 	req->length = len;
-	req->buf = kmalloc(len, flags);
+	req->buf = kmalloc(len + extra_sz, flags);
 	if (!req->buf) {
 		pr_err("request buf allocation failed\n");
 		usb_ep_free_request(ep, req);
@@ -816,7 +829,8 @@ static int usb_cser_bind(struct usb_configuration *c, struct usb_function *f)
 	ep->driver_data = cdev;
 	/* allocate notification */
 	port->port_usb.notify_req = usb_cser_alloc_req(ep,
-			sizeof(struct usb_cdc_notification) + 2, GFP_KERNEL);
+			sizeof(struct usb_cdc_notification) + 2,
+			cdev->gadget->extra_buf_alloc, GFP_KERNEL);
 	if (!port->port_usb.notify_req)
 		goto fail;
 
@@ -873,13 +887,16 @@ static void cser_free_inst(struct usb_function_instance *fi)
 	opts = container_of(fi, struct f_cdev_opts, func_inst);
 
 	if (opts->port) {
-		device_destroy(fcdev_classp, MKDEV(major, opts->port->minor));
-		cdev_del(&opts->port->fcdev_cdev);
+		cdev_device_del(&opts->port->fcdev_cdev, &opts->port->dev);
+		mutex_lock(&chardev_ida_lock);
+		ida_simple_remove(&chardev_ida, opts->port->minor);
+		mutex_unlock(&chardev_ida_lock);
 		usb_cser_debugfs_exit(opts->port);
+		put_device(&opts->port->dev);
 	}
+
 	usb_cser_chardev_deinit();
 	kfree(opts->func_name);
-	kfree(opts->port);
 	kfree(opts);
 }
 
@@ -895,7 +912,7 @@ static void usb_cser_unbind(struct usb_configuration *c, struct usb_function *f)
 }
 
 static int usb_cser_alloc_requests(struct usb_ep *ep, struct list_head *head,
-		int num, int size,
+		int num, int size, size_t extra_sz,
 		void (*cb)(struct usb_ep *ep, struct usb_request *))
 {
 	int i;
@@ -905,7 +922,7 @@ static int usb_cser_alloc_requests(struct usb_ep *ep, struct list_head *head,
 				ep, head, num, size, cb);
 
 	for (i = 0; i < num; i++) {
-		req = usb_cser_alloc_req(ep, size, GFP_ATOMIC);
+		req = usb_cser_alloc_req(ep, size, extra_sz, GFP_ATOMIC);
 		if (!req) {
 			pr_debug("req allocated:%d\n", i);
 			return list_empty(head) ? -ENOMEM : 0;
@@ -945,7 +962,7 @@ static void usb_cser_start_rx(struct f_cdev *port)
 
 		req = list_entry(pool->next, struct usb_request, list);
 		list_del_init(&req->list);
-		req->length = BRIDGE_RX_BUF_SIZE;
+		req->length = port->rx_buf_size;
 		req->complete = usb_cser_read_complete;
 		spin_unlock_irqrestore(&port->port_lock, flags);
 		ret = usb_ep_queue(ep, req, GFP_KERNEL);
@@ -1025,6 +1042,8 @@ static void usb_cser_write_complete(struct usb_ep *ep, struct usb_request *req)
 
 static void usb_cser_start_io(struct f_cdev *port)
 {
+	struct usb_function *f = &port->port_usb.func;
+	struct usb_composite_dev *cdev = f->config->cdev;
 	int ret = -ENODEV;
 	unsigned long	flags;
 
@@ -1040,7 +1059,9 @@ static void usb_cser_start_io(struct f_cdev *port)
 
 	ret = usb_cser_alloc_requests(port->port_usb.out,
 				&port->read_pool,
-				BRIDGE_RX_QUEUE_SIZE, BRIDGE_RX_BUF_SIZE,
+				port->rx_queue_size,
+				port->rx_buf_size,
+				0,
 				usb_cser_read_complete);
 	if (ret) {
 		pr_err("unable to allocate out requests\n");
@@ -1050,6 +1071,7 @@ static void usb_cser_start_io(struct f_cdev *port)
 	ret = usb_cser_alloc_requests(port->port_usb.in,
 				&port->write_pool,
 				BRIDGE_TX_QUEUE_SIZE, BRIDGE_TX_BUF_SIZE,
+				cdev->gadget->extra_buf_alloc,
 				usb_cser_write_complete);
 	if (ret) {
 		usb_cser_free_requests(port->port_usb.out, &port->read_pool);
@@ -1103,13 +1125,10 @@ int f_cdev_open(struct inode *inode, struct file *file)
 	struct f_cdev *port;
 
 	port = container_of(inode->i_cdev, struct f_cdev, fcdev_cdev);
-	if (!port) {
-		pr_err("Port is NULL.\n");
-		return -EINVAL;
-	}
-
-	if (port && port->port_open) {
+	get_device(&port->dev);
+	if (port->port_open) {
 		pr_err("port is already opened.\n");
+		put_device(&port->dev);
 		return -EBUSY;
 	}
 
@@ -1119,6 +1138,7 @@ int f_cdev_open(struct inode *inode, struct file *file)
 					port->is_connected);
 	if (ret) {
 		pr_debug("open interrupted.\n");
+		put_device(&port->dev);
 		return ret;
 	}
 
@@ -1138,16 +1158,12 @@ int f_cdev_release(struct inode *inode, struct file *file)
 	struct f_cdev *port;
 
 	port = file->private_data;
-	if (!port) {
-		pr_err("port is NULL.\n");
-		return -EINVAL;
-	}
-
 	spin_lock_irqsave(&port->port_lock, flags);
 	port->port_open = false;
 	port->cbits_updated = false;
 	spin_unlock_irqrestore(&port->port_lock, flags);
 	pr_debug("port(%s)(%pK) is closed.\n", port->name, port);
+	put_device(&port->dev);
 
 	return 0;
 }
@@ -1240,6 +1256,8 @@ ssize_t f_cdev_read(struct file *file,
 			current_rx_req = NULL;
 			current_rx_buf = NULL;
 		}
+		if (port->single_packet_mode)
+			break;
 	}
 
 	port->pending_rx_bytes = pending_rx_bytes;
@@ -1714,11 +1732,17 @@ static void usb_cser_debugfs_exit(struct f_cdev *port)
 	debugfs_remove_recursive(port->debugfs_root);
 }
 
+static void cdev_device_release(struct device *dev)
+{
+	struct f_cdev *port = container_of(dev, struct f_cdev, dev);
+
+	pr_debug("Free cdev port(%d)\n", port->port_num);
+	kfree(port);
+}
+
 static struct f_cdev *f_cdev_alloc(char *func_name, int portno)
 {
 	int ret;
-	dev_t dev;
-	struct device *device;
 	struct f_cdev *port;
 
 	port = kzalloc(sizeof(struct f_cdev), GFP_KERNEL);
@@ -1758,6 +1782,11 @@ static struct f_cdev *f_cdev_alloc(char *func_name, int portno)
 	INIT_LIST_HEAD(&port->read_queued);
 	INIT_LIST_HEAD(&port->write_pool);
 
+	/* Fill rx bridge parameters */
+	port->rx_buf_size = BRIDGE_RX_BUF_SIZE;
+	port->rx_queue_size = BRIDGE_RX_QUEUE_SIZE;
+	port->single_packet_mode = 0;
+
 	port->fcdev_wq = create_singlethread_workqueue(port->name);
 	if (!port->fcdev_wq) {
 		pr_err("Unable to create workqueue fcdev_wq for port:%s\n",
@@ -1768,17 +1797,16 @@ static struct f_cdev *f_cdev_alloc(char *func_name, int portno)
 
 	/* create char device */
 	cdev_init(&port->fcdev_cdev, &f_cdev_fops);
-	dev = MKDEV(major, port->minor);
-	ret = cdev_add(&port->fcdev_cdev, dev, 1);
+	device_initialize(&port->dev);
+	port->dev.class = fcdev_classp;
+	port->dev.parent = NULL;
+	port->dev.release = cdev_device_release;
+	port->dev.devt = MKDEV(major, port->minor);
+	dev_set_name(&port->dev, port->name);
+	ret = cdev_device_add(&port->fcdev_cdev, &port->dev);
 	if (ret) {
 		pr_err("Failed to add cdev for port(%s)\n", port->name);
 		goto err_cdev_add;
-	}
-
-	device = device_create(fcdev_classp, NULL, dev, NULL, port->name);
-	if (IS_ERR(device)) {
-		ret = PTR_ERR(device);
-		goto err_create_dev;
 	}
 
 	usb_cser_debugfs_init(port);
@@ -1787,8 +1815,6 @@ static struct f_cdev *f_cdev_alloc(char *func_name, int portno)
 			port->name, port, port->port_num);
 	return port;
 
-err_create_dev:
-	cdev_del(&port->fcdev_cdev);
 err_cdev_add:
 	destroy_workqueue(port->fcdev_wq);
 err_get_ida:
@@ -1927,9 +1953,64 @@ static ssize_t usb_cser_status_store(struct config_item *item,
 	return len;
 }
 
+#define CDEV_BUF_ATTRIBUTE(name)					\
+static ssize_t usb_cser_##name##_show(struct config_item *item,		\
+			char *page)					\
+{									\
+	struct f_cdev *port = to_f_cdev_opts(item)->port;		\
+	unsigned long flags;						\
+	int ret;							\
+									\
+	spin_lock_irqsave(&port->port_lock, flags);			\
+	ret = scnprintf(page, PAGE_SIZE, "%u\n",			\
+			port->name);					\
+	spin_unlock_irqrestore(&port->port_lock, flags);		\
+									\
+	return ret;							\
+}									\
+									\
+static ssize_t usb_cser_##name##_store(struct config_item *item,	\
+			const char *page, size_t len)			\
+{									\
+	struct f_cdev_opts *opts = to_f_cdev_opts(item);		\
+	struct f_cdev *port = opts->port;				\
+	unsigned long flags;						\
+	int ret;							\
+	unsigned int val;						\
+									\
+	spin_lock_irqsave(&port->port_lock, flags);			\
+	if (opts->refcnt) {						\
+		ret = -EBUSY;						\
+		goto end;						\
+	}								\
+									\
+	ret = kstrtouint(page, 0, &val);				\
+	if (ret)							\
+		goto end;						\
+									\
+	port->name = val;						\
+	ret = len;							\
+									\
+end:									\
+	spin_unlock_irqrestore(&port->port_lock, flags);		\
+	return ret;							\
+}									\
+									\
+
+CDEV_BUF_ATTRIBUTE(rx_buf_size);
+CDEV_BUF_ATTRIBUTE(rx_queue_size);
+CDEV_BUF_ATTRIBUTE(single_packet_mode);
+
+CONFIGFS_ATTR(usb_cser_, single_packet_mode);
 CONFIGFS_ATTR(usb_cser_, status);
+CONFIGFS_ATTR(usb_cser_, rx_buf_size);
+CONFIGFS_ATTR(usb_cser_, rx_queue_size);
+
 static struct configfs_attribute *cserial_attrs[] = {
+	&usb_cser_attr_single_packet_mode,
 	&usb_cser_attr_status,
+	&usb_cser_attr_rx_buf_size,
+	&usb_cser_attr_rx_queue_size,
 	NULL,
 };
 
@@ -2040,6 +2121,11 @@ static struct usb_function *cser_alloc(struct usb_function_instance *fi)
 {
 	struct f_cdev_opts *opts = to_fi_cdev_opts(fi);
 	struct f_cdev *port = opts->port;
+	unsigned long flags;
+
+	spin_lock_irqsave(&port->port_lock, flags);
+	opts->refcnt++;
+	spin_unlock_irqrestore(&port->port_lock, flags);
 
 	port->port_usb.func.name = "cser";
 	port->port_usb.func.strings = usb_cser_strings;
