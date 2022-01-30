@@ -14,6 +14,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/of.h>
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include <soc/qcom/qtee_shmbridge.h>
@@ -54,8 +55,14 @@ int crypto_qti_program_key(struct crypto_vops_qti_entry *ice_entry,
 	memcpy(tzbuf, key_new.bytes, key->size);
 	dmac_flush_range(tzbuf, tzbuf + key->size);
 
-	smc_id = TZ_ES_CONFIG_SET_ICE_KEY_CE_TYPE_ID;
-	desc.arginfo = TZ_ES_CONFIG_SET_ICE_KEY_CE_TYPE_PARAM_ID;
+	if (of_machine_is_compatible("qcom,trinket")) {
+		smc_id = TZ_ES_CONFIG_SET_ICE_KEY_ID;
+		desc.arginfo = TZ_ES_CONFIG_SET_ICE_KEY_PARAM_ID;
+	} else {
+		smc_id = TZ_ES_CONFIG_SET_ICE_KEY_CE_TYPE_ID;
+		desc.arginfo = TZ_ES_CONFIG_SET_ICE_KEY_CE_TYPE_PARAM_ID;
+	}
+
 	desc.args[0] = slot;
 	desc.args[1] = shm.paddr;
 	desc.args[2] = key->size;
@@ -81,9 +88,14 @@ int crypto_qti_invalidate_key(
 	uint32_t smc_id = 0;
 	struct scm_desc desc = {0};
 
-	smc_id = TZ_ES_INVALIDATE_ICE_KEY_CE_TYPE_ID;
+	if (of_machine_is_compatible("qcom,trinket")) {
+		smc_id = TZ_ES_INVALIDATE_ICE_KEY_ID;
+		desc.arginfo = TZ_ES_INVALIDATE_ICE_KEY_PARAM_ID;
+	} else {
+		smc_id = TZ_ES_INVALIDATE_ICE_KEY_CE_TYPE_ID;
+		desc.arginfo = TZ_ES_INVALIDATE_ICE_KEY_CE_TYPE_PARAM_ID;
+	}
 
-	desc.arginfo = TZ_ES_INVALIDATE_ICE_KEY_CE_TYPE_PARAM_ID;
 	desc.args[0] = slot;
 	desc.args[1] = storage_type;
 
