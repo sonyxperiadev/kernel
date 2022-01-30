@@ -2478,7 +2478,7 @@
 
 	cpu_cpu_ddr_bwmon: qcom,cpu-cpu-ddr-bwmon@01b8e200 {
 		compatible = "qcom,bimc-bwmon4";
-		reg = <0x01b8e300 0x100>, <0x01b8e200 0x100>;
+		reg = <0x01b8e200 0x100>, <0x01b8e100 0x100>;
 		reg-names = "base", "global_base";
 		interrupts = <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,mport = <0>;
