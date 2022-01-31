@@ -321,6 +321,10 @@
 	pinctrl-0 = <&sm_gpio_4 &sm_gpio_5>;
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
 	status = "okay";
+
+	nq@28 {
+		status = "disabled";
+	};
 };
 
 &sm6150_snd {
@@ -517,9 +521,17 @@
 };
 
 &qupv3_se2_i2c {
-		pinctrl-0 = <&sm_gpio_6 &sm_gpio_7>;
-		pinctrl-1 = <&sm_gpio_6_suspend &sm_gpio_7_suspend>;
-		status = "okay";
+	pinctrl-0 = <&sm_gpio_6 &sm_gpio_7>;
+	pinctrl-1 = <&sm_gpio_6_suspend &sm_gpio_7_suspend>;
+	status = "okay";
+
+	synaptics_tcm@20 {
+		status = "disabled";
+	};
+
+	himax_ts@48 {
+		status = "disabled";
+	};
 };
 
 &tlmm {
