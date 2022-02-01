@@ -4,6 +4,11 @@
 
 #include <linux/types.h>
 
+#if defined(CONFIG_ARCH_SDM845)
+#define VENUS_USES_LEGACY_MISR_INFO
+#endif
+
+
 #define MSM_VIDC_EXTRADATA_NONE 0x00000000
 struct msm_vidc_extradata_header {
 	__u32 size;
@@ -64,6 +69,14 @@ struct msm_vidc_aspect_ratio_payload {
 	__u32 aspect_height;
 };
 
+#ifdef VENUS_USES_LEGACY_MISR_INFO
+struct msm_vidc_misr_info {
+	unsigned int misr_dpb_luma;
+	unsigned int misr_dpb_chroma;
+	unsigned int misr_opb_luma;
+	unsigned int misr_opb_chroma;
+};
+#else
 struct msm_vidc_misr_info {
 	__u32 misr_set;
 	__u32 misr_dpb_luma[8];
@@ -71,6 +84,8 @@ struct msm_vidc_misr_info {
 	__u32 misr_opb_luma[8];
 	__u32 misr_opb_chroma[8];
 };
+#endif
+
 #define MSM_VIDC_EXTRADATA_OUTPUT_CROP 0x0700000F
 struct msm_vidc_output_crop_payload {
 	__u32 size;

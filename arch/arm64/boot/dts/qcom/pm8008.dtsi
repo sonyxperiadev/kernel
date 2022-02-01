@@ -59,7 +59,9 @@ pm8008_9: qcom,pm8008@9 {
 	pm8008_regulators: qcom,pm8008-regulator {
 		compatible = "qcom,pm8008-regulator";
 		pm8008_en-supply = <&PM8008_EN>;
-		qcom,enable-ocp-broadcast;
+		qcom,enable-ocp-broadcast;	
+		#address-cells = <1>;
+		#size-cells = <0>;
 
 		L1P: qcom,pm8008-l1@4000 {
 			reg = <0x4000>;

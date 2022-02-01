@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "sm8150-v2.dtsi"
+#include "sm8150-mtp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SM8150 V2 MTP";
+	compatible = "qcom,sm8150-mtp", "qcom,sm8150", "qcom,mtp";
+	qcom,board-id = <8 0>;
+};

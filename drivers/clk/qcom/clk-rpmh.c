@@ -435,7 +435,7 @@ static int clk_rpmh_probe(struct platform_device *pdev)
 
 static const struct of_device_id clk_rpmh_match_table[] = {
 	{ .compatible = "qcom,sdm845-rpmh-clk", .data = &clk_rpmh_sdm845},
-	{ .compatible = "qcom,rpmh-clk-sm8150", .data = &clk_rpmh_sm8150},
+	{ .compatible = "qcom,sm8150-rpmh-clk", .data = &clk_rpmh_sm8150},
 	{ .compatible = "qcom,kona-rpmh-clk", .data = &clk_rpmh_kona},
 	{ .compatible = "qcom,lito-rpmh-clk", .data = &clk_rpmh_lito},
 	{ .compatible = "qcom,lagoon-rpmh-clk", .data = &clk_rpmh_lagoon},

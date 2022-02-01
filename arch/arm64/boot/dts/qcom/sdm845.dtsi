@@ -2361,7 +2361,7 @@
 			qcom,modem_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_adsp>,
-						    <&glink_cdsp>,
+						    <&glink_slpi>,
 							<&glink_cdsp>,
 							<&glink_spss>;
 			};
@@ -2439,7 +2439,7 @@
 		glink_cdsp: cdsp {
 			qcom,remote-pid = <5>;
 			transport = "smem";
-			mboxes = <&apss_shared 28>;
+			mboxes = <&apss_shared 4>;
 			mbox-names = "cdsp_smem";
 			interrupts = <GIC_SPI 574 IRQ_TYPE_EDGE_RISING>;
 
@@ -2872,6 +2872,7 @@
 			<143 777 0 355>; /* IB defined for IPA clk in MHz*/
 		qcom,bus-vector-names =
 			"MIN", "SVS2", "SVS", "NOMINAL", "TURBO";
+		qcom,throughput-threshold = <310 600 1000>;
 
 		/* smp2p information */
 		qcom,smp2p_map_ipa_1_out {
@@ -2907,6 +2908,7 @@
 			compatible = "qcom,ipa-smmu-uc-cb";
 			iommus = <&apps_smmu 0x722 0x0>;
 			qcom,iommu-dma-addr-pool = <0x40000000 0x20000000>;
+			qcom,iommu-dma = "fastmap";
 		};
 	};
 
@@ -3164,9 +3166,8 @@
 	qcom,icnss@18800000 {
 		compatible = "qcom,icnss";
 		reg = <0x18800000 0x800000>,
-		      <0xa0000000 0x10000000>,
 		      <0xb0000000 0x10000>;
-		reg-names = "membase", "smmu_iova_base", "smmu_iova_ipa";
+		reg-names = "membase", "smmu_iova_ipa";
 		iommus = <&apps_smmu 0x0040 0x1>;
 		interrupts = <GIC_SPI 414 IRQ_TYPE_LEVEL_HIGH /* CE0 */ >,
 			     <GIC_SPI 415 IRQ_TYPE_LEVEL_HIGH /* CE1 */ >,
@@ -3180,27 +3181,29 @@
 			     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH /* CE9 */ >,
 			     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH /* CE10 */ >,
 			     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH /* CE11 */ >;
+		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "non-fatal";
+		qcom,hyp_enabled;
 		qcom,wlan-msa-memory = <0x100000>;
 
-		vdd-0.8-cx-mx-supply = <&pm8998_l5>;
+		vdd-cx-mx-supply = <&pm8998_l5>;
 		vdd-1.8-xo-supply = <&pm8998_l7>;
 		vdd-1.3-rfa-supply = <&pm8998_l17>;
 		vdd-3.3-ch0-supply = <&pm8998_l25>;
-		qcom,vdd-0.8-cx-mx-config = <800000 800000>;
+		qcom,vdd-cx-mx-config = <800000 800000>;
 		qcom,vdd-3.3-ch0-config = <3104000 3312000>;
 
 		qcom,smp2p_map_wlan_1_in {
 			interrupts-extended = <&smp2p_wlan_1_in 0 IRQ_TYPE_LEVEL_HIGH>,
-					<&smp2p_wlan_1_in 1 0>;
+					<&smp2p_wlan_1_in 1 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "qcom,smp2p-force-fatal-error",
 					"qcom,smp2p-early-crash-ind";
 		};
 	};
 
 	qmi-tmd-devices {
-		compatible = "qcom,qmi_cooling_devices";
+		compatible = "qcom,qmi-cooling-devices";
 
 		modem {
 			qcom,instance-id = <0x0>;

@@ -365,6 +365,9 @@ static struct msm_soc_info cpu_of_id[] = {
 	/* BENGALP-IOT ID */
 	[470] = {MSM_CPU_BENGALP_IOT, "BENGALP-IOT"},
 
+	/* Trinket ID */
+	[394] = {MSM_CPU_TRINKET, "TRINKET"},
+
 	/* Uninitialized IDs are not known to run Linux.
 	 * MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
 	 * considered as unknown CPU.
@@ -1303,6 +1306,10 @@ static void * __init setup_dummy_socinfo(void)
 	} else if (early_machine_is_bengalp_iot()) {
 		dummy_socinfo.id = 470;
 		strlcpy(dummy_socinfo.build_id, "bengalp-iot - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_trinket()) {
+		dummy_socinfo.id = 394;
+		strlcpy(dummy_socinfo.build_id, "trinket - ",
 		sizeof(dummy_socinfo.build_id));
 	} else
 		strlcat(dummy_socinfo.build_id, "Dummy socinfo",

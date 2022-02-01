@@ -221,6 +221,24 @@ config ARCH_SDM845
 	  This enables support for the SDM845 chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.
 
+config ARCH_SM8150
+	bool "Enable Support for Qualcomm Technologies, Inc. SM8150"
+	depends on ARCH_QCOM
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	help
+	  This enables support for the SM8150 chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
+
+config ARCH_TRINKET
+	bool "Enable Support for Qualcomm Technologies, Inc. TRINKET"
+	depends on ARCH_QCOM
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	help
+	  This enables support for the TRINKET chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
+
 config ARCH_REALTEK
 	bool "Realtek Platforms"
 	help
@@ -477,6 +495,24 @@ config MACH_SONY_APOLLO
 	  which is based on SONY Tama platform.
 	  If you enable this config,
 	  please use SONY Mobile device tree.
+
+config ARCH_SONY_SEINE
+	bool "Sony Mobile Seine platform"
+	depends on ARCH_TRINKET
+	help
+	  Support for the SONY Mobile Seine platform
+	  which is based on QCOM TRINKET chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX201
+	bool "Sony Mobile PDX-201"
+	depends on ARCH_SONY_SEINE
+	help
+	Support for the SONY Mobile PDX-201 device
+	which is based on SONY Seine platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
 
 config ARCH_SONY_EDO
 	bool "Sony Mobile Edo platform"

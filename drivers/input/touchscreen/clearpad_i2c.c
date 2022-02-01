@@ -1,15 +1,10 @@
-/* linux/drivers/input/touchscreen/clearpad_i2c.c
- *
- * Copyright (C) 2011 Sony Ericsson Mobile Communications AB.
+// SPDX-License-Identifier: GPL-2.0
+/*
  * Copyright (c) 2011 Synaptics Incorporated
  * Copyright (c) 2011 Unixphere
- * Copyright (C) 2012 Sony Mobile Communications AB.
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
  *
  * Author: Yusuke Yoshimura <Yusuke.Yoshimura@sonyericsson.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation.
  */
 
 #include <linux/async.h>
@@ -19,7 +14,7 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/input.h>
-#include <linux/clearpad.h>
+#include <linux/input/clearpad.h>
 
 #define CLEARPAD_PAGE_SELECT_REGISTER 0xff
 #define CLEARPAD_REG(addr) ((addr) & 0xff)
@@ -148,8 +143,12 @@ static int clearpad_i2c_write_block(struct device *dev, u16 addr, const u8 *buf,
 		int len)
 {
 	struct clearpad_i2c_t *this = dev_get_drvdata(dev);
-	u8 txbuf[len + 1];
+	u8 *txbuf;
 	int rc = 0;
+
+	txbuf = kzalloc(len + 1, GFP_KERNEL);
+	if (!txbuf)
+		return -ENOMEM;
 
 	txbuf[0] = addr & 0xff;
 	memcpy(txbuf + 1, buf, len);
@@ -199,6 +198,29 @@ static int clearpad_parse_dt(struct device *dev,
 }
 #endif
 
+static int clearpad_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			clearpad_active_panel = panel;
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+
 static int clearpad_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
@@ -212,6 +234,13 @@ static int clearpad_i2c_probe(struct i2c_client *client,
 	};
 	struct clearpad_i2c_t *this;
 	int rc;
+
+	rc = clearpad_get_active_panel(client->dev.of_node);
+	if (rc < 0) {
+		dev_err(&client->dev, "%s: Active panel not found, aborting probe\n", __func__);
+		rc = -ENODEV;
+		goto exit;
+	}
 
 	if (client->dev.of_node) {
 		clearpad_data.pdata = devm_kzalloc(&client->dev,
@@ -258,7 +287,7 @@ static int clearpad_i2c_probe(struct i2c_client *client,
 	if (rc)
 		goto err_device_put;
 
-	dev_info(&client->dev, "%s: sucess\n", __func__);
+	dev_info(&client->dev, "%s: success\n", __func__);
 	goto exit;
 
 err_device_put:
@@ -334,5 +363,9 @@ static void __exit clearpad_i2c_exit(void)
 MODULE_DESCRIPTION(CLEARPADI2C_NAME "ClearPad I2C Driver");
 MODULE_LICENSE("GPL v2");
 
+#ifndef MODULE
+late_initcall(clearpad_i2c_init);
+#else
 module_init(clearpad_i2c_init);
+#endif
 module_exit(clearpad_i2c_exit);

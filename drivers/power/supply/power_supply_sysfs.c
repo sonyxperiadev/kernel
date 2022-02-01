@@ -555,6 +555,8 @@ static struct device_attribute power_supply_attrs[] = {
 #ifdef CONFIG_SOMC_CHARGER_EXTENSION
 	POWER_SUPPLY_ATTR(charger_type),
 	POWER_SUPPLY_ATTR(wireless_status),
+	POWER_SUPPLY_ATTR(wireless_thermal_v_limit),
+	POWER_SUPPLY_ATTR(auth),
 #endif
 #ifdef CONFIG_ARCH_SONY_NILE
 	POWER_SUPPLY_ATTR(recharge_voltage),

@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "sm8150.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SM8150 v1 SoC";
+	compatible = "qcom,sm8150";
+	qcom,pmic-name = "PM8150";
+	qcom,board-id = <0 0>;
+};

@@ -20,13 +20,12 @@
 #include <linux/of_irq.h>
 #include <linux/power_supply.h>
 #ifdef USE_LCDSTATE
-#include <linux/drm_notify.h>
+#include <drm/drm_panel.h>
 #else
 #ifdef CONFIG_PM_SLEEP
 #include <linux/suspend.h>
 #endif
 #endif
-#include <linux/drm_notify.h>
 #include <linux/pm_wakeup.h>
 #include <linux/spinlock.h>
 #include <linux/alarmtimer.h>
@@ -95,8 +94,9 @@ struct wdet {
 
 	struct mutex		wdet_mutex;
 
-#ifdef USE_LCDSTATE
 	bool			isblanked;
+
+#ifdef USE_LCDSTATE
 	struct notifier_block	drm_notify;
 #else
 #ifdef CONFIG_PM_SLEEP
@@ -105,6 +105,10 @@ struct wdet {
 #endif
 	struct notifier_block	psy_nb;
 };
+
+#ifdef USE_LCDSTATE
+static struct drm_panel *active_panel;
+#endif
 
 void wdet_check_water(struct wdet *wdet);
 
@@ -718,13 +722,13 @@ static int wdet_drm_notify(struct notifier_block *notify_block,
 				unsigned long event, void *data)
 {
 	struct wdet *wdet = container_of(notify_block, struct wdet, drm_notify);
-	struct drm_ext_event *ev = (struct drm_ext_event *)data;
-	int *blank = (int *)ev->data;
+	struct drm_panel_notifier *ev = data;
+	int blank = *(int *)ev->data;
 
-	switch (*blank) {
+	switch (blank) {
 	/* LCD OFF */
-	case DRM_BLANK_POWERDOWN:
-		if (event == DRM_EXT_EVENT_AFTER_BLANK) {
+	case DRM_PANEL_BLANK_POWERDOWN:
+		if (event == DRM_PANEL_EVENT_BLANK) {
 			mutex_lock(&wdet->wdet_mutex);
 			wdet->isblanked = true;
 			wdet_set_timer(wdet, WDET_TIMER_STOP);
@@ -734,8 +738,8 @@ static int wdet_drm_notify(struct notifier_block *notify_block,
 		dev_dbg(wdet->dev, "%s: wdet blank (%ld)\n", __func__, event);
 		break;
 	/* LCD ON */
-	case DRM_BLANK_UNBLANK:
-		if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
+	case DRM_PANEL_BLANK_UNBLANK:
+		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
 			mutex_lock(&wdet->wdet_mutex);
 			wdet->isblanked = false;
 			wdet->cable_timer = 0;
@@ -833,11 +837,44 @@ static int wdet_psy_changed(struct notifier_block *notify_block,
 	return 0;
 }
 
+#ifdef USE_LCDSTATE
+static int wdet_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return -EINVAL;
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			active_panel = panel;
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+#endif
+
 static int wdet_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct wdet *wdet;
 	struct power_supply *usb_psy;
+
+#ifdef USE_LCDSTATE
+	ret = wdet_get_active_panel(pdev->dev.of_node);
+	if (ret < 0) {
+		pr_err("%s: Active panel not found, aborting probe\n", __func__);
+		return -ENODEV;
+	}
+#endif
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
@@ -960,8 +997,13 @@ static int wdet_probe(struct platform_device *pdev)
 #endif
 
 #ifdef USE_LCDSTATE
-	wdet->drm_notify.notifier_call = wdet_drm_notify;
-	ret = drm_register_client(&wdet->drm_notify);
+	if (active_panel) {
+		wdet->drm_notify.notifier_call = wdet_drm_notify;
+		ret = drm_panel_notifier_register(active_panel,
+				&wdet->drm_notify);
+		if (ret < 0)
+			dev_err(wdet->dev, "unable to register drm_notifier\n");
+	}
 #else
 #ifdef CONFIG_PM_SLEEP
 	wdet->pm_notify.notifier_call = wdet_pm_notify;
@@ -992,7 +1034,9 @@ static int wdet_remove(struct platform_device *pdev)
 	kfree(wdet->alarmtimer);
 #endif
 #ifdef USE_LCDSTATE
-	drm_unregister_client(&wdet->drm_notify);
+	if (active_panel)
+		drm_panel_notifier_unregister(active_panel,
+				&wdet->drm_notify);
 #else
 #ifdef CONFIG_PM_SLEEP
 	unregister_pm_notifier(&wdet->pm_notify);
@@ -1026,7 +1070,18 @@ static struct platform_driver wdet_driver = {
 	},
 };
 
-module_platform_driver(wdet_driver);
+static int __init wdet_init(void)
+{
+	return platform_driver_register(&wdet_driver);
+}
+
+static void __exit wdet_exit(void)
+{
+	platform_driver_unregister(&wdet_driver);
+}
+
+late_initcall(wdet_init);
+module_exit(wdet_exit);
 
 MODULE_DESCRIPTION("USB water detection");
 MODULE_LICENSE("GPL v2");

@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+&pmi632_charger {
+	qcom,fv-max-uv = <4400000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-173)>;
+	somc,product-max-icl-ua = <2800000>;
+};
+
+&soc {
+	seine_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "qg-batterydata-pdx201-tdk-4400mv.dtsi"
+		#include "qg-batterydata-pdx201-tdk-4370mv.dtsi"
+		#include "qg-batterydata-pdx201-tdk-4340mv.dtsi"
+		#include "qg-batterydata-pdx201-tdk-4300mv.dtsi"
+		#include "qg-batterydata-pdx201-tdk-4250mv.dtsi"
+		#include "qg-batterydata-pdx201-tdk-4200mv.dtsi"
+	};
+};
+
+&pmi632_qg {
+	qcom,battery-data = <&seine_batterydata>;
+	qcom,multi-profile-load;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
+	qcom,qg-iterm-ma = <400>;
+};

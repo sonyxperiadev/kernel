@@ -130,3 +130,7 @@
 &mdss_mdp {
 	connectors = <&sde_rscc &sde_wb &sde_dsi>;
 };
+
+&sde_dp {
+	status = "disabled";
+};

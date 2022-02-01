@@ -84,6 +84,7 @@
 	clock_audio_lnbb: audio_ext_clk_lnbb {
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
+		qcom,codec-ext-clk-src = <1>;
 		clock-names = "osr_clk";
 		clocks = <&clock_rpmh RPMH_LN_BB_CLK2>;
 		qcom,node_has_rpm_clock;
@@ -124,7 +125,7 @@
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
-		clocks = <&clock_audio_lnbb AUDIO_PMIC_LNBB_CLK>;
+		clocks = <&clock_audio_lnbb 0>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;

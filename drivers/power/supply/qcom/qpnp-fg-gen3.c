@@ -717,7 +717,7 @@ static int fg_get_battery_temp(struct fg_dev *fg, int *val)
 	return 0;
 }
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 #define ECELSIUS_DEGREE (-2730)
 static int fg_somc_get_real_temp(struct fg_dev *fg, int *val)
 {
@@ -878,9 +878,6 @@ static bool is_debug_batt_id(struct fg_dev *fg)
 
 #define DEBUG_BATT_SOC	67
 #define EMPTY_SOC	0
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-#define UNKNOWN_BATT_SOC 20
-#endif
 static int fg_get_prop_capacity(struct fg_dev *fg, int *val)
 {
 	struct fg_gen3_chip *chip = container_of(fg, struct fg_gen3_chip, fg);
@@ -914,6 +911,11 @@ static int fg_get_prop_capacity(struct fg_dev *fg, int *val)
 	}
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	if (!fg->profile_available) {
+		*val = UNKNOWN_BATT_SOC;
+		return 0;
+	}
+
 	if (fg->profile_load_status != PROFILE_LOADED) {
 		if (fg->last_soc)
 			*val = fg->last_soc;
@@ -1151,7 +1153,7 @@ static int fg_get_batt_profile(struct fg_dev *fg)
 	struct device_node *batt_node, *profile_node;
 	const char *data;
 	int rc, len;
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	int i = 0;
 	int num;
 	int step_len;
@@ -1234,7 +1236,7 @@ static int fg_get_batt_profile(struct fg_dev *fg)
 		return -EINVAL;
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	mutex_lock(&fg->step_lock);
 	fg->step_en = false;
 	rc = of_property_count_elems_of_size(profile_node,
@@ -2091,12 +2093,22 @@ static int fg_configure_full_soc(struct fg_dev *fg, int bsoc)
 		return rc;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	fg_dbg(fg, FG_SOMC, "Update FULL_SOC to bsoc=%d\n", bsoc);
+#endif
+
 	rc = fg_sram_write(fg, MONOTONIC_SOC_WORD, MONOTONIC_SOC_OFFSET,
 			full_soc, 2, FG_IMA_ATOMIC);
 	if (rc < 0) {
 		pr_err("failed to write monotonic_soc rc=%d\n", rc);
 		return rc;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_ARCH_SONY_TAMA)
+	fg_dbg(fg, FG_SOMC, "Update MONOTONIC SOC to 100\n");
+	if (batt_psy_initialized(fg))
+		power_supply_changed(fg->batt_psy);
+#endif
 
 	return 0;
 }
@@ -2934,7 +2946,7 @@ static int fg_esr_timer_config(struct fg_dev *fg, bool sleep)
 	return 0;
 }
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 static void fg_somc_jeita_step_wakelock(struct fg_dev *fg, bool en)
 {
 	if (en)
@@ -3418,10 +3430,11 @@ static void status_change_work(struct work_struct *work)
 	}
 
 	fg_ttf_update(fg);
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	fg->prev_charge_status = fg->charge_status;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)  && !defined(CONFIG_ARCH_SONY_TAMA)
 	fg_somc_jeita_step_update(fg); /* must call it after fg_ttf_update */
 #endif
-	fg->prev_charge_status = fg->charge_status;
+
 out:
 	fg_dbg(fg, FG_STATUS, "charge_status:%d charge_type:%d charge_done:%d\n",
 		fg->charge_status, fg->charge_type, fg->charge_done);
@@ -3632,7 +3645,10 @@ static int fg_somc_write_back_sram_params(struct fg_dev *fg)
 	struct fg_gen3_chip *chip = container_of(fg, struct fg_gen3_chip, fg);
 	int rc;
 	int16_t act_cap_mah;
-	u8 buf[4], val;
+	u8 val;
+#if !defined(CONFIG_ARCH_SONY_TAMA)
+	u8 buf[4];
+#endif
 
 	/* Rewrite the CYCLE_COUNT */
 	rc = fg_sram_write(fg, CYCLE_COUNT_WORD, CYCLE_COUNT_OFFSET,
@@ -3664,6 +3680,7 @@ static int fg_somc_write_back_sram_params(struct fg_dev *fg)
 		return rc;
 	}
 
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	/* This SRAM register is only present in v2.0 and above */
 	if (!(fg->wa_flags & PMI8998_V1_REV_WA) &&
 					fg->bp.float_volt_uv > 0) {
@@ -3684,6 +3701,7 @@ static int fg_somc_write_back_sram_params(struct fg_dev *fg)
 		if (rc < 0)
 			return rc;
 	}
+#endif
 
 	return 0;
 }
@@ -4706,9 +4724,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_MONOTONIC_SOC:
 		rc = fg_get_msoc(fg, &pval->intval);
 		break;
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_REAL_TEMP:
 		rc = fg_somc_get_real_temp(fg, &pval->intval);
 		break;
+#endif
 	case POWER_SUPPLY_PROP_BATT_AGING_LEVEL:
 		pval->intval = fg->batt_aging_level;
 		break;
@@ -4966,6 +4986,7 @@ static int fg_psy_set_property(struct power_supply *psy,
 		}
 		break;
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_REAL_TEMP:
 		rc = fg_somc_set_real_temp_debug(fg, pval->intval);
 		if (rc < 0) {
@@ -4973,6 +4994,7 @@ static int fg_psy_set_property(struct power_supply *psy,
 			return rc;
 		}
 		break;
+#endif
 	case POWER_SUPPLY_PROP_BATT_AGING_LEVEL:
 		rc = fg_somc_set_batt_aging_level(fg, pval->intval);
 		if (rc < 0)
@@ -5007,7 +5029,9 @@ static int fg_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_WARM_TEMP:
 	case POWER_SUPPLY_PROP_HOT_TEMP:
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case POWER_SUPPLY_PROP_REAL_TEMP:
+#endif
 	case POWER_SUPPLY_PROP_BATT_AGING_LEVEL:
 #endif
 #if defined(CONFIG_ARCH_SONY_NILE)
@@ -5115,7 +5139,9 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_RECHARGE_COUNTER,
 	POWER_SUPPLY_PROP_FULL_COUNTER,
 	POWER_SUPPLY_PROP_MONOTONIC_SOC,
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	POWER_SUPPLY_PROP_REAL_TEMP,
+#endif
 	POWER_SUPPLY_PROP_BATT_AGING_LEVEL,
 #endif
 #if defined(CONFIG_ARCH_SONY_NILE)
@@ -5459,7 +5485,7 @@ static int fg_hw_init(struct fg_dev *fg)
 		}
 	}
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	val = FG_ESR_CURRENT_THR_VALUE;
 	rc =  fg_sram_write(fg, ESR_CURRENT_THR_WORD, ESR_CURRENT_THR_OFFSET,
 						&val, 1, FG_IMA_DEFAULT);
@@ -5535,7 +5561,7 @@ static int fg_adjust_timebase(struct fg_dev *fg)
 	return 0;
 }
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 #define CELL_IMPEDANCE_MOHM 30
 static void fg_somc_jeita_step_charge_work(struct work_struct *work)
 {
@@ -6617,7 +6643,7 @@ static int fg_parse_dt(struct fg_gen3_chip *chip)
 	chip->dt.disable_fg_twm = of_property_read_bool(node,
 					"qcom,fg-disable-in-twm");
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	fg->use_real_temp = of_property_read_bool(node,
 					"somc,jeita-step-use-real-temp");
 	if (fg->use_real_temp) {
@@ -6713,7 +6739,9 @@ enum fg_somc_sysfs {
 	ATTR_CL_CCSOC_DROP,
 	ATTR_CL_HOLD_TIME,
 	ATTR_CL_TOTAL_TIME,
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	ATTR_VCELL_MAX,
+#endif
 	ATTR_RECAHRGE_VOLTAGE_MV,
 	ATTR_CHARGE_FULL,
 };
@@ -6740,7 +6768,9 @@ static struct device_attribute fg_somc_attrs[] = {
 	__ATTR(cl_ccsoc_drop, S_IRUGO, fg_somc_param_show, NULL),
 	__ATTR(cl_hold_time, S_IRUGO, fg_somc_param_show, NULL),
 	__ATTR(cl_total_time, S_IRUGO, fg_somc_param_show, NULL),
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	__ATTR(vcell_max, 0444, fg_somc_param_show, NULL),
+#endif
 	__ATTR(recharge_voltage_mv, S_IRUGO, fg_somc_param_show, NULL),
 	__ATTR(charge_full, S_IRUGO, fg_somc_param_show, NULL),
 };
@@ -6924,10 +6954,12 @@ static ssize_t fg_somc_param_show(struct device *dev,
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 						(int)fg->charge_full);
 		break;
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	case ATTR_VCELL_MAX:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 						(int)fg->vcell_max_mv);
 		break;
+#endif
 	default:
 		size = 0;
 		break;
@@ -6978,7 +7010,6 @@ static void fg_somc_remove_sysfs_entries(struct device *dev)
 	for (i = 0; i < ARRAY_SIZE(fg_somc_attrs); i++)
 		device_remove_file(dev, &fg_somc_attrs[i]);
 }
-
 #endif
 
 static int fg_gen3_probe(struct platform_device *pdev)
@@ -7078,7 +7109,7 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	mutex_init(&chip->cl.lock);
 	mutex_init(&chip->ttf.lock);
 	mutex_init(&fg->qnovo_esr_ctrl_lock);
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && !defined(CONFIG_ARCH_SONY_TAMA)
 	mutex_init(&fg->step_lock);
 #endif
 	spin_lock_init(&fg->suspend_lock);
@@ -7094,10 +7125,12 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	INIT_WORK(&fg->esr_filter_work, esr_filter_work);
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	INIT_DELAYED_WORK(&fg->full_delay_work, full_delay_work);
+#if !defined(CONFIG_ARCH_SONY_TAMA)
 	INIT_DELAYED_WORK(&fg->somc_jeita_step_charge_work,
 						fg_somc_jeita_step_charge_work);
 
 	fg->step_ws = wakeup_source_register(fg->dev, "somc_jeita_step");
+#endif
 #endif
 	alarm_init(&fg->esr_filter_alarm, ALARM_BOOTTIME,
 			fg_esr_filter_alarm_cb);
@@ -7112,10 +7145,6 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, chip);
-
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-	fg_somc_restore_batt_aging_level(fg);
-#endif
 
 	rc = fg_hw_init(fg);
 	if (rc < 0) {
@@ -7217,6 +7246,11 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	}
 
 	device_init_wakeup(fg->dev, true);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	fg_somc_restore_batt_aging_level(fg);
+#endif
+
 	schedule_delayed_work(&fg->profile_load_work, 0);
 
 	pr_debug("FG GEN3 driver probed successfully\n");

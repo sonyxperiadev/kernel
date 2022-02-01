@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+&pmi632_charger {
+	qcom,sec-charger-config = <0>;
+	qcom,auto-recharge-soc = <95>;
+	qcom,hvdcp-disable;
+	qcom,float-option = <1>;
+	qcom,otg-cl-ua = <1000000>;
+	somc,jeita-hard-thresholds = <0x5314 0x181d>;
+};
+
+&pmi632_qg {
+	io-channels = <&pmi632_vadc ADC_BAT_THERM_PU2>,
+		      <&pmi632_vadc ADC_BAT_ID_PU2>,
+		      <&pmi632_vadc ADC_GPIO2_PU2>;
+	io-channel-names = "batt-therm",
+			   "batt-id",
+			   "aux-temp";
+
+	qcom,hold-soc-while-full;
+	qcom,linearize-soc;
+	qcom,qg-use-s7-ocv;
+	qcom,vbatt-cutoff-mv = <3200>;
+	qcom,vbatt-empty-mv = <3000>;
+	qcom,vbatt-empty-cold-mv = <3000>;
+	/delete-property/ qcom,cl-disable;
+	qcom,cl-feedback-on;
+	qcom,cl-min-start-soc = <0>;
+	qcom,cl-max-start-soc = <40>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+};

@@ -17,6 +17,10 @@
 	pinctrl-1 = <&pmi8998_gpio_8 &pmi8998_gpio_11>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_3 &dsi_7>;
+};
+
 &soc {
 };
 

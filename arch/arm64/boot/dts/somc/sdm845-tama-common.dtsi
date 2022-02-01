@@ -226,6 +226,7 @@
 			debounce-interval = <15>;
 		};
 	};
+
 	somc_pinctrl: somc_pinctrl {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
@@ -286,6 +287,11 @@
 		pinctrl-2 = <>;
 	};
 
+	sony_ext_uim_ctrl {
+		compatible = "sony,ext-uim-ctrl";
+		uim2_detect_en_gpio = <&tlmm 129 GPIO_ACTIVE_HIGH>;
+	};
+
 	sim_detect {
 		compatible = "sim-detect";
 
@@ -294,6 +300,14 @@
 			gpios = <&tlmm 112 0x0>;
 			debounce-interval = <10>;
 		};
+	};
+
+	somc_water_detection: somc_water_detection {
+		compatible = "somc,water-detection";
+
+		dvdt_enable_gpio = <&tlmm 28 0>;
+		dvdt_wrt_det_and = <&tlmm 29 0>;
+		dvdt_wrt_det_or = <&tlmm 30 0>;
 	};
 
 	bu520x1nvx {
@@ -665,10 +679,6 @@
 
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;
-
-	dvdt_enable_gpio = <&tlmm 28 0>;
-	dvdt_wrt_det_and = <&tlmm 29 0>;
-	dvdt_wrt_det_or = <&tlmm 30 0>;
 };
 
 &pmi8998_charger {
@@ -3201,5 +3211,4 @@
 
 &sdhc_2 {
 	cd-gpios = <&tlmm 126 GPIO_ACTIVE_HIGH>;
-	uim2-gpios = <&tlmm 129 GPIO_ACTIVE_HIGH>;
 };

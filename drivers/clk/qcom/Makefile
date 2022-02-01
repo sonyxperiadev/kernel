@@ -17,6 +17,8 @@ clk-qcom-y += gdsc-regulator.o
 clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o
 
 # Ported clock drivers
+obj-$(CONFIG_CLOCK_CPU_OSM) += clk-cpu-osm.o
+
 obj-$(CONFIG_MSM_GCC_SM8150) += gcc-sm8150.o
 obj-$(CONFIG_MSM_DEBUGCC_SM8150) += debugcc-sm8150.o
 obj-$(CONFIG_MSM_DISPCC_SM8150) += dispcc-sm8150.o

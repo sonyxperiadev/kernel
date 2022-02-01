@@ -38,11 +38,11 @@
 #include <linux/vmalloc.h>
 #include <linux/workqueue.h>
 #include <linux/incell.h>
+#include <drm/drm_panel.h>
 
 #ifdef CONFIG_INPUT_BOOSTER
 #include <linux/input/input_booster.h>
 #endif
-#include <linux/drm_notify.h>
 
 #include "sec_cmd.h"
 

@@ -7831,11 +7831,6 @@ static int _ipa_suspend_resume_pipe(enum ipa_client_type client, bool suspend)
 	struct ipa3_ep_context *ep;
 	int res;
 
-	if (ipa3_ctx->ipa_hw_type < IPA_HW_v4_0) {
-		IPAERR("not supported\n");
-		return -EPERM;
-	}
-
 	ipa_ep_idx = ipa3_get_ep_mapping(client);
 	if (ipa_ep_idx < 0) {
 		IPADBG("client %d not configued\n", client);

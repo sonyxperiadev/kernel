@@ -136,7 +136,7 @@ static const struct alpha_pll_config disp_cc_pll0_config = {
 	.vco_mask = 0x3 << 20,
 	.main_output_mask = BIT(0),
 	.config_ctl_val = 0x4001055b,
-	/* .test_ctl_hi_mask = 0x1, */
+	.test_ctl_hi_mask = 0x1,
 };
 
 static struct clk_alpha_pll disp_cc_pll0_out_main = {

@@ -12,7 +12,7 @@
 #include <linux/err.h>
 #include <linux/dma-mapping.h>
 #include <linux/msm_ion.h>
-#include <trace/events/kmem.h>
+#include <trace/events/ion.h>
 
 #include <soc/qcom/secure_buffer.h>
 #include <asm/cacheflush.h>

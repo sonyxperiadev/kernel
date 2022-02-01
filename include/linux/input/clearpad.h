@@ -1,14 +1,9 @@
-/* include/linux/clearpad.h
- *
- * Copyright (C) 2013 Sony Mobile Communications Inc.
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
  *
  * Author: Courtney Cavin <courtney.cavin@sonyericsson.com>
  *         Yusuke Yoshimura <Yusuke.Yoshimura@sonymobile.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
  */
 
 #ifndef __LINUX_CLEARPAD_H
@@ -17,6 +12,7 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <drm/drm_panel.h>
 
 #define CLEARPAD_NAME "clearpad"
 #define CLEARPADI2C_NAME "clearpad-i2c"
@@ -24,6 +20,8 @@
 
 #define SYN_PCA_BLOCK_SIZE		16
 #define SYN_PCA_BLOCK_NUMBER_MAX	31
+
+//#define CLEARPAD_WAKEUP_GESTURE
 
 enum clearpad_funcarea_kind_e {
 	SYN_FUNCAREA_INSENSIBLE,
@@ -109,6 +107,8 @@ struct clearpad_ioctl_pca_info {
 	u16 block_pos;
 	u8 data[SYN_PCA_BLOCK_SIZE];
 };
+
+extern struct drm_panel *clearpad_active_panel;
 
 #define SYN_PCA_IOCTL_MAGIC	0xCC
 #define SYN_PCA_IOCTL_GET \

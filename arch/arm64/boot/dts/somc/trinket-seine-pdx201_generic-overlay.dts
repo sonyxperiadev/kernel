@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-trinket.h>
+#include "../qcom/trinket-idp.dtsi"
+#include "../qcom/trinket-audio-overlay.dtsi"
+
+#include "trinket-seine-pdx201_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications Inc., PDX-201(TRINKET)";
+	compatible = "somc,pdx201-generic", "qcom,trinket", "qcom,idp";
+	qcom,msm-id = <394 0x10000>;
+	qcom,board-id = <34 0>;
+};

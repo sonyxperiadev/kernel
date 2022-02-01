@@ -21,5 +21,7 @@
 
 		/* feature */
 		sec,side_touch_supported = <0>;
+
+		panel = <&dsi_1>;
 	};
 };
