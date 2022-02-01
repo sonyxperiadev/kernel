@@ -16,12 +16,15 @@
 #include <linux/of_gpio.h>
 #include <linux/usb/redriver.h>
 
+#if (defined(CONFIG_SONY_USB_EXTENSIONS) && defined(CONFIG_ARCH_SONY_EDO))
+#define USB_EXTENSIONS
+#endif
+
 /* priority: INT_MAX >= x >= 0 */
 #define NOTIFIER_PRIORITY		1
 
 /* Registers Address */
 #define GEN_DEV_SET_REG			0x00
-#ifdef CONFIG_SONY_USB_EXTENSIONS
 #define AUX_CH_CTRL_REG			0x09
 #endif
 #define CHIP_VERSION_REG		0x17
@@ -137,7 +140,7 @@ static int redriver_i2c_reg_set(struct ssusb_redriver *redriver,
 
 static int ssusb_redriver_gen_dev_set(struct ssusb_redriver *redriver)
 {
-#ifndef CONFIG_SONY_USB_EXTENSIONS
+#ifndef USB_EXTENSIONS
 	u8 val = 0;
 #else
 	u8 val = 0, aux_val = 0x02;
@@ -167,7 +170,7 @@ static int ssusb_redriver_gen_dev_set(struct ssusb_redriver *redriver)
 
 		/* Set to default USB Mode */
 		val |= (0x5 << OP_MODE_SHIFT);
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#ifdef USB_EXTENSIONS
 		aux_val = 0x02;
 #endif
 		val |= CHIP_EN;
@@ -179,7 +182,7 @@ static int ssusb_redriver_gen_dev_set(struct ssusb_redriver *redriver)
 
 		/* Set to DP 4 Lane Mode (OP Mode 2) */
 		val |= (0x2 << OP_MODE_SHIFT);
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#ifdef USB_EXTENSIONS
 		aux_val = 0x00;
 #endif
 		val |= CHIP_EN;
@@ -197,7 +200,7 @@ static int ssusb_redriver_gen_dev_set(struct ssusb_redriver *redriver)
 				== ORIENTATION_CC2)
 			val |= (0x0 << OP_MODE_SHIFT);
 
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#ifdef USB_EXTENSIONS
 		aux_val = 0x00;
 #endif
 
@@ -207,7 +210,7 @@ static int ssusb_redriver_gen_dev_set(struct ssusb_redriver *redriver)
 		break;
 	}
 
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#ifdef USB_EXTENSIONS
 	aux_val |= (redriver->typec_orientation	== ORIENTATION_CC1) ?
 		0x00 : 0x01;
 
@@ -261,7 +264,7 @@ static int ssusb_redriver_param_config(struct ssusb_redriver *redriver,
 			if (ret < 0)
 				return ret;
 		}
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#ifdef USB_EXTENSIONS
 		aux_val = 0x00;
 #endif
 
