@@ -26,7 +26,7 @@
 /* Registers Address */
 #define GEN_DEV_SET_REG			0x00
 #define AUX_CH_CTRL_REG			0x09
-#endif
+
 #define CHIP_VERSION_REG		0x17
 
 #define REDRIVER_REG_MAX		0x1f
