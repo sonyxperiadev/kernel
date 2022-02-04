@@ -90,6 +90,7 @@
 			swrm-io-base = <0x0a450000 0x0>;
 			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "swr_master_irq";
+			qcom,disable-div2-clk-switch = <1>;
 			qcom,swr-num-ports = <5>;
 			qcom,swr-port-mapping = <1 HPH_L 0x1>,
 				<1 HPH_R 0x2>, <2 CLSH 0x1>,
