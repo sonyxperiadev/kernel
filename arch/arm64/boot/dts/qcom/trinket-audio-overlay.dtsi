@@ -64,7 +64,7 @@
 			qcom,swr-mstr-irq-wakeup-capable = <1>;
 			wcd937x_tx_slave: wcd937x-tx-slave {
 				compatible = "qcom,wcd937x-slave";
-				reg = <0x0 0x01170223>;
+				reg = <0x0A 0x01170223>;
 			};
 		};
 	};
@@ -101,7 +101,7 @@
 			qcom,swr-clock-stop-mode0 = <1>;
 			wcd937x_rx_slave: wcd937x-rx-slave {
 				compatible = "qcom,wcd937x-slave";
-				reg = <0x0 0x01170224>;
+				reg = <0x0A 0x01170224>;
 			};
 		};
 	};
