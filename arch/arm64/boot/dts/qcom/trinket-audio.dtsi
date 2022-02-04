@@ -90,7 +90,7 @@
 				<&rx_cdc_dma_4_rx>, <&tx_cdc_dma_4_tx>,
 				<&rx_cdc_dma_5_rx>, <&tx_cdc_dma_5_tx>,
 				<&rx_cdc_dma_6_rx>, <&rx_cdc_dma_7_rx>;
-		asoc-cpu-names = "msm-dai-q6-dp.24608",
+		asoc-cpu-names = "msm-dai-q6-dp.0",
 				"msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
 				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
 				"msm-dai-q6-mi2s.4", "msm-dai-q6-auxpcm.1",
