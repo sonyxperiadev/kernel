@@ -3,6 +3,7 @@
  * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
+#include <dt-bindings/clock/qcom,audio-ext-clk.h>
 #include "msm-audio-lpass-trinket.dtsi"
 
 &msm_audio_ion {
@@ -24,8 +25,17 @@
 &audio_apr {
 	q6core: qcom,q6core-audio {
 		compatible = "qcom,q6core-audio";
+
+		lpass_core_hw_vote: vote_lpass_core_hw {
+			compatible = "qcom,audio-ref-clk";
+			qcom,codec-ext-clk-src = <AUDIO_LPASS_CORE_HW_VOTE>;
+			#clock-cells = <1>;
+		};
+
 		bolero: bolero-cdc {
 			compatible = "qcom,bolero-codec";
+			clock-names = "lpass_core_hw_vote";
+			clocks = <&lpass_core_hw_vote 0>;
 
 			bolero-clk-rsc-mngr {
 				compatible = "qcom,bolero-clk-rsc-mngr";
