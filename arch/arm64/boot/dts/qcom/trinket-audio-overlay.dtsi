@@ -44,6 +44,7 @@
 			#size-cells = <0>;
 			clock-names = "lpass_core_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <3>;
 			swrm-io-base = <0x0a470000 0x0>;
 			interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
@@ -84,6 +85,7 @@
 			#size-cells = <0>;
 			clock-names = "lpass_core_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <2>;
 			swrm-io-base = <0x0a450000 0x0>;
 			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
@@ -118,6 +120,7 @@
 			#size-cells = <0>;
 			clock-names = "lpass_core_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <1>;
 			swrm-io-base = <0x0a490000 0x0>;
 			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
