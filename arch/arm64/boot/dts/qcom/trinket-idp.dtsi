@@ -9,7 +9,7 @@
 #include "trinket-thermal-overlay.dtsi"
 #include "trinket-sde-display.dtsi"
 #include <dt-bindings/clock/qcom,gcc-trinket.h>
-#include "trinket-camera-sensor-idp.dtsi"
+//#include "trinket-camera-sensor-idp.dtsi"
 
 &qupv3_se1_i2c {
 	#address-cells = <1>;
