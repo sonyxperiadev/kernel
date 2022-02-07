@@ -2407,7 +2407,7 @@
 		glink_slpi: dsps {
 			qcom,remote-pid = <3>;
 			transport = "smem";
-			mboxes = <&apss_shared 26>;
+			mboxes = <&apss_shared 24>;
 			mbox-names = "dsps_smem";
 			interrupts = <GIC_SPI 170 IRQ_TYPE_EDGE_RISING>;
 
