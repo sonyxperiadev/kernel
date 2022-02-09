@@ -1,0 +1,83 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+&soc {
+	dsi_panel_cmd_display: qcom,dsi-display@2 {
+		label = "dsi_panel_cmd_display";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_2>;
+	};
+
+	dsi_2_display: qcom,dsi-display@25 {
+		label = "2";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_2>;
+	};
+
+};
+
+&dsi_2 {
+	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
+	/delete-property/qcom,panel-vspvsn-supply-entries;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,mdss-dsi-panel-peak-brightness = <10000000>;
+	qcom,mdss-dsi-panel-blackness-level = <100>;
+	qcom,mdss-dsi-panel-hdr-enabled;
+	qcom,mdss-dsi-panel-hdr-color-primaries = <15335 15900 34110 15890 12460 35210 6890 2500>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
+	qcom,platform-te-gpio = <&tlmm 8 0>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 54 0>;
+	somc,ts_vddio = <&pm8150l_gpios 1 0>;
+	somc,ts_vddh = <&pm8150b_gpios 7 0>;
+	somc,disp-err-flag-gpio = <&tlmm 101 0>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 02 04 00 1B 18];
+		};
+		timing@1 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 02 04 00 1B 18];
+		};
+	};
+};
+
+&pm8150_l14 {
+	qcom,init-enable = <1>;
+};
+
+&pm8150_l17 {
+	qcom,init-enable = <1>;
+};
+
+&sde_dsi {
+	qcom,dsi-display-list =
+		<
+		&dsi_2_display
+		&dsi_panel_cmd_display
+		>;
+};
+
+&dsi_panel_cmd_display {
+	qcom,dsi-display-active;
+};
+
