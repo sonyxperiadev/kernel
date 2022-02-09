@@ -1,0 +1,145 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ */
+
+qcom,bahamut_tmm_4300mv {
+	/* Added or Modified by SOMC */
+	qcom,battery-type = "1318-3746";
+	qcom,fastchg-current-ma = <3000>;
+	somc,initial-capacity-uah = <3130000>;
+	somc,step-cfg = <
+		(-2550) 50    0 4500    0 4300 1
+		   50  100    0 4500  900 4300 2
+		  100  450    0 4250 3000 4300 3
+		  100  450 4250 4300 1500 4300 3
+		  100  450 4300 4500  900 4300 3
+		  450  550    0 4500  900 4200 4
+		  550 2550    0 4500    0 4200 5
+	>;
+	somc,step-cell-impedance-mohm = <25>;
+
+	/* Prepared by Qualcomm */
+	qcom,profile-revision = <24>;
+	/* #3869628_SoMC_LukeMurata_2821mAh_averaged_MasterSlave_Feb26th2019*/
+	qcom,max-voltage-uv = <4300000>;
+	qcom,fg-cc-cv-threshold-mv = <4290>;
+	qcom,nom-batt-capacity-mah = <2821>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4250>;
+	qcom,therm-room-temp = <100000>;
+	/* qcom,battery-type = "3869628_somc_lukemurata_2821mah_averaged_masterslave_feb26th2019"; */
+	qcom,therm-coefficients = <0x2318 0xd0c 0xdaf7 0xc556 0x848d>;
+	qcom,therm-center-offset = <0x70>;
+	qcom,therm-pull-up = <100>;
+	qcom,rslow-normal-coeffs = <0x9c 0x0d 0x0d 0x03>;
+	qcom,rslow-low-coeffs = <0xcc 0x05 0x54 0x0b>;
+	qcom,checksum = <0xE8DE>;
+	qcom,gui-version = "PM855GUI - 1.0.0.13";
+	qcom,fg-profile-data = [
+		 09 00 64 00
+		 1F ED A9 F2
+		 0F ED 00 00
+		 4B C5 2A 9A
+		 D9 87 50 AA
+		 1A A4 B2 87
+		 1A 00 9C 0D
+		 0D 03 73 04
+		 83 02 CE 07
+		 32 00 12 EB
+		 12 ED DE DA
+		 35 03 36 DC
+		 27 C5 1B 04
+		 D6 DC BA D3
+		 60 00 40 00
+		 43 00 42 00
+		 3E 00 3A 00
+		 3A 00 3E 00
+		 42 00 3D 00
+		 37 00 60 00
+		 41 00 52 00
+		 5B 00 5A 00
+		 4C 00 54 00
+		 78 64 60 00
+		 53 00 44 08
+		 60 F8 61 00
+		 66 00 70 08
+		 86 08 6C 00
+		 7F 20 A9 40
+		 89 50 75 14
+		 6B 00 D8 00
+		 19 20 33 0D
+		 5B 02 43 05
+		 31 1C 09 0B
+		 8B 0C 2E 23
+		 77 17 F5 3A
+		 D1 4D 41 02
+		 80 15 DB 1F
+		 79 05 42 0A
+		 9A 06 83 1C
+		 6A FA 65 05
+		 7F 02 F1 17
+		 B4 22 2A 3C
+		 C7 4B 82 16
+		 20 20 3E 05
+		 69 D2 74 DE
+		 8F 1C EB D3
+		 7C 04 5B C3
+		 19 18 8F 92
+		 6F 84 71 93
+		 91 A0 09 80
+		 55 00 4B 04
+		 5B 03 0B FC
+		 00 00 AC 05
+		 70 F3 E3 F7
+		 7C DD A6 BC
+		 F6 F8 1D E8
+		 E6 D5 F8 01
+		 5C 05 61 03
+		 CE 07 32 00
+		 77 01 52 00
+		 D2 05 85 03
+		 84 03 6D 02
+		 CD 02 97 02
+		 63 04 51 00
+		 33 00 3F 00
+		 49 64 51 00
+		 54 F8 54 00
+		 53 E8 54 00
+		 54 08 4F 10
+		 4B 10 34 00
+		 42 20 44 40
+		 4C 58 52 10
+		 4E 00 47 00
+		 4F 08 58 00
+		 4D 00 44 00
+		 36 08 44 08
+		 4B 00 53 20
+		 64 40 5C 50
+		 50 12 55 00
+		 5F 00 58 08
+		 D8 F8 4D 1F
+		 57 05 75 0A
+		 13 0C 54 1C
+		 07 22 5E 3D
+		 7F 4A 28 18
+		 63 03 D4 04
+		 18 02 6A 14
+		 3F 0A B4 20
+		 AF 04 D7 02
+		 04 06 81 1C
+		 15 03 57 04
+		 69 03 65 18
+		 EF 02 8A 05
+		 E5 02 7E 00
+		 A4 1F C1 05
+		 28 02 2F 05
+		 89 1C B4 02
+		 E6 04 05 03
+		 8B 18 82 02
+		 4F 04 CF 03
+		 78 00 AA 01
+		 C0 00 FA 00
+		 71 0B 00 00
+	];
+};
