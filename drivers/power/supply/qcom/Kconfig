@@ -109,4 +109,11 @@ config IDTP9382A
 	  Say Y here to enable the IDT P9382A wireless charging driver.
 	  The driver supports charger enable/disable.
 
+config SOMC_BATTERY_CHARGER
+	tristate "SOMC Battery Charger"
+	depends on I2C
+	help
+	  Say Y to include support for SOMC Battery Charger.
+	  The driver supports SOMC charger used by SONY Xperia 1III/5III devices.
+
 endif
