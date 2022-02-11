@@ -21,8 +21,8 @@
 	qcom,platform-te-gpio = <&tlmm 8 0>;
 	qcom,platform-reset-gpio = <&tlmm 6 0>;
 	qcom,platform-touch-reset-gpio = <&tlmm 54 0>;
-	somc,ts_vddio = <&pm8150l_gpios 1 0>;
-	somc,ts_vddh = <&pm8150b_gpios 7 0>;
+	qcom,platform-touch-vddio-en-gpio = <&pm8150l_gpios 1 0>;
+	qcom,platform-touch-vddh-en-gpio  = <&pm8150b_gpios 7 0>;
 	somc,disp-err-flag-gpio = <&tlmm 101 0>;
 
 	qcom,mdss-dsi-display-timings {
