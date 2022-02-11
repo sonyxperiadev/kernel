@@ -4,7 +4,7 @@
  */
 
 &slim_aud {
-	pahu_codec {
+	pahu_codec: pahu_codec {
 		swr_master {
 			compatible = "qcom,swr-wcd";
 			#address-cells = <2>;
@@ -36,7 +36,7 @@
 		};
 	};
 
-	tavil_codec {
+	tavil_codec: tavil_codec {
 		swr_master {
 			compatible = "qcom,swr-wcd";
 			#address-cells = <2>;
