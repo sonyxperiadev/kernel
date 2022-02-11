@@ -7,6 +7,8 @@
 #include "msm-wsa881x.dtsi"
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
 
+/delete-node/ &pahu_codec;
+
 &snd_934x {
 	qcom,audio-routing =
 		"AIF4 VI", "MCLK",
