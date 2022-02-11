@@ -2640,7 +2640,7 @@
 	disp_rsc: rsc@af20000 {
 		compatible = "qcom,rpmh-rsc";
 		label = "display_rsc";
-		reg = <0xaf20000 0x1000>;
+		reg = <0xaf20000 0x10000>;
 		reg-names = "drv-0";
 		interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,tcs-offset = <0x1c00>;
@@ -2653,6 +2653,11 @@
 		msm_bus_disp_rsc {
 			compatible = "qcom,msm-bus-rsc";
 			qcom,msm-bus-id = <MSM_BUS_RSC_DISP>;
+		};
+
+		sde_rsc_rpmh {
+			compatible = "qcom,sde-rsc-rpmh";
+			cell-index = <0>;
 		};
 	};
 
