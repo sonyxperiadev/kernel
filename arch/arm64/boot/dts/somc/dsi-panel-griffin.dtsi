@@ -38,6 +38,7 @@
 		qcom,mdss-dsi-t-clk-post = <0x18>;
 		qcom,mdss-dsi-t-clk-pre = <0x1B>;
 		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-inverted-dbv;
 
 		somc,dsi-panel-type = "oled";
 
