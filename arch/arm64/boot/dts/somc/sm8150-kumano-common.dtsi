@@ -809,7 +809,7 @@
 		};
 	};
 
-	somc_water_detection {
+	somc_water_detection: somc_water_detection {
 		compatible = "somc,water-detection";
 		dvdt_enable_gpio = <&tlmm 131 0>;
 		dvdt_wrt_det_and = <&tlmm 87 0>;
