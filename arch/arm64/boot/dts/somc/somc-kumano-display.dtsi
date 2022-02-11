@@ -71,109 +71,25 @@
 };
 
 &sde_dsi {
-	compatible = "somc,dsi-display";
-
-	qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
-	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
-
 	clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
 		 <&mdss_dsi0_pll PCLK_MUX_0_CLK>;
-	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
-		      "mux_byte_clk1", "mux_pixel_clk1";
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0";
 
 	pinctrl-names = "panel_active", "panel_suspend",
-			"ts_int_active", "ts_suspend";
+			"somc_ts_int_active", "somc_ts_int_suspend";
 	pinctrl-0 = <&sm_gpio_6 &te_active>;
 	pinctrl-1 = <&sm_gpio_6 &te_suspend>;
 	pinctrl-2 = <&ts_int_active>;
 	pinctrl-3 = <&ts_suspend>;
 
-	qcom,platform-te-gpio = <&tlmm 8 0>;
-
-	vddio-supply = <&pm8150_l14>;
-	lab-supply = <&lcdb_ldo_vreg>;
-	ibb-supply = <&lcdb_ncp_vreg>;
 	/delete-property/ vdd-supply;
-	vci-supply = <&pm8150_l17>;
-
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-	qcom,platform-touch-reset-gpio = <&tlmm 54 0>;
-
-	/delete-property/ qcom,panel-mode-gpio;
+	vci-supply = <&L17A>;
 };
 
 &sde_dsi1 {
-	/delete-property/ vdd-supply;
+	status = "disabled";
 };
 
 &mdss_mdp {
 	connectors = <&sde_rscc &sde_wb &sde_dp &sde_dsi>;
-};
-
-&dsi_sharp_4k_dsc_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sharp_4k_dsc_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sharp_1080_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_dual_sharp_1080_120hz_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_dual_nt35597_truly_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};&dsi_dual_nt35597_truly_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_nt35597_truly_dsc_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_nt35597_truly_dsc_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sim_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_dual_sim_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sim_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_dual_sim_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sim_dsc_375_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_dual_sim_dsc_375_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sw43404_amoled_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_nt35695b_truly_fhd_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_nt35695b_truly_fhd_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
 };

@@ -827,7 +827,7 @@
 /* Regulator config */
 &pm8150_l13 {
 	qcom,regulator-type = <0>;      /* LDO */
-	qcom,init-enable = <0>;
+	qcom,init-enable = <1>;
 	qcom,init-ldo-mode = <1>;
 	qcom,init-pin-ctrl-enable = <0>;
 	qcom,init-pin-ctrl-mode = <0>;
@@ -839,7 +839,7 @@
 
 &pm8150_l14 {
 	qcom,regulator-type = <0>;      /* LDO */
-	qcom,init-enable = <0>;
+	qcom,init-enable = <1>;
 	qcom,init-ldo-mode = <1>;
 	qcom,init-pin-ctrl-enable = <0>;
 	qcom,init-pin-ctrl-mode = <0>;

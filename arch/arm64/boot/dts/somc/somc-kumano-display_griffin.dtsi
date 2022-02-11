@@ -3,32 +3,10 @@
  * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  */
 
-&soc {
-	dsi_panel_cmd_display: qcom,dsi-display@2 {
-		label = "dsi_panel_cmd_display";
-		qcom,display-type = "primary";
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
-		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-		qcom,dsi-panel = <&dsi_2>;
-	};
-
-	dsi_2_display: qcom,dsi-display@25 {
-		label = "2";
-		qcom,display-type = "primary";
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
-		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-		qcom,dsi-panel = <&dsi_2>;
-	};
-
-};
+#include "dsi-panel-griffin.dtsi"
 
 &dsi_2 {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
 	/delete-property/qcom,panel-vspvsn-supply-entries;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
@@ -61,23 +39,6 @@
 	};
 };
 
-&pm8150_l14 {
-	qcom,init-enable = <1>;
-};
-
-&pm8150_l17 {
-	qcom,init-enable = <1>;
-};
-
 &sde_dsi {
-	qcom,dsi-display-list =
-		<
-		&dsi_2_display
-		&dsi_panel_cmd_display
-		>;
+	qcom,dsi-default-panel = <&dsi_2>;
 };
-
-&dsi_panel_cmd_display {
-	qcom,dsi-display-active;
-};
-

@@ -193,7 +193,6 @@
 	rxb-equ-tuning-manual;
 };
 
-#include "dsi-panel-griffin.dtsi"
 #include "somc-kumano-display.dtsi"
 #include "somc-kumano-display_griffin.dtsi"
 #include "somc-kumano-touch.dtsi"
