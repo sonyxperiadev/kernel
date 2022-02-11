@@ -5,7 +5,7 @@
 
 &mdss_mdp {
 	/* Samsung FHD OLED ID4 */
-	dsi_4: somc,4_panel {
+	dsi_4: 4 {
 		qcom,mdss-dsi-panel-name = "4";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 
