@@ -581,7 +581,6 @@
 	};
 };
 
-#include "dsi-panel-bahamut.dtsi"
 #include "somc-kumano-display.dtsi"
 #include "somc-kumano-display_bahamut.dtsi"
 #include "somc-kumano-touch.dtsi"

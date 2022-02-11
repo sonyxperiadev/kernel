@@ -8,6 +8,10 @@
 	dsi_2: somc,2_panel {
 		qcom,mdss-dsi-panel-name = "2";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <152>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -39,7 +43,7 @@
 
 		somc,pw-wait-after-on-vddio = <0>;
 		somc,pw-wait-after-on-touch-int-n = <10>;
-		qcom,mdss-dsi-touch-reset-sequence = <1 10>;
+		somc,mdss-dsi-touch-reset-sequence = <1 10>;
 		qcom,mdss-dsi-reset-sequence = <1 10>;
 
 		somc,pw-off-rst-b-seq = <0 5>;
