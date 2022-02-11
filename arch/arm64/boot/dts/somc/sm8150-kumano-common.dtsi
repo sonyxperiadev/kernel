@@ -8,6 +8,9 @@
 #include <dt-bindings/phy/qcom,sm8150-qmp-usb3.h>
 
 &reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
 	ramoops: ramoops@ffc00000 {
 		compatible = "removed-dma-pool", "ramoops";
 		no-map;
@@ -391,6 +394,9 @@
 
 	/* I2C: QUP7 */
 	i2c@89c000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		pinctrl-0 = <&sm_gpio_98 &sm_gpio_99>;
 		pinctrl-1 = <&sm_gpio_98_suspend &sm_gpio_99_suspend>;
 		qcom,clk-freq-out = <400000>;
@@ -516,7 +522,6 @@
 
 	sony_camera_module_0: sony,camera_modules@0 {
 		cell-index = <0>;
-		reg = <0x00>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_0";
@@ -593,7 +598,6 @@
 
 	sony_camera_module_1: sony,camera_modules@1 {
 		cell-index = <1>;
-		reg = <0x01>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_1";
@@ -677,7 +681,6 @@
 
 	sony_camera_module_2: sony,camera_modules@2 {
 		cell-index = <2>;
-		reg = <0x02>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_2";
@@ -743,7 +746,6 @@
 
 	sony_camera_module_3: sony,camera_modules@3 {
 		cell-index = <3>;
-		reg = <0x03>;
 		interrupt-parent = <&tlmm>;
 		status = "ok";
 		compatible = "sony_camera_3";

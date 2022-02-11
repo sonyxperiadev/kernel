@@ -4,6 +4,9 @@
  */
 
 &qupv3_se4_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	nfc@28 {
 		compatible = "nxp,pn553";
 		reg = <0x28>;

@@ -4,7 +4,10 @@
  */
 
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
+
 	touchscreen@48 {
 		compatible = "sec,sec_ts";
 		reg = <0x48>;
