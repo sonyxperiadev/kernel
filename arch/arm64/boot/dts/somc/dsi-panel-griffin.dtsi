@@ -5,7 +5,7 @@
 
 &mdss_mdp {
 	/* Samsung 4K OLED ID2 */
-	dsi_2: somc,2_panel {
+	dsi_2: 2 {
 		qcom,mdss-dsi-panel-name = "2";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 
