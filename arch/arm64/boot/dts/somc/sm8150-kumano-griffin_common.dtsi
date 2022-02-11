@@ -200,5 +200,6 @@
 #include "somc-kumano-display.dtsi"
 #include "somc-kumano-display_griffin.dtsi"
 #include "somc-kumano-touch.dtsi"
+#include "somc-kumano-touch_griffin.dtsi"
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-griffin.dtsi"

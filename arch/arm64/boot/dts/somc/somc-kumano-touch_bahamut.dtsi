@@ -10,5 +10,7 @@
 		sec,cover_mode_supported = <0>;
 		sec,rejection_area_portrait = <25 150 60 200>;
 		sec,rejection_area_landscape = <150 20 200 60>;
+
+		panel = <&dsi_4>;
 	};
 };

@@ -7,6 +7,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "ok";
+	qcom,i2c-touch-active = "sec,sec_ts";
 
 	touchscreen@48 {
 		compatible = "sec,sec_ts";
