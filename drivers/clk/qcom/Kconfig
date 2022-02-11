@@ -258,6 +258,7 @@ config MSM_CLK_AOP_QMP
 config MSM_GCC_SM8150
 	tristate "SM8150 Global Clock Controller"
 	depends on COMMON_CLK_QCOM
+	select QCOM_GDSC
 	help
 	  Support for the global clock controller on Qualcomm Technologies, Inc
 	  SM8150 devices.
