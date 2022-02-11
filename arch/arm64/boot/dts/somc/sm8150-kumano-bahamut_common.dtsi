@@ -17,6 +17,10 @@
 	pinctrl-1 = <&pm8150_gpio_7 &pm8150l_gpio_3 &pm8150b_gpio_7 &pm8150l_gpio_1>;
 };
 
+&somc_water_detection {
+	panel = <&dsi_4>;
+};
+
 &soc {
 	gpio_keys {
 		pinctrl-0 = <&key_vol_dn_default
