@@ -80,6 +80,12 @@
 	};
 };
 
+&pm8150b_pdphy {
+	vdd-pdphy-supply = <&pm8150_l2>;
+	vbus-supply = <&smb5_vbus>;
+	vconn-supply = <&smb5_vconn>;
+};
+
 &pm8150b_fg {
 	nvmem-names = "fg_sdam";
 	nvmem = <&pm8150_sdam_2>;
