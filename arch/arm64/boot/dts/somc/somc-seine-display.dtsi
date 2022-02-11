@@ -33,5 +33,5 @@
 
 	vddio-supply = <&L12A>;
 
-	qcom.dsi-default-panel = <&dsi_6>;
+	qcom,dsi-default-panel = <&dsi_6>;
 };
