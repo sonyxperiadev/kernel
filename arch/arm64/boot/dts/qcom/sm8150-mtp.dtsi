@@ -315,6 +315,7 @@
 };
 
 &pm8150b_fg {
+	status = "ok";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
@@ -635,6 +636,7 @@
 };
 
 &pm8150b_charger {
+	status = "ok";
 	qcom,sec-charger-config = <3>;
 	qcom,auto-recharge-soc = <98>;
 	io-channels = <&pm8150b_vadc ADC_MID_CHG_DIV6>,
