@@ -58,7 +58,7 @@
 				<&dai_tert_tdm_rx_0>, <&dai_tert_tdm_tx_0>,
 				<&dai_quat_tdm_rx_0>, <&dai_quat_tdm_tx_0>,
 				<&dai_quin_tdm_rx_0>, <&dai_quin_tdm_tx_0>;
-		asoc-cpu-names = "msm-dai-q6-hdmi.8",  "msm-dai-q6-dp.24608",
+		asoc-cpu-names = "msm-dai-q6-hdmi.8",  "msm-dai-q6-dp.0",
 				"msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
 				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
 				"msm-dai-q6-mi2s.4", "msm-dai-q6-auxpcm.1",
@@ -122,7 +122,7 @@
 				<&dai_quat_tdm_rx_0>, <&dai_quat_tdm_tx_0>,
 				<&dai_quat_tdm_rx_1>,
 				<&dai_quin_tdm_rx_0>, <&dai_quin_tdm_tx_0>;
-		asoc-cpu-names = "msm-dai-q6-hdmi.8",  "msm-dai-q6-dp.24608",
+		asoc-cpu-names = "msm-dai-q6-hdmi.8",  "msm-dai-q6-dp.0",
 				"msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
 				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
 				"msm-dai-q6-mi2s.4", "msm-dai-q6-auxpcm.1",
