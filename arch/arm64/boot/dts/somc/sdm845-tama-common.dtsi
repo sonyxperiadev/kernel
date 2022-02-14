@@ -690,6 +690,7 @@
 
 &pmi8998_wled {
 	qcom,fs-current-limit = <20000>;
+	qcom,string-cfg = <7>;
 };
 
 &vendor {

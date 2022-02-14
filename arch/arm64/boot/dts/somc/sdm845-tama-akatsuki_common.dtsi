@@ -386,6 +386,10 @@
 	status = "okay";
 };
 
+&pmi8998_wled {
+	status = "disabled";
+};
+
 &qusb_phy0 {
 	qcom,efuse-offset = <0x00000000>;
 	qcom,qusb-phy-init-seq =
