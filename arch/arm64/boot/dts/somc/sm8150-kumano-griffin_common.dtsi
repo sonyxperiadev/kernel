@@ -4,6 +4,7 @@
  */
 
 #include "sm8150-kumano-common.dtsi"
+#include "sm8150-kumano-camera.dtsi"
 
 &somc_pinctrl {
 	/* If product common default setting is needed,

@@ -4,6 +4,7 @@
  */
 
 #include "sm8150-kumano-common.dtsi"
+#include "sm8150-kumano-camera.dtsi"
 
 &somc_pinctrl {
 	/* If product common default setting is needed,
@@ -52,108 +53,6 @@
 /* Regulator config */
 &pm8150_l13 {
 	status = "disabled";
-};
-
-&sony_camera_module_0 {
-	module_names = "SEM12BC3";
-	default_module_name = "SEM12BC3";
-	/delete-property/ cam_vmdr-supply;
-	cam-vreg-name = "cam_vio", "cam_vdig", "cam_vdig2", "cam_clk";
-	cam-vreg-type = <0 0 0 0>;
-	cam-vreg-min-voltage = <1800000 0 0 0>;
-	cam-vreg-max-voltage = <1800000 0 0 0>;
-	cam-vreg-op-mode = <0 0 0 0>;
-
-	/delete-node/ SEM12BS1;
-	SEM12BC3 {
-		i2c_freq_mode = <3>;
-		power_off {
-			commands =
-				"gpio_reset",
-				"cam_clk",
-				"cam_vdig2",
-				"cam_vdig",
-				"cam_vio",
-				"probe_wait",
-				"exit";
-			gpio_reset = <6 0x0 0 5000>;
-			cam_clk = <4 0xffffffff 0 0>;
-			cam_vdig2 = <20 0xffffffff 0 0>;
-			cam_vdig = <0 0xffffffff 0 0>;
-			cam_vio = <1 0xffffffff 0 1000>;
-			probe_wait = <97 50000 0 0>;
-			exit = <99 0x0 0 0>;
-		};
-		power_on {
-			commands =
-				"cam_vio",
-				"cam_vdig",
-				"cam_vdig2",
-				"cam_clk",
-				"gpio_reset",
-				"exit";
-			cam_vio = <1 1800 105000 1000>;
-			cam_vdig = <0 0 0 3000>;
-			cam_vdig2 = <20 0 0 3000>;
-			cam_clk = <4 24000000 0 1000>;
-			gpio_reset = <6 1 0 1000>;
-			exit = <99 0x0 0 0>;
-		};
-	};
-};
-
-&sony_camera_module_1 {
-	module_names = "SEM12BS4";
-	default_module_name = "SEM12BS4";
-	/delete-property/ cam_vmdr-supply;
-	cam-vreg-name = "cam_vio", "cam_vdig", "cam_vdig2", "cam_gyro", "cam_clk";
-	cam-vreg-type = <0 0 0 0 0>;
-	cam-vreg-min-voltage = <1800000 0 0 1800000 0>;
-	cam-vreg-max-voltage = <1800000 0 0 1800000 0>;
-	cam-vreg-op-mode = <0 0 0 0 0>;
-
-	/delete-node/ SEM12BS2;
-	SEM12BS4 {
-		i2c_freq_mode = <3>;
-		power_off {
-			commands =
-				"probe_wait",
-				"gpio_reset",
-				"cam_clk",
-				"cam_vdig2",
-				"cam_vdig",
-				"cam_gyro",
-				"cam_vio",
-				"probe_wait2",
-				"exit";
-			probe_wait = <97 10 0 0>;
-			gpio_reset = <6 0x0 0 5000>;
-			cam_clk = <4 0xffffffff 0 0>;
-			cam_vdig2 = <20 0xffffffff 0 0>;
-			cam_vdig = <0 0xffffffff 0 0>;
-			cam_gyro = <8 0xffffffff 0 1000>;
-			cam_vio = <1 0xffffffff 0 1000>;
-			probe_wait2 = <98 50000 0 0>;
-			exit = <99 0x0 0 0>;
-		};
-		power_on {
-			commands =
-				"cam_vio",
-				"cam_gyro",
-				"cam_vdig",
-				"cam_vdig2",
-				"cam_clk",
-				"gpio_reset",
-				"exit";
-			cam_vio = <1 1800 105000 1000>;
-			cam_gyro = <8 1800 105000 1000>;
-			cam_vdig = <0 0 0 3000>;
-			cam_vdig2 = <20 0 0 3000>;
-			cam_clk = <4 24000000 0 1000>;
-			gpio_reset = <6 1 0 1000>;
-			exit = <99 0x0 0 0>;
-		};
-	};
 };
 
 /* GPIO_7: SUPWC_PWR_EN */
