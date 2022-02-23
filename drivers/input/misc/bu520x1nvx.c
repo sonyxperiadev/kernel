@@ -31,7 +31,7 @@
 #include <linux/switch.h>
 #endif
 #include <linux/types.h>
-#include "bu520x1nvx.h"
+#include <linux/input/bu520x1nvx.h>
 
 #define BU520X1NVX_DEV_NAME "bu520x1nvx"
 #define BU520X1NVX_SW_LID_NAME "lid"
