@@ -80,6 +80,18 @@
 			reboot-cmd;
 		};
 	};
+
+	bu520x1nvx {
+		compatible = "rohm,bu520x1nvx";
+
+		acc_cover {
+			label = "lid";
+			gpios = <&tlmm 99 0x1>;
+			lid-pin = <1>;
+			open-debounce-interval = <120>;
+			close-debounce-interval = <300>;
+		};
+	};
 };
 
 /* Primary USB maximum-speed */
