@@ -46,10 +46,6 @@
 		qcom,batt-id-range-pct = <15>;
 	};
 
-	sony_ext_uim_ctrl {
-		compatible = "sony,ext-uim-ctrl";
-		uim2_detect_en_gpio = <&tlmm 51 GPIO_ACTIVE_HIGH>;
-	};
 };
 
 &pm6150a_l1 {
