@@ -27,20 +27,15 @@
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-#include <linux/switch.h>
-#endif
 #include <linux/types.h>
-#include "bu520x1nvx.h"
+#include <linux/input/bu520x1nvx.h>
 
 #define BU520X1NVX_DEV_NAME "bu520x1nvx"
 #define BU520X1NVX_SW_LID_NAME "lid"
 #define BU520X1NVX_SW_KEYDOCK_NAME "keyboard_dock"
 #define BU520X1NVX_SWITCH_NUM 2
 
-#ifdef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
 #define LID_DEVPATH "DEVPATH=/devices/virtual/switch/lid"
-#endif
 
 struct bu520x1nvx_event_data {
 	const struct bu520x1nvx_gpio_event *event;
@@ -53,12 +48,7 @@ struct bu520x1nvx_drvdata {
 	struct device *dev;
 	struct pinctrl *key_pinctrl;
 	struct input_dev *input_dev;
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-	struct switch_dev switch_lid;
-	struct switch_dev switch_keydock;
-#else
 	int input_lid_state;
-#endif
 	struct mutex lock;
 	atomic_t detection_in_progress;
 	unsigned int n_events;
@@ -86,34 +76,17 @@ static void bu520x1nvx_report_input_event(struct input_dev *idev,
 				 const struct bu520x1nvx_gpio_event *event)
 {
 	int gpio_state = bu520x1nvx_get_lid_state(event);
-#ifdef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
 	char *input_event[3];
 	char buf[32] = {0};
-#endif
 	dev_dbg(&idev->dev, "%s: value(%d)\n", __func__, gpio_state);
 	input_report_switch(idev, SW_LID, gpio_state);
 	input_sync(idev);
-#ifdef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
 	snprintf(buf, sizeof(buf), "SWITCH_STATE=%d", gpio_state);
 	input_event[0] = buf;
 	input_event[1] = LID_DEVPATH;
 	input_event[2] = NULL;
 	kobject_uevent_env(&idev->dev.kobj, KOBJ_CHANGE, input_event);
-#endif
 }
-
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-static void bu520x1nvx_report_switch_event(struct switch_dev *switch_dev,
-				 const struct bu520x1nvx_gpio_event *event)
-{
-	int gpio_state = (gpio_get_value_cansleep(event->gpio)
-						  ^ event->active_low ?
-						  SWITCH_ON : SWITCH_OFF);
-
-	dev_dbg(switch_dev->dev, "%s: value(%d)\n", __func__, gpio_state);
-	switch_set_state(switch_dev, gpio_state);
-}
-#endif
 
 static int bu520x1nvx_get_devtree(struct device *dev,
 				  struct bu520x1nvx_platform_data *pdata)
@@ -218,15 +191,7 @@ static irqreturn_t bu520x1nvx_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SETUP_TIMER
-static void bu520x1nvx_det_tmr_func(unsigned long func_data)
-{
-	struct bu520x1nvx_event_data *edata =
-		(struct bu520x1nvx_event_data *)func_data;
 
-	schedule_work(&edata->det_work);
-}
-#else
 static void bu520x1nvx_det_tmr_func(struct timer_list *t)
 {
 	struct bu520x1nvx_event_data *edata =
@@ -234,7 +199,6 @@ static void bu520x1nvx_det_tmr_func(struct timer_list *t)
 
 	schedule_work(&edata->det_work);
 }
-#endif
 
 static void bu520x1nvx_det_work(struct work_struct *work)
 {
@@ -246,16 +210,8 @@ static void bu520x1nvx_det_work(struct work_struct *work)
 						data[!event->lid_pin]);
 
 	if (event->lid_pin) {
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-		bu520x1nvx_report_switch_event(&ddata->switch_lid, event);
-#else
 		ddata->input_lid_state = bu520x1nvx_get_lid_state(event);
-#endif
 		bu520x1nvx_report_input_event(ddata->input_dev, event);
-	} else {
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-		bu520x1nvx_report_switch_event(&ddata->switch_keydock, event);
-#endif
 	}
 
 	atomic_set(&ddata->detection_in_progress, 0);
@@ -362,13 +318,8 @@ static int bu520x1nvx_setup_event(struct platform_device *pdev,
 	irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
 	INIT_WORK(&edata->det_work, bu520x1nvx_det_work);
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SETUP_TIMER
-	setup_timer(&edata->det_timer,
-		    bu520x1nvx_det_tmr_func, (unsigned long)edata);
-#else
 	timer_setup(&edata->det_timer,
 		    bu520x1nvx_det_tmr_func, 0);
-#endif
 
 	error = request_any_context_irq(edata->irq, isr, irqflags, desc, edata);
 	if (error < 0) {
@@ -432,41 +383,6 @@ out:
 
 }
 
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-static int bu520x1nvx_set_switch_device(struct bu520x1nvx_drvdata *ddata,
-					bool lid_pin)
-{
-	int error = 0;
-
-	if (lid_pin) {
-		ddata->switch_lid.name = BU520X1NVX_SW_LID_NAME;
-		ddata->switch_lid.state = SWITCH_OFF;
-		error = switch_dev_register(&ddata->switch_lid);
-		if (error) {
-			dev_err(ddata->dev, "%s cannot regist lid(%d)\n",
-				__func__, error);
-			goto out;
-		}
-	} else {
-		ddata->switch_keydock.name = BU520X1NVX_SW_KEYDOCK_NAME;
-		ddata->switch_keydock.state = SWITCH_OFF;
-		error = switch_dev_register(&ddata->switch_keydock);
-		if (error) {
-			dev_err(ddata->dev, "%s cannot regist keydock(%d)\n",
-				__func__, error);
-			goto fail_switch;
-		}
-	}
-	goto out;
-
-fail_switch:
-	switch_dev_unregister(&ddata->switch_lid);
-out:
-	return error;
-}
-#endif
-
-#ifdef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
 static ssize_t bu520x1nvx_show_lid_state(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -480,7 +396,6 @@ static ssize_t bu520x1nvx_show_lid_state(struct device *dev,
 static struct device_attribute bu520x1nvx_attrs[] = {
 	__ATTR(state, S_IRUGO, bu520x1nvx_show_lid_state, NULL),
 };
-#endif
 
 static int bu520x1nvx_probe(struct platform_device *pdev)
 {
@@ -489,9 +404,6 @@ static int bu520x1nvx_probe(struct platform_device *pdev)
 	const struct bu520x1nvx_gpio_event *event;
 	struct bu520x1nvx_event_data *edata;
 	struct bu520x1nvx_drvdata *ddata;
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-	struct switch_dev *switch_dev;
-#endif
 	int i = 0;
 	int error = 0;
 	struct pinctrl_state *set_state;
@@ -548,14 +460,6 @@ static int bu520x1nvx_probe(struct platform_device *pdev)
 				goto fail_setup_event;
 			}
 		}
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-		error = bu520x1nvx_set_switch_device(ddata, event->lid_pin);
-		if (error) {
-			dev_err(ddata->dev, "%s cannot set switch dev(%d)\n",
-				__func__, error);
-			goto fail_setup_event;
-		}
-#endif
 		error = bu520x1nvx_setup_event(pdev, edata, event);
 		if (error) {
 			dev_err(ddata->dev, "%s cannot set event error(%d)\n",
@@ -563,17 +467,8 @@ static int bu520x1nvx_probe(struct platform_device *pdev)
 			goto fail_setup_event;
 		}
 
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-		if (event->lid_pin)
-			switch_dev = &ddata->switch_lid;
-		else
-			switch_dev = &ddata->switch_keydock;
-
-		bu520x1nvx_report_switch_event(switch_dev, event);
-#endif
 	}
 
-#ifdef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
 	error = device_create_file(ddata->dev, bu520x1nvx_attrs);
 	if (error) {
 		dev_err(&pdev->dev, "create_file failed\n");
@@ -582,24 +477,12 @@ static int bu520x1nvx_probe(struct platform_device *pdev)
 	kobject_uevent(&ddata->dev->kobj, KOBJ_CHANGE);
 	ddata->input_lid_state = bu520x1nvx_get_lid_state(event);
 	bu520x1nvx_report_input_event(ddata->input_dev, event);
-#endif
 
 	return 0;
 
 fail_setup_event:
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-	if (ddata->switch_lid.dev)
-		switch_dev_unregister(&ddata->switch_lid);
-	if (ddata->switch_keydock.dev)
-		switch_dev_unregister(&ddata->switch_keydock);
-	if (&ddata->input_dev->dev) {
-		input_unregister_device(ddata->input_dev);
-		input_free_device(ddata->input_dev);
-	}
-#else
 	input_unregister_device(ddata->input_dev);
 	input_free_device(ddata->input_dev);
-#endif
 	if (ddata->key_pinctrl) {
 		set_state =
 		pinctrl_lookup_state(ddata->key_pinctrl,
@@ -623,16 +506,7 @@ static int bu520x1nvx_remove(struct platform_device *pdev)
 {
 	int i;
 	struct bu520x1nvx_drvdata *ddata = platform_get_drvdata(pdev);
-#ifndef CONFIG_HALL_SENSOR_NOT_USE_SWITCH
-	if (ddata->switch_lid.dev)
-		switch_dev_unregister(&ddata->switch_lid);
-	if (ddata->switch_keydock.dev)
-		switch_dev_unregister(&ddata->switch_keydock);
-	if (&ddata->input_dev->dev)
-		input_unregister_device(ddata->input_dev);
-#else
 	input_unregister_device(ddata->input_dev);
-#endif
 	mutex_destroy(&ddata->lock);
 	for (i = 0; i < ddata->n_events; i++)
 		bu520x1nvx_remove_event(&ddata->data[i]);
