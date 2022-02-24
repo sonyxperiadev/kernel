@@ -8,7 +8,6 @@
 
 #include "sm8150-pmic-overlay.dtsi"
 #include "sm8150-sde-display.dtsi"
-#include "sm8150-camera-sensor-mtp.dtsi"
 #include "sm8150-thermal-overlay.dtsi"
 
 &qupv3_se4_i2c {
