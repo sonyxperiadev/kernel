@@ -5,6 +5,10 @@
 
 #include <dt-bindings/thermal/thermal.h>
 
+&mdss_mdp {
+	#cooling-cells = <2>;
+};
+
 &clock_cpucc {
 	#address-cells = <1>;
 	#size-cells = <1>;

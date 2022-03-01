@@ -12,6 +12,11 @@ dtbo-$(CONFIG_MACH_SONY_APOLLO) += \
 	sdm845-v2-tama-apollo_generic-overlay.dtbo \
 	sdm845-v2.1-tama-apollo_generic-overlay.dtbo
 
+dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
+	sm8150-kumano-griffin_generic-overlay.dtbo
+dtbo-$(CONFIG_MACH_SONY_BAHAMUT) += \
+	sm8150-kumano-bahamut_generic-overlay.dtbo
+
 dtbo-$(CONFIG_MACH_SONY_PDX201) += \
 	trinket-seine-pdx201_generic-overlay.dtbo
 
@@ -37,6 +42,13 @@ ifeq ($(CONFIG_MACH_SONY_APOLLO),y)
 sdm845-tama-apollo_generic-overlay.dtbo-base := ../qcom/sdm845.dtb
 sdm845-v2-tama-apollo_generic-overlay.dtbo-base := ../qcom/sdm845-v2.dtb
 sdm845-v2.1-tama-apollo_generic-overlay.dtbo-base := ../qcom/sdm845-v2.1.dtb
+endif
+
+ifeq ($(CONFIG_MACH_SONY_GRIFFIN),y)
+sm8150-kumano-griffin_generic-overlay.dtbo-base := ../qcom/sm8150.dtb ../qcom/sm8150-v2.dtb
+endif
+ifeq ($(CONFIG_MACH_SONY_BAHAMUT),y)
+sm8150-kumano-bahamut_generic-overlay.dtbo-base := ../qcom/sm8150.dtb ../qcom/sm8150-v2.dtb
 endif
 
 ifeq ($(CONFIG_MACH_SONY_PDX201),y)
@@ -78,6 +90,13 @@ dtb-$(CONFIG_MACH_SONY_KIRIN) += \
 	sdm630-ganges-kirin.dtb
 dtb-$(CONFIG_MACH_SONY_MERMAID) += \
 	sdm636-ganges-mermaid.dtb
+
+dtb-$(CONFIG_MACH_SONY_GRIFFIN) += \
+	sm8150-kumano-griffin_generic.dtb \
+	sm8150-v2-kumano-griffin_generic.dtb
+dtb-$(CONFIG_MACH_SONY_BAHAMUT) += \
+	sm8150-kumano-bahamut_generic.dtb \
+	sm8150-v2-kumano-bahamut_generic.dtb
 
 dtb-$(CONFIG_MACH_SONY_PDX201) += \
 	trinket-seine-pdx201_generic.dtb

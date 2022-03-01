@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ */
+
+&pm8150b_charger {
+	qcom,battery-data = <&kumano_batterydata>;
+	qcom,fv-max-uv = <4380000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-150)>;
+	somc,product-max-icl-ua = <2600000>;
+};
+
+&pm8150b_pdphy {
+};
+
+&vendor {
+	kumano_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-kumano-reference.dtsi"
+	};
+	kumano_batterydata_al0: somc,battery-data-al0 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-bahamut-tmm-4380mv.dtsi"
+	};
+	kumano_batterydata_al1: somc,battery-data-al1 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-bahamut-tmm-4340mv.dtsi"
+	};
+	kumano_batterydata_al2: somc,battery-data-al2 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-bahamut-tmm-4300mv.dtsi"
+	};
+	kumano_batterydata_al3: somc,battery-data-al3 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-bahamut-tmm-4250mv.dtsi"
+	};
+	kumano_batterydata_al4: somc,battery-data-al4 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-bahamut-tmm-4150mv.dtsi"
+	};
+};
+
+&pm8150b_fg {
+	qcom,battery-data = <&kumano_batterydata>;
+	somc,battery-data-al0 = <&kumano_batterydata_al0>;
+	somc,battery-data-al1 = <&kumano_batterydata_al1>;
+	somc,battery-data-al2 = <&kumano_batterydata_al2>;
+	somc,battery-data-al3 = <&kumano_batterydata_al3>;
+	somc,battery-data-al4 = <&kumano_batterydata_al4>;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
+	qcom,fg-sys-term-current = <(-200)>;
+	qcom,ki-coeff-low-chg = <184>;
+	qcom,ki-coeff-med-chg = <123>;
+	qcom,ki-coeff-hi-chg = <62>;
+	qcom,ki-coeff-soc-dischg = <0 0 100>;
+	qcom,ki-coeff-low-dischg = <0 0 184>;
+	qcom,ki-coeff-med-dischg = <0 0 123>;
+	qcom,ki-coeff-hi-dischg = <0 0 62>;
+	qcom,ki-coeff-chg-low-med-thresh-ma = <63>;
+	qcom,ki-coeff-chg-med-hi-thresh-ma = <500>;
+	qcom,ki-coeff-dischg-low-med-thresh-ma = <63>;
+	qcom,ki-coeff-dischg-med-hi-thresh-ma = <500>;
+};

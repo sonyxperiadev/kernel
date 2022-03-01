@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+#include "sm8150-kumano-griffin_common.dtsi"
+#include "somc-kumano-nfc_pn557.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	pinctrl-2 = <&sm_gpio_0 &sm_gpio_3>;
+};
+
+/* GPIO_0 : NFC_ESE_SPI_MISO */
+&sm_gpio_0 {
+	mux {
+		pins = "gpio0";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio0";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+	};
+};
+
+/* GPIO_3 : NFC_ESE_SPI_CS_N */
+&sm_gpio_3 {
+	mux {
+		pins = "gpio3";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio3";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+		/delete-property/output-low;
+	};
+};
