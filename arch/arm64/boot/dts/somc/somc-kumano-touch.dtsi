@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+&qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	qcom,i2c-touch-active = "sec,sec_ts";
+
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 122 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1644 3840>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <3>;
+		sec,firmware_name = "touch_module_id_0x61.img";
+		sec,platform-touch-reset-gpio = <&tlmm 54 0>;
+		sec,device_id = /bits/ 8 <0xAC 0x37 0x71>;
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <1>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <1>;
+		sec,aod_mode_supported = <1>;
+		sec,sod_mode_supported = <1>;
+		sec,stamina_mode_supported = <1>;
+		sec,rejection_area_portrait = <40 240 90 300>;
+		sec,rejection_area_landscape = <240 30 300 90>;
+	};
+};

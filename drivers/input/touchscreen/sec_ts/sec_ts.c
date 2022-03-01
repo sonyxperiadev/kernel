@@ -2512,8 +2512,10 @@ int sec_ts_suspend(struct sec_ts_data *ts)
 		input_info(true, &ts->client->dev, "%s: already power off\n", __func__);
 		goto out;
 	}
-
+#ifdef USE_POWER_RESET_WORK
 	cancel_delayed_work_sync(&ts->reset_work);
+#endif
+
 	if (ts->plat_data->watchdog.supported)
 		cancel_delayed_work(&ts->work_watchdog);
 
@@ -2823,6 +2825,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	ts->power_status = SEC_TS_STATE_POWER_ON;
 	ts->touch_noise_status = 0;
 
+#ifdef USE_POR_AFTER_I2C_RETRY
 	if (!ts->reset_is_on_going) {
 		ret = sec_ts_wait_for_ready(ts, SEC_TS_ACK_BOOT_COMPLETE);
 		if (ret < 0) {
@@ -2831,6 +2834,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 			goto err;
 		}
 	}
+#endif
 
 	if (ts->plat_data->enable_sync)
 		ts->plat_data->enable_sync(true);

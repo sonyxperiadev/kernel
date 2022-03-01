@@ -1,0 +1,492 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+#include "sm8150-kumano-common.dtsi"
+#include "sm8150-kumano-camera.dtsi"
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_16 &sm_gpio_23 &sm_gpio_33 &sm_gpio_34 /*&sm_gpio_122*/>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&pm8150_gpio_7 &pm8150l_gpio_3 &pm8150b_gpio_7 &pm8150l_gpio_1>;
+};
+
+&somc_water_detection {
+	panel = <&dsi_4>;
+};
+
+&soc {
+	gpio_keys {
+		pinctrl-0 = <&key_vol_dn_default
+			     &key_cam_focus_default
+			     &key_cam_snapshot_default>;
+
+		cam_snapshot {
+			label = "cam_snapshot";
+			gpios = <&pm8150b_gpios 1 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <766>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+
+		cam_focus {
+			label = "cam_focus";
+			gpios = <&pm8150b_gpios 2 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_CAMERA_FOCUS>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+/* Regulator config */
+&pm8150_l13 {
+	status = "disabled";
+};
+
+/* GPIO_7: SUPWC_PWR_EN */
+&pm8150_gpio_7 {
+	pins = "gpio7";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <1>; /* Low */
+	power-source = <1>;
+};
+
+/* GPIO_1: TS_VDDIO_EN(do not initialize output value) */
+&pm8150l_gpio_1 {
+	pins = "gpio1";
+	function = "normal";
+	/delete-property/ output-high;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <1>;
+	power-source = <0>;
+};
+
+/* GPIO_7: TS_VDDH_EN(do not initialize output value) */
+&pm8150b_gpio_7 {
+	pins = "gpio7";
+	function = "normal";
+	/delete-property/ output-low;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <1>;
+	power-source = <1>;
+};
+
+/* GPIO_3: NC */
+&pm8150l_gpio_3 {
+	pins = "gpio3";
+	function = "normal";
+	bias-high-impedance; /* DISABLE GPIO_3 */
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ qcom,drive-strength;
+	/delete-property/ power-source;
+};
+
+/* GPIO_16 : CAM_MCLK3 */
+&sm_gpio_16 {
+	mux {
+		pins = "gpio16";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio16";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_23 : CAM3_RST_N */
+&sm_gpio_23 {
+	mux {
+		pins = "gpio23";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio23";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_33 : CCI_I2C_SDA3 */
+&sm_gpio_33 {
+	mux {
+		pins = "gpio33";
+		function = "cci_i2c";
+	};
+
+	config {
+		pins = "gpio33";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_34 : CCI_I2C_SCL3 */
+&sm_gpio_34 {
+	mux {
+		pins = "gpio34";
+		function = "cci_i2c";
+	};
+
+	config {
+		pins = "gpio34";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_122 : TS_INT_N */
+&sm_gpio_122 {
+	mux {
+		pins = "gpio122";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio122";
+		drive-strength = <2>;
+		bias-disable;
+		input-enable;
+	};
+};
+
+/* Primary USB port related QMP USB DP Combo PHY */
+&usb_qmp_dp_phy {
+	rxa-equ-tuning-manual;
+	rxb-equ-tuning-manual;
+	qcom,qmp-phy-init-seq =
+		/* <reg_offset, value, delay> */
+		<USB3_DP_QSERDES_COM_SSC_EN_CENTER 0x01 0
+		 USB3_DP_QSERDES_COM_SSC_PER1 0x31 0
+		 USB3_DP_QSERDES_COM_SSC_PER2 0x01 0
+		 USB3_DP_QSERDES_COM_SSC_STEP_SIZE1_MODE0 0xde 0
+		 USB3_DP_QSERDES_COM_SSC_STEP_SIZE2_MODE0 0x07 0
+		 USB3_DP_QSERDES_COM_SSC_STEP_SIZE1_MODE1 0xde 0
+		 USB3_DP_QSERDES_COM_SSC_STEP_SIZE2_MODE1 0x07 0
+		 USB3_DP_QSERDES_COM_SYSCLK_BUF_ENABLE 0x0a 0
+		 USB3_DP_QSERDES_COM_CMN_IPTRIM 0x20 0
+		 USB3_DP_QSERDES_COM_CP_CTRL_MODE0 0x06 0
+		 USB3_DP_QSERDES_COM_CP_CTRL_MODE1 0x06 0
+		 USB3_DP_QSERDES_COM_PLL_RCTRL_MODE0 0x16 0
+		 USB3_DP_QSERDES_COM_PLL_RCTRL_MODE1 0x16 0
+		 USB3_DP_QSERDES_COM_PLL_CCTRL_MODE0 0x36 0
+		 USB3_DP_QSERDES_COM_PLL_CCTRL_MODE1 0x36 0
+		 USB3_DP_QSERDES_COM_SYSCLK_EN_SEL 0x1a 0
+		 USB3_DP_QSERDES_COM_LOCK_CMP_EN 0x04 0
+		 USB3_DP_QSERDES_COM_LOCK_CMP1_MODE0 0x14 0
+		 USB3_DP_QSERDES_COM_LOCK_CMP2_MODE0 0x34 0
+		 USB3_DP_QSERDES_COM_LOCK_CMP1_MODE1 0x34 0
+		 USB3_DP_QSERDES_COM_LOCK_CMP2_MODE1 0x82 0
+		 USB3_DP_QSERDES_COM_DEC_START_MODE0 0x82 0
+		 USB3_DP_QSERDES_COM_DEC_START_MODE1 0x82 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START1_MODE0 0xab 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START2_MODE0 0xea 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START3_MODE0 0x02 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START1_MODE1 0xab 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START2_MODE1 0xea 0
+		 USB3_DP_QSERDES_COM_DIV_FRAC_START3_MODE1 0x02 0
+		 USB3_DP_QSERDES_COM_VCO_TUNE_MAP 0x02 0
+		 USB3_DP_QSERDES_COM_VCO_TUNE1_MODE0 0x24 0
+		 USB3_DP_QSERDES_COM_VCO_TUNE1_MODE1 0x24 0
+		 USB3_DP_QSERDES_COM_VCO_TUNE2_MODE1 0x02 0
+		 USB3_DP_QSERDES_COM_HSCLK_SEL 0x01 0
+		 USB3_DP_QSERDES_COM_CORECLK_DIV_MODE1 0x08 0
+		 USB3_DP_QSERDES_COM_BIN_VCOCAL_CMP_CODE1_MODE0 0xca 0
+		 USB3_DP_QSERDES_COM_BIN_VCOCAL_CMP_CODE2_MODE0 0x1e 0
+		 USB3_DP_QSERDES_COM_BIN_VCOCAL_CMP_CODE1_MODE1 0xca 0
+		 USB3_DP_QSERDES_COM_BIN_VCOCAL_CMP_CODE2_MODE1 0x1e 0
+		 USB3_DP_QSERDES_COM_BIN_VCOCAL_HSCLK_SEL 0x11 0
+		 USB3_DP_QSERDES_TXA_LANE_MODE_1 0xd5 0
+		 USB3_DP_QSERDES_TXA_RCV_DETECT_LVL_2 0x12 0
+		 USB3_DP_QSERDES_TXA_RES_CODE_LANE_TX 0x00 0
+		 USB3_DP_QSERDES_TXA_RES_CODE_LANE_RX 0x00 0
+		 USB3_DP_QSERDES_TXA_RES_CODE_LANE_OFFSET_TX 0x16 0
+		 USB3_DP_QSERDES_TXA_RES_CODE_LANE_OFFSET_RX 0x05 0
+		 USB3_DP_QSERDES_TXA_PI_QEC_CTRL 0x20 0
+		 USB3_DP_QSERDES_RXA_UCDR_SO_GAIN 0x05 0
+		 USB3_DP_QSERDES_RXA_UCDR_FASTLOCK_FO_GAIN 0x2f 0
+		 USB3_DP_QSERDES_RXA_UCDR_SO_SATURATION_AND_ENABLE 0x7f 0
+		 USB3_DP_QSERDES_RXA_UCDR_FASTLOCK_COUNT_LOW 0xff 0
+		 USB3_DP_QSERDES_RXA_UCDR_FASTLOCK_COUNT_HIGH 0x0f 0
+		 USB3_DP_QSERDES_RXA_UCDR_PI_CONTROLS 0x99 0
+		 USB3_DP_QSERDES_RXA_UCDR_SB2_THRESH1 0x04 0
+		 USB3_DP_QSERDES_RXA_UCDR_SB2_THRESH2 0x08 0
+		 USB3_DP_QSERDES_RXA_UCDR_SB2_GAIN1 0x05 0
+		 USB3_DP_QSERDES_RXA_UCDR_SB2_GAIN2 0x05 0
+		 USB3_DP_QSERDES_RXA_AUX_DATA_TCOARSE_TFINE 0xa0 0
+		 USB3_DP_QSERDES_RXA_VGA_CAL_CNTRL1 0x54 0
+		 USB3_DP_QSERDES_RXA_VGA_CAL_CNTRL2 0x0e 0
+		 USB3_DP_QSERDES_RXA_GM_CAL 0x1f 0
+		 USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL2 0x0f 0
+		 USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL3 0x4a 0
+		 USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4 0x0f 0
+		 USB3_DP_QSERDES_RXA_RX_IDAC_TSETTLE_LOW 0xc0 0
+		 USB3_DP_QSERDES_RXA_RX_IDAC_TSETTLE_HIGH 0x00 0
+		 USB3_DP_QSERDES_RXA_RX_EQ_OFFSET_ADAPTOR_CNTRL1 0x77 0
+		 USB3_DP_QSERDES_RXA_SIGDET_CNTRL 0x04 0
+		 USB3_DP_QSERDES_RXA_SIGDET_DEGLITCH_CNTRL 0x0e 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_00_LOW 0xbf 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH 0xbf 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH2 0x3f 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH3 0x7f 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_00_HIGH4 0x94 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_01_LOW 0xdc 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH 0xdc 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH2 0x5c 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH3 0x0b 0
+		 USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4 0xb3 0
+		 USB3_DP_QSERDES_RXA_DFE_EN_TIMER 0x04 0
+		 USB3_DP_QSERDES_RXA_DFE_CTLE_POST_CAL_OFFSET 0x38 0
+		 USB3_DP_QSERDES_RXA_DCC_CTRL1 0xc 0
+		 USB3_DP_QSERDES_RXA_VTH_CODE 0x10 0
+		 USB3_DP_QSERDES_TXB_LANE_MODE_1 0xd5 0
+		 USB3_DP_QSERDES_TXB_RCV_DETECT_LVL_2 0x12 0
+		 USB3_DP_QSERDES_TXB_RES_CODE_LANE_TX 0x00 0
+		 USB3_DP_QSERDES_TXB_RES_CODE_LANE_RX 0x00 0
+		 USB3_DP_QSERDES_TXB_RES_CODE_LANE_OFFSET_TX 0x16 0
+		 USB3_DP_QSERDES_TXB_RES_CODE_LANE_OFFSET_RX 0x05 0
+		 USB3_DP_QSERDES_TXB_PI_QEC_CTRL 0x01 0
+		 USB3_DP_QSERDES_RXB_UCDR_SO_GAIN 0x05 0
+		 USB3_DP_QSERDES_RXB_UCDR_FASTLOCK_FO_GAIN 0x2f 0
+		 USB3_DP_QSERDES_RXB_UCDR_SO_SATURATION_AND_ENABLE 0x7f 0
+		 USB3_DP_QSERDES_RXB_UCDR_FASTLOCK_COUNT_LOW 0xff 0
+		 USB3_DP_QSERDES_RXB_UCDR_FASTLOCK_COUNT_HIGH 0x0f 0
+		 USB3_DP_QSERDES_RXB_UCDR_PI_CONTROLS 0x99 0
+		 USB3_DP_QSERDES_RXB_UCDR_SB2_THRESH1 0x04 0
+		 USB3_DP_QSERDES_RXB_UCDR_SB2_THRESH2 0x08 0
+		 USB3_DP_QSERDES_RXB_UCDR_SB2_GAIN1 0x05 0
+		 USB3_DP_QSERDES_RXB_UCDR_SB2_GAIN2 0x05 0
+		 USB3_DP_QSERDES_RXB_AUX_DATA_TCOARSE_TFINE 0xa0 0
+		 USB3_DP_QSERDES_RXB_VGA_CAL_CNTRL1 0x54 0
+		 USB3_DP_QSERDES_RXB_VGA_CAL_CNTRL2 0x0e 0
+		 USB3_DP_QSERDES_RXB_GM_CAL 0x1f 0
+		 USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL2 0x0f 0
+		 USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL3 0x4a 0
+		 USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4 0x0f 0
+		 USB3_DP_QSERDES_RXB_RX_IDAC_TSETTLE_LOW 0xc0 0
+		 USB3_DP_QSERDES_RXB_RX_IDAC_TSETTLE_HIGH 0x00 0
+		 USB3_DP_QSERDES_RXB_RX_EQ_OFFSET_ADAPTOR_CNTRL1 0x77 0
+		 USB3_DP_QSERDES_RXB_SIGDET_CNTRL 0x04 0
+		 USB3_DP_QSERDES_RXB_SIGDET_DEGLITCH_CNTRL 0x0e 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_00_LOW 0xbf 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH 0xbf 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH2 0x3f 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH3 0x7f 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_00_HIGH4 0x94 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_01_LOW 0xdc 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH 0xdc 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH2 0x5c 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH3 0x0b 0
+		 USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4 0xb3 0
+		 USB3_DP_QSERDES_RXB_DFE_EN_TIMER 0x04 0
+		 USB3_DP_QSERDES_RXB_DFE_CTLE_POST_CAL_OFFSET 0x38 0
+		 USB3_DP_QSERDES_RXB_DCC_CTRL1 0xc 0
+		 USB3_DP_QSERDES_RXB_VTH_CODE 0x10 0
+		 USB3_DP_PCS_LOCK_DETECT_CONFIG1 0xd0 0
+		 USB3_DP_PCS_LOCK_DETECT_CONFIG2 0x07 0
+		 USB3_DP_PCS_LOCK_DETECT_CONFIG3 0x20 0
+		 USB3_DP_PCS_LOCK_DETECT_CONFIG6 0x13 0
+		 USB3_DP_PCS_REFGEN_REQ_CONFIG1 0x21 0
+		 USB3_DP_PCS_RX_SIGDET_LVL 0xaa 0
+		 USB3_DP_PCS_CDR_RESET_TIME 0x0f 0
+		 USB3_DP_PCS_ALIGN_DETECT_CONFIG1 0x88 0
+		 USB3_DP_PCS_ALIGN_DETECT_CONFIG2 0x13 0
+		 USB3_DP_PCS_PCS_TX_RX_CONFIG 0x0c 0
+		 USB3_DP_PCS_EQ_CONFIG1 0x4b 0
+		 USB3_DP_PCS_EQ_CONFIG5 0x10 0
+		 USB3_DP_PCS_USB3_LFPS_DET_HIGH_COUNT_VAL 0xf8 0
+		 USB3_DP_PCS_USB3_RXEQTRAINING_DFE_TIME_S2 0x07 0
+		 USB3_DP_QSERDES_TXA_TX_DRV_LVL 0x3D 0
+		 USB3_DP_QSERDES_TXB_TX_DRV_LVL 0x3D 0
+		 USB3_DP_QSERDES_TXA_PRE_EMPH 0x25 0
+		 USB3_DP_QSERDES_TXB_PRE_EMPH 0x26 0
+		 USB3_DP_QSERDES_TXA_TX_EMP_POST1_LVL 0x35 0
+		 USB3_DP_QSERDES_TXB_TX_EMP_POST1_LVL 0x36 0
+		 0xffffffff 0xffffffff 0x00>;
+};
+
+&pm8150_vadc {
+	pmic_therm {
+		reg = <ADC_AMUX_THM1_PU2>;
+		label = "pmic_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
+&pm8150_adc_tm {
+	io-channels =	<&pm8150_vadc ADC_XO_THERM_PU2>,
+			<&pm8150_vadc ADC_AMUX_THM1_PU2>,
+			<&pm8150_vadc ADC_AMUX_THM2_PU2>;
+
+	pmic_therm {
+		reg = <ADC_AMUX_THM1_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+	};
+};
+
+&thermal_zones {
+	pmic_therm {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "user_space";
+		thermal-sensors = <&pm8150_adc_tm ADC_AMUX_THM1_PU2>;
+		trips {
+			active-config0 {
+				temperature = <125000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+		};
+	};
+};
+
+&pm8150b_haptics {
+	compatible = "qcom,haptics";
+	reg = <0xc000 0x100>;
+	interrupts = <0x3 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
+		     <0x3 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
+	interrupt-names = "hap-sc-irq", "hap-play-irq";
+	qcom,actuator-type = "lra";
+	qcom,vmax-mv = <2121>;
+	qcom,play-rate-us = <5882>;
+	qcom,lra-resonance-sig-shape = "sine";
+	qcom,lra-auto-resonance-mode = "qwd";
+	qcom,lra-allow-variable-play-rate;
+
+	wf_0 {
+		/* CLICK */
+		qcom,effect-id = <0>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [7e 7e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <1>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+	wf_1 {
+		/* DOUBLE CLICK */
+		qcom,effect-id = <1>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [3e 3e 3e 3e 3e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <1>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+	wf_2 {
+		/* TICK */
+		qcom,effect-id = <2>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [7e 3e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <1>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+	wf_3 {
+		/* THUD */
+		qcom,effect-id = <3>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [7e 7e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <1>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+	wf_4 {
+		/* POP */
+		qcom,effect-id = <4>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [7e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <1>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+	wf_5 {
+		/* HEAVY CLICK */
+		qcom,effect-id = <5>;
+		qcom,wf-vmax-mv = <2121>;
+		qcom,wf-pattern = [3e 3e 3e 3e 3e 3e 3e 3e];
+		qcom,wf-play-rate-us = <5882>;
+		qcom,wf-brake-pattern = [00 00 00 00];
+		qcom,wf-repeat-count = <2>;
+		qcom,wf-s-repeat-count = <1>;
+	};
+
+};
+
+&pm8150l_rgb_led {
+	somc,rgb_sync = <1>;
+	red {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <4>;
+		somc,max_current = <
+			95 183 137
+			96 183 137
+			97 183 137
+			98 183 137>;
+	};
+	green {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <4>;
+		somc,max_current = <
+			95 89 186
+			96 89 186
+			97 89 186
+			98 89 186>;
+	};
+	blue {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <4>;
+		somc,max_current = <
+			95 386 80
+			96 386 80
+			97 386 80
+			98 386 80>;
+	};
+};
+
+#include "somc-kumano-display.dtsi"
+#include "somc-kumano-display_bahamut.dtsi"
+#include "somc-kumano-touch.dtsi"
+#include "somc-kumano-touch_bahamut.dtsi"
+#include "charger-kumano-common.dtsi"
+#include "charger-kumano-bahamut.dtsi"

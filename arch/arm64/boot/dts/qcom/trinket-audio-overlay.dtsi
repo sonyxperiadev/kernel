@@ -5,6 +5,7 @@
 
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
 #include <dt-bindings/sound/audio-codec-port-types.h>
+#include <dt-bindings/sound/qcom,bolero-clk-rsc.h>
 
 &bolero {
 	#address-cells = <1>;
@@ -14,6 +15,20 @@
 	qcom,va-without-decimation;
 	slew_rate_reg1 = <0xD8E000 0x0>;
 	slew_rate_val1 = <0x3 0x0>;
+
+	bolero-clk-rsc-mngr {
+		compatible = "qcom,bolero-clk-rsc-mngr";
+		qcom,fs-gen-sequence = <0x3000 0x1>,
+					<0x3004 0x1>, <0x3080 0x2>;
+		qcom,rx_mclk_mode_muxsel = <0x0a041020>;
+		clock-names = "tx_core_clk", "tx_npl_clk", "rx_core_clk", "rx_npl_clk",
+			"wsa_core_clk", "wsa_npl_clk", "va_core_clk", "va_npl_clk";
+		clocks = <&clock_audio_tx_1 0>, <&clock_audio_tx_2 0>,
+			<&clock_audio_rx_1 0>, <&clock_audio_rx_2 0>,
+			<&clock_audio_wsa_1 0>, <&clock_audio_wsa_2 0>,
+			<&clock_audio_va_1 0>, <&clock_audio_va_2 0>;
+	};
+
 	tx_macro: tx-macro@0a460000 {
 		compatible = "qcom,tx-macro";
 		reg = <0x0a460000 0x0>;
@@ -22,10 +37,14 @@
 			 <&clock_audio_tx_2 0>;
 		qcom,tx-swr-gpios = <&tx_swr_gpios>;
 		qcom,tx-dmic-sample-rate = <2400000>;
+		qcom,default-clk-id = <TX_CORE_CLK>;
 		swr2: tx_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
+			clock-names = "lpass_core_hw_vote";
+			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <3>;
 			swrm-io-base = <0x0a470000 0x0>;
 			interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
@@ -45,7 +64,7 @@
 			qcom,swr-mstr-irq-wakeup-capable = <1>;
 			wcd937x_tx_slave: wcd937x-tx-slave {
 				compatible = "qcom,wcd937x-slave";
-				reg = <0x0 0x01170223>;
+				reg = <0x0A 0x01170223>;
 			};
 		};
 	};
@@ -59,14 +78,19 @@
 		qcom,rx-swr-gpios = <&rx_swr_gpios>;
 		qcom,rx_mclk_mode_muxsel = <0x0a041020>;
 		qcom,rx-bcl-pmic-params = /bits/ 8 <0x00 0x00 0x1E>;
+		qcom,default-clk-id = <TX_CORE_CLK>;
 		swr1: rx_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
+			clock-names = "lpass_core_hw_vote";
+			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <2>;
 			swrm-io-base = <0x0a450000 0x0>;
 			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "swr_master_irq";
+			qcom,disable-div2-clk-switch = <1>;
 			qcom,swr-num-ports = <5>;
 			qcom,swr-port-mapping = <1 HPH_L 0x1>,
 				<1 HPH_R 0x2>, <2 CLSH 0x1>,
@@ -77,7 +101,7 @@
 			qcom,swr-clock-stop-mode0 = <1>;
 			wcd937x_rx_slave: wcd937x-rx-slave {
 				compatible = "qcom,wcd937x-slave";
-				reg = <0x0 0x01170224>;
+				reg = <0x0A 0x01170224>;
 			};
 		};
 	};
@@ -90,10 +114,14 @@
 			 <&clock_audio_wsa_2 0>;
 		qcom,wsa-swr-gpios = <&wsa_swr_gpios>;
 		qcom,wsa-bcl-pmic-params = /bits/ 8 <0x00 0x00 0x1E>;
+		qcom,default-clk-id = <TX_CORE_CLK>;
 		swr0: wsa_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
 			#size-cells = <0>;
+			clock-names = "lpass_core_hw_vote";
+			clocks = <&lpass_core_hw_vote 0>;
+			qcom,swr-master-version = <0x01050001>;
 			qcom,swr_master_id = <1>;
 			swrm-io-base = <0x0a490000 0x0>;
 			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
@@ -139,7 +167,8 @@
 		compatible = "qcom,va-macro";
 		reg = <0x0a4a0000 0x0>;
 		clock-names = "va_core_clk";
-		clocks = <&clock_audio_va 0>;
+		clocks = <&clock_audio_va_1 0>;
+		qcom,default-clk-id = <TX_CORE_CLK>;
 	};
 
 	wcd937x_codec: wcd937x-codec {
@@ -308,11 +337,19 @@
 		#clock-cells = <1>;
 	};
 
-	clock_audio_va: va_core_clk  {
+	clock_audio_va_1: va_core_clk {
 		compatible = "qcom,audio-ref-clk";
 		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK>;
 		qcom,codec-lpass-ext-clk-freq = <19200000>;
 		qcom,codec-lpass-clk-id = <0x30B>;
+		#clock-cells = <1>;
+	};
+
+	clock_audio_va_2: va_npl_clk {
+		compatible = "qcom,audio-ref-clk";
+		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK_8>;
+		qcom,codec-lpass-ext-clk-freq = <19200000>;
+		qcom,codec-lpass-clk-id = <0x310>;
 		#clock-cells = <1>;
 	};
 

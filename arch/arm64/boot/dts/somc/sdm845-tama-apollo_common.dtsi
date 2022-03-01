@@ -56,11 +56,6 @@
 		    0x22 0x210>; /* PWR_CTRL1 */
 };
 
-&pmi8998_wled {
-	qcom,fs-current-limit = <19500>;
-	qcom,string-cfg = <7>;
-};
-
 #include "dsi-panel-apollo.dtsi"
 #include "somc-tama-display.dtsi"
 #include "somc-tama-display_apollo.dtsi"

@@ -496,6 +496,33 @@ config MACH_SONY_APOLLO
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_SONY_KUMANO
+	bool "Sony Mobile Kumano platform"
+	depends on ARCH_SM8150
+	help
+	  Support for the SONY Mobile Kumano platform
+	  which is based on QCOM SM8150 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_GRIFFIN
+	bool "Sony Mobile Griffin"
+	depends on ARCH_SONY_KUMANO
+	help
+	  Support for the SONY Mobile Griffin device
+	  which is based on SONY Kumano platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_BAHAMUT
+	bool "Sony Mobile Bahamut"
+	depends on ARCH_SONY_KUMANO
+	help
+	  Support for the SONY Mobile Bahamut device
+	  which is based on SONY Kumano platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_SONY_SEINE
 	bool "Sony Mobile Seine platform"
 	depends on ARCH_TRINKET
