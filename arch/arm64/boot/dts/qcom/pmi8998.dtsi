@@ -543,6 +543,7 @@
 			qcom,current-boost-limit = <970>;
 			qcom,switching-freq = <800>; /* 800KHz */
 			qcom,enabled-strings = <0 1 2>;
+			qcom,auto-string-detection;
 
 			qcom,pmic-revid = <&pmi8998_revid>;
 			status = "disabled";
