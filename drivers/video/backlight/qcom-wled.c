@@ -172,15 +172,14 @@ struct wled {
 static int wled3_set_brightness(struct wled *wled, u16 brightness)
 {
 	int rc, i;
-	u16 v;
+	u8 v[2];
 
-	v = __cpu_to_le16(brightness & 0xfff);
+	v[0] = brightness & 0xff;
+	v[1] = (brightness >> 8) & 0xf;
 
 	for (i = 0;  i < wled->cfg.num_strings; ++i) {
 		rc = regmap_bulk_write(wled->regmap, wled->ctrl_addr +
-				       WLED3_SINK_REG_BRIGHT(
-				       wled->cfg.enabled_strings[i]),
-				       &v, 2);
+				       WLED3_SINK_REG_BRIGHT(i), v, 2);
 		if (rc < 0)
 			return rc;
 	}
@@ -191,19 +190,19 @@ static int wled3_set_brightness(struct wled *wled, u16 brightness)
 static int wled4_set_brightness(struct wled *wled, u16 brightness)
 {
 	int rc, i;
-	u16 v, low_limit = wled->max_brightness * 4 / 1000;
+	u16 low_limit = wled->max_brightness * 4 / 1000;
+	u8 v[2];
 
 	/* WLED4's lower limit of operation is 0.4% */
 	if (brightness > 0 && brightness < low_limit)
 		brightness = low_limit;
 
-	v = __cpu_to_le16(brightness & 0xfff);
+	v[0] = brightness & 0xff;
+	v[1] = (brightness >> 8) & 0xf;
 
-	for (i = 0; i < wled->cfg.num_strings; ++i) {
+	for (i = 0;  i < wled->cfg.num_strings; ++i) {
 		rc = regmap_bulk_write(wled->regmap, wled->sink_addr +
-				       WLED4_SINK_REG_BRIGHT(
-				       wled->cfg.enabled_strings[i]),
-				       &v, 2);
+				       WLED4_SINK_REG_BRIGHT(i), v, 2);
 		if (rc < 0)
 			return rc;
 	}
@@ -868,7 +867,6 @@ static const struct wled_config wled4_config_defaults = {
 	.cabc = false,
 	.external_pfet = false,
 	.auto_detection_enabled = false,
-	.enabled_strings = {0, 1, 2, 3},
 };
 
 static const u32 wled3_boost_i_limit_values[] = {
@@ -1167,18 +1165,11 @@ static int wled_configure(struct wled *wled, int version)
 	string_len = of_property_count_elems_of_size(dev->of_node,
 						     "qcom,enabled-strings",
 						     sizeof(u32));
-	if (string_len > 0) {
-		rc = of_property_read_u32_array(dev->of_node,
+	if (string_len > 0)
+		of_property_read_u32_array(dev->of_node,
 						"qcom,enabled-strings",
 						wled->cfg.enabled_strings,
-						string_len);
-
-		if (rc < 0) {
-			dev_err(dev, "Failed to read qcom,enabled-strings\n");
-			return rc;
-		}
-		cfg->num_strings = string_len;
-	}
+						sizeof(u32));
 
 	return 0;
 }
