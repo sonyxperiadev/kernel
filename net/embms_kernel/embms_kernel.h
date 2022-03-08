@@ -49,8 +49,6 @@ static dev_t device;
 /* The name of the device file*/
 #define EMBMS_DEVICE_NAME "embms_tm_device"
 
-extern int (*embms_tm_multicast_recv)(struct sk_buff *skb);
-
 /**
  * enum embms_action_type - Describes action to perform
  * @ADD_CLIENT_ENTRY: add client entry to TMGI
