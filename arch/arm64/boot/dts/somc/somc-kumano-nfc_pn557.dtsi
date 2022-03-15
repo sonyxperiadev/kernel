@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+&qupv3_se4_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	nfc@28 {
+		compatible = "nxp,pn553";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <47 0x1>;
+		nxp,irq_gpio = <&tlmm 47 0x00>;
+		nxp,dwld_en = <&tlmm 48 0x00>;
+		nxp,ven = <&tlmm 41 0x01>;
+		nxp,ese-pwr = <&tlmm 42 0x00>;
+	};
+};
+
+&soc {
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
+};

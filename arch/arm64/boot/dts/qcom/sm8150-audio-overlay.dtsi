@@ -315,7 +315,7 @@
 		reg = <0x0d>;
 
 		clock-names = "aqt_clk";
-		clocks = <&clock_audio_lnbb>;
+		clocks = <&clock_audio_lnbb 0>;
 
 		interrupt-controller;
 		#interrupt-cells = <1>;

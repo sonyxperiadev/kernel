@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-sm8150.h>
+#include <dt-bindings/clock/qcom,camcc-sm8150.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#include "../qcom/sm8150-mtp.dtsi"
+#include "../qcom/sm8150-mtp-audio-overlay.dtsi"
+#include "sm8150-kumano-bahamut_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications Inc., Bahamut(SM8150)";
+	compatible = "somc,bahamut-generic", "qcom,sm8150", "qcom,mtp";
+	qcom,board-id = <8 0>;
+};

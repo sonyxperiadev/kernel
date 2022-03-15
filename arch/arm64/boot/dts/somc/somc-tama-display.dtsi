@@ -92,7 +92,7 @@
 
 	touch-avdd-supply = <&pm8998_l28>;
 
-	qcom,dsi-panel = <&dsi_default_panel>;
+	qcom,dsi-default-panel = <&dsi_default_panel>;
 };
 
 &ext_5v_boost {

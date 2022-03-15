@@ -516,10 +516,12 @@ static ssize_t get_force_recal_count(struct device *dev,
 		return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", -ENODEV);
 	}
 
+#ifdef USE_POR_AFTER_I2C_RETRY
 	if (ts->reset_is_on_going) {
 		input_err(true, &ts->client->dev, "%s: Reset is ongoing!\n", __func__);
 		return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", -EBUSY);
 	}
+#endif
 
 	ret = ts->sec_ts_i2c_read(ts, SEC_TS_READ_FORCE_RECAL_COUNT, rbuf, 4);
 	if (ret < 0) {

@@ -7,6 +7,8 @@
 #include "msm-wsa881x.dtsi"
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
 
+/delete-node/ &pahu_codec;
+
 &snd_934x {
 	qcom,audio-routing =
 		"AIF4 VI", "MCLK",
@@ -56,8 +58,8 @@
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 
 	qcom,wsa-max-devs = <2>;
-	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
-			<&wsa881x_0213>, <&wsa881x_0214>;
+	qcom,wsa-devs = <&wsa881x_70211>, <&wsa881x_70212>,
+			<&wsa881x_70213>, <&wsa881x_70214>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 				  "SpkrLeft", "SpkrRight";
 };
@@ -101,6 +103,10 @@
 
 	qocm,wcd-dsp-glink {
 		compatible = "qcom,wcd-dsp-glink";
+		qcom,wdsp-channels = "g_glink_ctrl",
+				     "g_glink_persistent_data_nild",
+				     "g_glink_persistent_data_ild",
+				     "g_glink_audio_data";
 	};
 
 	qcom,wcd-dsp-mgr {
