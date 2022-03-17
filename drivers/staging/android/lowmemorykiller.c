@@ -509,7 +509,7 @@ static void lowmem_wakeup_kswapds(struct shrink_control *sc, int minfree)
 	}
 
 	lowmem_print(4, "lowmem_wakeup_kswapds order %d\n", order);
-	_wake_all_kswapds(order, zonelist, high_zoneidx,
+	_wake_all_kswapds(order, gfp_mask, zonelist, high_zoneidx,
 				preferred_zone);
 }
 #endif
