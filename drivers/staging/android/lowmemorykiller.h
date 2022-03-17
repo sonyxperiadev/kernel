@@ -17,6 +17,8 @@
 
 extern u32 lowmem_debug_level;
 
+extern void wake_oom_reaper(struct task_struct *tsk);
+
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
