@@ -63,7 +63,7 @@ ssize_t get_task_rss(struct task_struct *tsk)
 	unsigned long rss = 0;
 	struct mm_struct *mm;
 
-	mm = ACCESS_ONCE(tsk->mm);
+	mm = READ_ONCE(tsk->mm);
 	if (mm)
 		rss = get_mm_rss(mm) << PAGE_SHIFT;
 	if (rss < LMK_ZOMBIE_SIZE)
