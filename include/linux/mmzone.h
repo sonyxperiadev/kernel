@@ -778,6 +778,7 @@ static inline bool pgdat_is_empty(pg_data_t *pgdat)
 void build_all_zonelists(pg_data_t *pgdat);
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_CONSIDER_SWAP
 void _wake_all_kswapds(unsigned int order,
+			     gfp_t gfp_mask,
 			     struct zonelist *zonelist,
 			     enum zone_type high_zoneidx,
 			     struct zone *preferred_zone);

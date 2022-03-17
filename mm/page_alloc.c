@@ -4294,6 +4294,7 @@ static void wake_all_kswapds(unsigned int order, gfp_t gfp_mask,
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_CONSIDER_SWAP
 void _wake_all_kswapds(unsigned int order,
+			     gfp_t gfp_mask,
 			     struct zonelist *zonelist,
 			     enum zone_type high_zoneidx,
 			     struct zone *preferred_zone)
@@ -4303,7 +4304,7 @@ void _wake_all_kswapds(unsigned int order,
 
 	for_each_zone_zonelist_nodemask(zone, z, zonelist,
 						high_zoneidx, NULL)
-		wakeup_kswapd(zone, order, zone_idx(preferred_zone));
+		wakeup_kswapd(zone, gfp_mask, order, zone_idx(preferred_zone));
 }
 #endif
 
