@@ -63,7 +63,7 @@ ssize_t get_task_rss(struct task_struct *tsk)
 	unsigned long rss = 0;
 	struct mm_struct *mm;
 
-	mm = ACCESS_ONCE(tsk->mm);
+	mm = READ_ONCE(tsk->mm);
 	if (mm)
 		rss = get_mm_rss(mm) << PAGE_SHIFT;
 	if (rss < LMK_ZOMBIE_SIZE)
@@ -161,8 +161,7 @@ static void calc_params(struct calculated_params *cp, gfp_t mask)
 	int i;
 	int array_size;
 	long free_swap = get_nr_swap_pages();
-	long irp = global_node_page_state(NR_INDIRECTLY_RECLAIMABLE_BYTES)
-	  >> PAGE_SHIFT;
+	long irp = global_node_page_state(NR_KERNEL_MISC_RECLAIMABLE);
 	long usable_free_swap = 0;
 	long tot_usable = 0;
 	int start;
@@ -276,7 +275,7 @@ void print_obituary(struct task_struct *doomed,
 		     "   Slab UnReclaimable is %ldkB\n"
 		     "   Total Slab is %ldkB\n"
 		     "   GFP mask is 0x%x\n"
-		     "   Indirect Reclaimable is %zdkB\n"
+		     "   Kernel Memory Reclaimable is %zdkB\n"
 		     "   Free Swap %ldkB\n"
 		     "   queue len is %d of max %d reason:0x%x margin:%d\n",
 		     doomed->comm, doomed->pid,
@@ -302,8 +301,8 @@ void print_obituary(struct task_struct *doomed,
 		     global_node_page_state(NR_SLAB_UNRECLAIMABLE) *
 		     (long)(PAGE_SIZE / 1024),
 		     gfp_mask,
-		     global_node_page_state(NR_INDIRECTLY_RECLAIMABLE_BYTES)
-		     / 1024,
+		     global_node_page_state(NR_KERNEL_MISC_RECLAIMABLE) *
+		     (long)(PAGE_SIZE / 1024),
 		     get_nr_swap_pages() * (long)(PAGE_SIZE / 1024),
 		     death_pending_len,
 		     cp->dynamic_max_queue_len,
