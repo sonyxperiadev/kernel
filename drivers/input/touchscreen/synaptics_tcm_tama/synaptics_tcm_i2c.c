@@ -65,6 +65,10 @@ static struct syna_tcm_hw_interface hw_if;
 
 static struct platform_device *syna_tcm_i2c_device;
 
+#ifdef CONFIG_DRM_PANEL
+struct drm_panel *syna_tcm_active_panel;
+#endif
+
 #ifdef CONFIG_OF
 static int parse_dt(struct device *dev, struct syna_tcm_board_data *bdata)
 {
@@ -430,10 +434,44 @@ exit:
 	return retval;
 }
 
+#ifdef CONFIG_DRM_PANEL
+static int syna_tcm_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		return -EINVAL;
+	
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (!IS_ERR(panel)) {
+			syna_tcm_active_panel = panel;
+			return 0;
+		}
+	}
+
+	return -ENODEV;
+}
+#endif
+
 static int syna_tcm_i2c_probe(struct i2c_client *i2c,
 		const struct i2c_device_id *dev_id)
 {
 	int retval;
+
+#ifdef CONFIG_DRM_PANEL
+	retval = syna_tcm_get_active_panel(i2c->dev.of_node);
+	if (retval < 0) {
+		LOGE(&i2c->dev,
+				"%s: Active panel not found, aborting probe\n");
+		return -ENODEV;
+	}
+#endif
 
 	syna_tcm_i2c_device = platform_device_alloc(PLATFORM_DRIVER_NAME, 0);
 	if (!syna_tcm_i2c_device) {

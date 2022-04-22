@@ -47,7 +47,7 @@
 #include <linux/notifier.h>
 #endif
 #ifdef CONFIG_DRM_PANEL
-#include <linux/drm_notify.h>
+#include <drm/drm_panel.h>
 #endif
 #include <uapi/linux/sched/types.h>
 
@@ -523,6 +523,10 @@ int syna_tcm_bus_init(void);
 void syna_tcm_bus_exit(void);
 
 int syna_tcm_add_module(struct syna_tcm_module_cb *mod_cb, bool insert);
+
+#ifdef CONFIG_DRM_PANEL
+extern struct drm_panel *syna_tcm_active_panel;
+#endif
 
 static inline int syna_tcm_rmi_read(struct syna_tcm_hcd *tcm_hcd,
 		unsigned short addr, unsigned char *data, unsigned int length)

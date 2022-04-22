@@ -3340,28 +3340,25 @@ exit:
 static int syna_tcm_fb_notifier_cb(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
-	int retval;
+	int retval = 0;
 	int *transition;
 	struct fb_event *evdata = data;
 	struct syna_tcm_hcd *tcm_hcd =
 			container_of(nb, struct syna_tcm_hcd, fb_notifier);
 
-	retval = 0;
+	if (!evdata || !evdata->data || !tcm_hcd)
+		return 0;
 
-	if (evdata && evdata->data && tcm_hcd) {
-		if (action == FB_EARLY_EVENT_BLANK) {
-			transition = evdata->data;
-			if (*transition == FB_BLANK_POWERDOWN) {
-				retval = syna_tcm_suspend(&tcm_hcd->pdev->dev);
-				tcm_hcd->fb_ready = 0;
-			}
-		} else if (action == FB_EVENT_BLANK) {
-			transition = evdata->data;
-			if (*transition == FB_BLANK_UNBLANK) {
-				retval = syna_tcm_resume(&tcm_hcd->pdev->dev);
-				tcm_hcd->fb_ready++;
-			}
-		}
+	transition = (int *)evdata->data;
+
+	if (action == FB_EARLY_EVENT_BLANK &&
+			*transition == FB_BLANK_POWERDOWN) {
+		retval = syna_tcm_suspend(&tcm_hcd->pdev->dev);
+		tcm_hcd->fb_ready = 0;
+	} else if (action == FB_EVENT_BLANK &&
+			*transition == FB_BLANK_UNBLANK) {
+		retval = syna_tcm_resume(&tcm_hcd->pdev->dev);
+		tcm_hcd->fb_ready++;
 	}
 
 	return 0;
@@ -3371,27 +3368,23 @@ static int syna_tcm_fb_notifier_cb(struct notifier_block *nb,
 static int syna_tcm_drm_notifier_cb(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
-	int retval;
-	int *transition;
-	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
+	int retval = 0;
+	int transition;
+	struct drm_panel_notifier *evdata = data;
 	struct syna_tcm_hcd *tcm_hcd =
 			container_of(nb, struct syna_tcm_hcd, drm_notifier);
 
-	retval = 0;
+	if (!evdata)
+		return 0;
 
-	if (evdata && evdata->data && tcm_hcd) {
-		if (action == DRM_EXT_EVENT_BEFORE_BLANK) {
-			transition = evdata->data;
-			if (*transition == DRM_BLANK_POWERDOWN) {
-				retval = syna_tcm_suspend(&tcm_hcd->pdev->dev);
-			}
-		}
-		else if (action == DRM_EXT_EVENT_AFTER_BLANK) {
-			transition = evdata->data;
-			if (*transition == DRM_BLANK_UNBLANK) {
-				retval = syna_tcm_resume(&tcm_hcd->pdev->dev);
-			}
-		}
+	transition = *(int *)evdata->data;
+
+	if (action == DRM_PANEL_EARLY_EVENT_BLANK &&
+			transition == DRM_PANEL_BLANK_POWERDOWN) {
+		retval = syna_tcm_suspend(&tcm_hcd->pdev->dev);
+	} else if (action == DRM_PANEL_EVENT_BLANK &&
+			transition == DRM_PANEL_BLANK_UNBLANK) {
+		retval = syna_tcm_resume(&tcm_hcd->pdev->dev);
 	}
 
 	return 0;
@@ -3587,11 +3580,14 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	}
 #endif
 #ifdef CONFIG_DRM_PANEL
-	tcm_hcd->drm_notifier.notifier_call = syna_tcm_drm_notifier_cb;
-	retval = drm_register_client(&tcm_hcd->drm_notifier);
-	if (retval < 0) {
-		LOGE(tcm_hcd->pdev->dev.parent,
-				"Failed to register DRM notifier client\n");
+	if (syna_tcm_active_panel) {
+		tcm_hcd->drm_notifier.notifier_call = syna_tcm_drm_notifier_cb;
+		retval = drm_panel_notifier_register(syna_tcm_active_panel,
+				&tcm_hcd->drm_notifier);
+		if (retval < 0) {
+			LOGE(tcm_hcd->pdev->dev.parent,
+					"Failed to register DRM notifier client\n");
+		}
 	}
 #endif
 
@@ -3725,7 +3721,9 @@ err_create_run_kthread:
 	fb_unregister_client(&tcm_hcd->fb_notifier);
 #endif
 #ifdef CONFIG_DRM_PANEL
-	drm_unregister_client(&tcm_hcd->drm_notifier);
+	if (syna_tcm_active_panel)
+		drm_panel_notifier_unregister(syna_tcm_active_panel,
+				&tcm_hcd->drm_notifier);
 #endif
 
 err_sysfs_create_dynamic_config_file:
@@ -3833,7 +3831,9 @@ static int syna_tcm_remove(struct platform_device *pdev)
 	fb_unregister_client(&tcm_hcd->fb_notifier);
 #endif
 #ifdef CONFIG_DRM_PANEL
-	drm_unregister_client(&tcm_hcd->drm_notifier);
+	if (syna_tcm_active_panel)
+		drm_panel_notifier_unregister(syna_tcm_active_panel,
+			&tcm_hcd->drm_notifier);
 #endif
 
 	for (idx = 0; idx < ARRAY_SIZE(dynamic_config_attrs); idx++) {
