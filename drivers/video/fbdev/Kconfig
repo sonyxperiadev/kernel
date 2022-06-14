@@ -647,6 +647,12 @@ config FB_EFI
 	  your platform is EFI 1.10 or UEFI 2.0, select Y to add support for
 	  using the EFI framebuffer as your console.
 
+config FB_EARLY
+	bool "Framebuffer earlycon"
+	depends on SERIAL_EARLYCON
+	select FONT_SUPPORT
+	select ARCH_USE_MEMREMAP_PROT
+
 config FB_N411
 	tristate "N411 Apollo/Hecuba devkit support"
 	depends on FB && X86 && MMU
