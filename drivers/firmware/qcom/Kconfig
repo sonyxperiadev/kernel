@@ -6,3 +6,13 @@ config QTI_TZ_LOG
           This option enables a driver with a debugfs interface for messages
           produced by the Secure code (Trust zone). These messages provide
           diagnostic information about TZ operation.
+
+config TZ_LAST_LOGS
+        bool "Format and export tz logs for system"
+        depends on DEBUG_FS && QTI_TZ_LOG
+        default y
+        help
+          When a fatal error is encountered on system, system reboots and
+          saves the logs in to last logs memory. From last_logs area
+          TZ related logs are read in this driver.
+          These logs are formatted and exported via debugfs.
