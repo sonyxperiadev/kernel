@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
@@ -20,7 +25,7 @@
 #define MSG_OWNER_USBC_PAN	32780
 #define MSG_TYPE_REQ_RESP	1
 
-#define NOTIFY_PAYLOAD_SIZE	16
+#define NOTIFY_PAYLOAD_SIZE	20
 #define USBC_WRITE_BUFFER_SIZE	8
 
 #define USBC_CMD_WRITE_REQ	0x15
