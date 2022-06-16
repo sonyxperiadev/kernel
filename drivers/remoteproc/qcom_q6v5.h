@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #ifndef __QCOM_Q6V5_H__
 #define __QCOM_Q6V5_H__
@@ -9,6 +14,8 @@
 struct rproc;
 struct qcom_smem_state;
 struct qcom_sysmon;
+
+#define SUBSYS_CRASH_REASON_LEN 512
 
 struct qcom_q6v5 {
 	struct device *dev;
@@ -33,6 +40,8 @@ struct qcom_q6v5 {
 	struct completion stop_done;
 
 	int crash_reason;
+	char crash_reason_buf[SUBSYS_CRASH_REASON_LEN];
+	int data_ready;
 
 	bool running;
 
