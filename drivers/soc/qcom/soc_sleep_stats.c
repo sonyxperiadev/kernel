@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2022 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
@@ -48,8 +53,28 @@ struct subsystem_data {
 	const char *name;
 	u32 smem_item;
 	u32 pid;
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+	struct kobj_attribute ka;
+#endif
 };
 
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+static struct kobject *soc_sleep_stats_kobj;
+static ssize_t sysfs_ddr_stats_show(struct kobject *kobj, struct kobj_attribute *ka, char *buf);
+static struct kobj_attribute ddr_stats_ka = __ATTR(ddr_stats, 0444, sysfs_ddr_stats_show, NULL);
+static struct subsystem_data subsystems[] = {
+	{ "modem", 605, 1, __ATTR_NULL },
+	{ "wpss", 605, 13, __ATTR_NULL },
+	{ "adsp", 606, 2, __ATTR_NULL },
+	{ "adsp_island", 613, 2, __ATTR_NULL },
+	{ "cdsp", 607, 5, __ATTR_NULL },
+	{ "slpi", 608, 3, __ATTR_NULL },
+	{ "slpi_island", 613, 3, __ATTR_NULL },
+	{ "gpu", 609, 0, __ATTR_NULL },
+	{ "display", 610, 0, __ATTR_NULL },
+	{ "apss", 631, QCOM_SMEM_HOST_ANY, __ATTR_NULL },
+};
+#else // CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
 static struct subsystem_data subsystems[] = {
 	{ "modem", 605, 1 },
 	{ "wpss", 605, 13 },
@@ -62,6 +87,7 @@ static struct subsystem_data subsystems[] = {
 	{ "display", 610, 0 },
 	{ "apss", 631, QCOM_SMEM_HOST_ANY },
 };
+#endif // CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
 #endif
 
 struct stats_config {
@@ -79,6 +105,9 @@ struct stats_entry {
 
 struct stats_prv_data {
 	const struct stats_config *config;
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+	struct kobj_attribute ka;
+#endif
 	void __iomem *reg;
 };
 
@@ -168,6 +197,202 @@ static int soc_sleep_stats_show(struct seq_file *s, void *d)
 }
 
 DEFINE_SHOW_ATTRIBUTE(soc_sleep_stats);
+
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+static ssize_t sysfs_print_sleep_stats(char *buf, struct sleep_stats *stat)
+{
+	u64 accumulated = stat->accumulated;
+	/*
+	 * If a subsystem is in sleep when reading the sleep stats adjust
+	 * the accumulated sleep duration to show actual sleep time.
+	 */
+	if (stat->last_entered_at > stat->last_exited_at)
+		accumulated += arch_timer_read_counter()
+			       - stat->last_entered_at;
+
+	return scnprintf(buf, PAGE_SIZE,
+		"Count = %u\n"
+		"Last Entered At = %llu\n"
+		"Last Exited At = %llu\n"
+		"Accumulated Duration = %llu\n",
+		stat->count, stat->last_entered_at, stat->last_exited_at, accumulated);
+}
+
+static ssize_t sysfs_subsystem_sleep_stats_show(struct kobject *kobj, struct kobj_attribute *ka, char *buf)
+{
+	struct subsystem_data *subsystem = container_of(ka, struct subsystem_data, ka);
+	struct sleep_stats *stat;
+
+	stat = qcom_smem_get(subsystem->pid, subsystem->smem_item, NULL);
+	if (IS_ERR(stat))
+		return PTR_ERR(stat);
+
+	return sysfs_print_sleep_stats(buf, stat);
+}
+
+static ssize_t sysfs_soc_sleep_stats_show(struct kobject *kobj, struct kobj_attribute *ka, char *buf)
+{
+	struct stats_prv_data *prv_data = container_of(ka, struct stats_prv_data, ka);
+	void __iomem *reg = prv_data->reg;
+	struct sleep_stats stat;
+	ssize_t length;
+
+	stat.count = readl_relaxed(reg + COUNT_ADDR);
+	stat.last_entered_at = readq(reg + LAST_ENTERED_AT_ADDR);
+	stat.last_exited_at = readq(reg + LAST_EXITED_AT_ADDR);
+	stat.accumulated = readq(reg + ACCUMULATED_ADDR);
+
+	length = sysfs_print_sleep_stats(buf, &stat);
+
+	if (prv_data->config->appended_stats_avail) {
+		struct appended_stats app_stat;
+
+		app_stat.client_votes = readl_relaxed(reg + CLIENT_VOTES_ADDR);
+		length += scnprintf(buf+length, PAGE_SIZE - length,
+			"Client_votes = %#x\n",
+			app_stat.client_votes);
+	}
+
+	return length;
+}
+
+static ssize_t sysfs_print_ddr_stats(char *buf, int *count,
+			     struct stats_entry *data, u64 accumulated_duration)
+{
+	u32 cp_idx = 0;
+	u32 name, duration = 0;
+	ssize_t length = 0;
+
+	if (accumulated_duration)
+		duration = (data->duration * 100) / accumulated_duration;
+
+	name = (data->name >> 8) & 0xFF;
+	if (name == 0x0) {
+		name = (data->name) & 0xFF;
+		*count = *count + 1;
+		length = scnprintf(buf, PAGE_SIZE,
+		"LPM %d:\tName:0x%x\tcount:%u\tDuration (ticks):%ld (~%d%%)\n",
+			*count, name, data->count, data->duration, duration);
+	} else if (name == 0x1) {
+		cp_idx = data->name & 0x1F;
+		name = data->name >> 16;
+
+		if (!name || !data->count)
+			return 0;
+
+		length = scnprintf(buf, PAGE_SIZE,
+		"Freq %dMhz:\tCP IDX:%u\tDuration (ticks):%ld (~%d%%)\n",
+			name, cp_idx, data->duration, duration);
+	}
+	return length;
+}
+
+static void ddr_stats_fill_data(void __iomem *reg, u32 entry_count,
+					struct stats_entry *data, u64 *accumulated_duration);
+
+static bool ddr_stats_is_freq_overtime(struct stats_entry *data);
+
+static ssize_t sysfs_ddr_stats_show(struct kobject *kobj, struct kobj_attribute *ka, char *buf)
+{
+	struct stats_entry data[DDR_STATS_MAX_NUM_MODES];
+	void __iomem *reg = ddr_gdata->ddr_reg;
+	u32 entry_count;
+	u64 accumulated_duration = 0;
+	int i, lpm_count = 0;
+	ssize_t len = 0;
+	ssize_t sum_len = 0;
+
+	entry_count = readl_relaxed(reg + DDR_STATS_NUM_MODES_ADDR);
+	if (entry_count > DDR_STATS_MAX_NUM_MODES) {
+		pr_err("Invalid entry count\n");
+		return 0;
+	}
+
+	reg += DDR_STATS_NUM_MODES_ADDR + 0x4;
+	ddr_stats_fill_data(reg, DDR_STATS_NUM_MODES_ADDR, data, &accumulated_duration);
+	for (i = 0; i < DDR_STATS_NUM_MODES_ADDR; i++) {
+		len = sysfs_print_ddr_stats(buf, &lpm_count, &data[i], accumulated_duration);
+		buf += len;
+		sum_len += len;
+	}
+	accumulated_duration = 0;
+	reg += sizeof(struct stats_entry) * 0x4;
+	for (i = DDR_STATS_NUM_MODES_ADDR; i < entry_count; i++) {
+		data[i].count = readl_relaxed(reg + DDR_STATS_COUNT_ADDR);
+		if (ddr_stats_is_freq_overtime(&data[i])) {
+			len = scnprintf(buf, PAGE_SIZE, "ddr_stats: Freq update failed.\n");
+			buf += len;
+			sum_len += len;
+			return sum_len;
+		}
+		data[i].name = readl_relaxed(reg + DDR_STATS_NAME_ADDR);
+		data[i].duration = readq_relaxed(reg + DDR_STATS_DURATION_ADDR);
+		accumulated_duration += data[i].duration;
+		reg += sizeof(struct stats_entry);
+	}
+
+	for (i = DDR_STATS_NUM_MODES_ADDR; i < entry_count; i++) {
+		len = sysfs_print_ddr_stats(buf, &lpm_count, &data[i], accumulated_duration);
+		buf += len;
+		sum_len += len;
+	}
+	return sum_len;
+}
+
+static int create_sysfs_entries(void __iomem *reg,
+					     void __iomem *ddr_reg,
+					     struct stats_prv_data *prv_data,
+					     struct device_node *node)
+{
+	char stat_type[sizeof(u32) + 1] = {0};
+	u32 type, key;
+	int i, j, n_subsystems;
+	const char *name;
+	int ret = -ENOMEM;
+
+        soc_sleep_stats_kobj = kobject_create_and_add("qcom_sleep_stats", kernel_kobj);
+
+	for (i = 0; i < prv_data[0].config->num_records; i++) {
+		type = readl_relaxed(prv_data[i].reg);
+		memcpy(stat_type, &type, sizeof(u32));
+		strim(stat_type);
+
+		prv_data[i].ka.attr.name = stat_type;
+		prv_data[i].ka.attr.mode = 0444;
+		prv_data[i].ka.show = sysfs_soc_sleep_stats_show;
+		ret = sysfs_create_file(soc_sleep_stats_kobj, &prv_data[i].ka.attr);
+	}
+
+	n_subsystems = of_property_count_strings(node, "ss-name");
+	if (n_subsystems < 0)
+		goto exit;
+
+	for (i = 0; i < n_subsystems; i++) {
+		of_property_read_string_index(node, "ss-name", i, &name);
+
+		for (j = 0; j < ARRAY_SIZE(subsystems); j++) {
+			if (!strcmp(subsystems[j].name, name)) {
+				subsystems[j].ka.attr.name = subsystems[j].name;
+				subsystems[j].ka.attr.mode = 0444;
+				subsystems[j].ka.show = sysfs_subsystem_sleep_stats_show;
+				ret = sysfs_create_file(soc_sleep_stats_kobj, &subsystems[j].ka.attr);
+				break;
+			}
+		}
+	}
+
+	if (!ddr_reg)
+		goto exit;
+
+	key = readl_relaxed(ddr_reg + DDR_STATS_MAGIC_KEY_ADDR);
+	if (key == DDR_STATS_MAGIC_KEY) {
+		ret = sysfs_create_file(soc_sleep_stats_kobj, &ddr_stats_ka.attr);
+	}
+
+exit:
+	return ret;
+}
+#endif // CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
 
 static void  print_ddr_stats(struct seq_file *s, int *count,
 			     struct stats_entry *data, u64 accumulated_duration)
@@ -573,6 +798,11 @@ skip_ddr_stats:
 	platform_set_drvdata(pdev, root);
 #endif
 
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+	create_sysfs_entries(reg_base, ddr_gdata->ddr_reg,  prv_data,
+                                      pdev->dev.of_node);
+#endif
+
 	return 0;
 }
 
@@ -581,6 +811,9 @@ static int soc_sleep_stats_remove(struct platform_device *pdev)
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 	struct dentry *root = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_QCOM_SOC_SLEEP_STATS_ON_SYSFS
+        kobject_put(soc_sleep_stats_kobj);
+#endif
 	debugfs_remove_recursive(root);
 #endif
 

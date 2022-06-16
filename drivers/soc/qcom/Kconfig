@@ -544,6 +544,13 @@ config QCOM_SOC_SLEEP_STATS
 	  various SoC level low power modes statistics and export to debugfs
 	  interface.
 
+config QCOM_SOC_SLEEP_STATS_ON_SYSFS
+	bool "Enable SoC sleep stats I/F on SYSFS"
+	depends on QCOM_SOC_SLEEP_STATS && QCOM_SMEM
+	help
+	  Duplicate stats I/F virtual files to /sys/qcom_sleep_stats/
+          derived from /sys/kernel/debug/qcom_sleep_stats/ .
+
 config QCOM_ADSP_SLEEPMON
 	tristate "ADSP sleep monitor"
 	depends on QCOM_SMEM
