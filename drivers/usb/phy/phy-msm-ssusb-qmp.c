@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2019 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
@@ -73,6 +78,58 @@ enum core_ldo_levels {
 #define DP_MODE			BIT(1) /* enables DP mode */
 #define USB3_DP_COMBO_MODE	(USB3_MODE | DP_MODE) /*enables combo mode */
 
+#define USB3_DP_QSERDES_TXA_TX_DRV_LVL		(0x1214)
+#define USB3_DP_QSERDES_TXB_TX_DRV_LVL		(0x1614)
+#define USB3_DP_QSERDES_TXA_PRE_EMPH		(0x1308)
+#define USB3_DP_QSERDES_TXB_PRE_EMPH		(0x1708)
+#define USB3_DP_QSERDES_TXA_TX_EMP_POST1_LVL	(0x120C)
+#define USB3_DP_QSERDES_TXB_TX_EMP_POST1_LVL	(0x160C)
+#define USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL2	(0x14EC)
+#define USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL3	(0x14F0)
+#define USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4	(0x14F4)
+#define USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL2	(0x18EC)
+#define USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL3	(0x18F0)
+#define USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4	(0x18F4)
+#define USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4		(0x1594)
+#define USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4		(0x1994)
+
+unsigned int ssphy_txa_tx_drv_lvl;
+unsigned int ssphy_txb_tx_drv_lvl;
+unsigned int ssphy_txa_pre_emph;
+unsigned int ssphy_txb_pre_emph;
+unsigned int ssphy_txa_tx_emp_post1_lvl;
+unsigned int ssphy_txb_tx_emp_post1_lvl;
+unsigned int ssphy_rxa_equ_tuning_enable;
+unsigned int ssphy_rxb_equ_tuning_enable;
+unsigned int ssphy_rxa_equ_tuning_parameter;
+unsigned int ssphy_rxb_equ_tuning_parameter;
+unsigned int ssphy_rxa_rx_mode_01_high4;
+unsigned int ssphy_rxb_rx_mode_01_high4;
+module_param(ssphy_txa_tx_drv_lvl, uint, 0644);
+module_param(ssphy_txb_tx_drv_lvl, uint, 0644);
+module_param(ssphy_txa_pre_emph, uint, 0644);
+module_param(ssphy_txb_pre_emph, uint, 0644);
+module_param(ssphy_txa_tx_emp_post1_lvl, uint, 0644);
+module_param(ssphy_txb_tx_emp_post1_lvl, uint, 0644);
+module_param(ssphy_rxa_equ_tuning_enable, uint, 0644);
+module_param(ssphy_rxb_equ_tuning_enable, uint, 0644);
+module_param(ssphy_rxa_equ_tuning_parameter, uint, 0644);
+module_param(ssphy_rxb_equ_tuning_parameter, uint, 0644);
+module_param(ssphy_rxa_rx_mode_01_high4, uint, 0644);
+module_param(ssphy_rxb_rx_mode_01_high4, uint, 0644);
+MODULE_PARM_DESC(ssphy_txa_tx_drv_lvl, "USB3_DP_QSERDES_TXA_TX_DRV_LVL");
+MODULE_PARM_DESC(ssphy_txb_tx_drv_lvl, "USB3_DP_QSERDES_TXB_TX_DRV_LVL");
+MODULE_PARM_DESC(ssphy_txa_pre_emph, "USB3_DP_QSERDES_TXA_PRE_EMPH");
+MODULE_PARM_DESC(ssphy_txb_pre_emph, "USB3_DP_QSERDES_TXB_PRE_EMPH");
+MODULE_PARM_DESC(ssphy_txa_tx_emp_post1_lvl, "USB3_DP_QSERDES_TXA_TX_EMP_POST1_LVL");
+MODULE_PARM_DESC(ssphy_txb_tx_emp_post1_lvl, "USB3_DP_QSERDES_TXB_TX_EMP_POST1_LVL");
+MODULE_PARM_DESC(ssphy_rxa_equ_tuning_enable, "RXA_RX EQUALIZATION TUNING ENABLE");
+MODULE_PARM_DESC(ssphy_rxb_equ_tuning_enable, "RXB_RX EQUALIZATION TUNING ENABLE");
+MODULE_PARM_DESC(ssphy_rxa_equ_tuning_parameter, "USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4");
+MODULE_PARM_DESC(ssphy_rxb_equ_tuning_parameter, "USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4");
+MODULE_PARM_DESC(ssphy_rxa_rx_mode_01_high4, "USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4");
+MODULE_PARM_DESC(ssphy_rxb_rx_mode_01_high4, "USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4");
+
 enum qmp_phy_rev_reg {
 	USB3_PHY_PCS_STATUS,
 	USB3_PHY_AUTONOMOUS_MODE_CTRL,
@@ -140,6 +197,8 @@ struct msm_ssphy_qmp {
 	u32			*qmp_phy_init_seq;
 	int			init_seq_len;
 	enum qmp_phy_type	phy_type;
+	bool			rxa_equ_tuning_manual;
+	bool			rxb_equ_tuning_manual;
 };
 
 static const struct of_device_id msm_usb_id_table[] = {
@@ -466,6 +525,176 @@ static void usb_qmp_powerup_phy(struct msm_ssphy_qmp *phy)
 	mb();
 }
 
+static void msm_ssphy_dynamically_change(struct usb_phy *uphy)
+{
+	struct msm_ssphy_qmp *phy = container_of(uphy, struct msm_ssphy_qmp,
+					phy);
+	const u8 maskcntrl2 = (0x70);	/* Adapter Control Mask bit[6:4] */
+	const u8 maskcntrl3 = (0x07);	/* Adapter Control Mask bit[2:0] */
+	const u8 maskcntrl4 = (0x60);	/* Adapter Control Mask bit[6:5] */
+	const u8 maskequ2 = (0x0F);	/* Equ2 Mask bit[3:0] */
+	const u8 cntrl2 = (0x50);	/* Adapter Control bit[6:4] as 0b101 */
+	const u8 cntrl3 = (0x04);	/* Adapter Control bit[2:0] as 0b100 */
+	const u8 cntrl4 = (0x60);	/* Adapter Control bit[6:5] as 0b11 */
+	const u8 maskrxmodeh4 = (0x0f);	/* Mask for rx mode high4[7:4] */
+	u8 val, equparm;
+
+	if (ssphy_txa_tx_drv_lvl)
+		writel_relaxed(ssphy_txa_tx_drv_lvl,
+			phy->base + USB3_DP_QSERDES_TXA_TX_DRV_LVL);
+
+	if (ssphy_txb_tx_drv_lvl)
+		writel_relaxed(ssphy_txb_tx_drv_lvl,
+			phy->base + USB3_DP_QSERDES_TXB_TX_DRV_LVL);
+
+	if (ssphy_txa_pre_emph)
+		writel_relaxed(ssphy_txa_pre_emph,
+			phy->base + USB3_DP_QSERDES_TXA_PRE_EMPH);
+
+	if (ssphy_txb_pre_emph)
+		writel_relaxed(ssphy_txb_pre_emph,
+			phy->base + USB3_DP_QSERDES_TXB_PRE_EMPH);
+
+	if (ssphy_txa_tx_emp_post1_lvl)
+		writel_relaxed(ssphy_txa_tx_emp_post1_lvl,
+			phy->base + USB3_DP_QSERDES_TXA_TX_EMP_POST1_LVL);
+
+	if (ssphy_txb_tx_emp_post1_lvl)
+		writel_relaxed(ssphy_txb_tx_emp_post1_lvl,
+			phy->base + USB3_DP_QSERDES_TXB_TX_EMP_POST1_LVL);
+
+	if (ssphy_rxa_rx_mode_01_high4) {
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4);
+		val = (val & ~maskrxmodeh4) |
+				(ssphy_rxa_rx_mode_01_high4 & maskrxmodeh4);
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4);
+	}
+
+	if (ssphy_rxb_rx_mode_01_high4) {
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4);
+		val = (val & ~maskrxmodeh4) |
+				(ssphy_rxb_rx_mode_01_high4 & maskrxmodeh4);
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4);
+	}
+
+	/* for dynamically or manual change rxa equ tuning */
+	if (phy->rxa_equ_tuning_manual || ssphy_rxa_equ_tuning_enable) {
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL2);
+		val = (val & ~maskcntrl2) | cntrl2;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL2);
+
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL3);
+		val = (val & ~maskcntrl3) | cntrl3;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL3);
+
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4);
+		if (ssphy_rxa_equ_tuning_enable)
+			equparm = ssphy_rxa_equ_tuning_parameter;
+		else
+			equparm = val;
+
+		val = (val & ~maskcntrl4) | cntrl4;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4);
+
+		val = (val & ~maskequ2) | (equparm & maskequ2);
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4);
+	}
+
+	/* for dynamically or manual change rxb equ tuning */
+	if (phy->rxb_equ_tuning_manual || ssphy_rxb_equ_tuning_enable) {
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL2);
+		val = (val & ~maskcntrl2) | cntrl2;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL2);
+
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL3);
+		val = (val & ~maskcntrl3) | cntrl3;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL3);
+
+		val = readl_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4);
+		if (ssphy_rxb_equ_tuning_enable)
+			equparm = ssphy_rxb_equ_tuning_parameter;
+		else
+			equparm = val;
+
+		val = (val & ~maskcntrl4) | cntrl4;
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4);
+
+		val = (val & ~maskequ2) | (equparm & maskequ2);
+		writel_relaxed(val,
+			phy->base + USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4);
+	}
+}
+
+static void msm_ssphy_param_output(struct usb_phy *uphy)
+{
+	struct msm_ssphy_qmp *phy = container_of(uphy, struct msm_ssphy_qmp,
+					phy);
+
+	/* USB3_TXA */
+	dev_dbg(uphy->dev, "USB3:TXA_TX_DRV_LVL      :0x%02x\n",
+		readb_relaxed(phy->base + USB3_DP_QSERDES_TXA_TX_DRV_LVL));
+	dev_dbg(uphy->dev, "USB3:TXA_PRE_EMPH        :0x%02x\n",
+		readb_relaxed(phy->base + USB3_DP_QSERDES_TXA_PRE_EMPH));
+	dev_dbg(uphy->dev, "USB3:TXA_TX_EMP_POST1_LVL:0x%02x\n",
+		readb_relaxed(phy->base +
+					USB3_DP_QSERDES_TXA_TX_EMP_POST1_LVL));
+	dev_dbg(uphy->dev, "USB3:RXA_RX_EQU_ADAPTOR_CNTRL2:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL2));
+	dev_dbg(uphy->dev, "USB3:RXA_RX_EQU_ADAPTOR_CNTRL3:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL3));
+	dev_dbg(uphy->dev, "USB3:RXA_RX_EQU_ADAPTOR_CNTRL4:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXA_RX_EQU_ADAPTOR_CNTRL4));
+
+	/* USB3_TXB */
+	dev_dbg(uphy->dev, "USB3:TXB_TX_DRV_LVL      :0x%02x\n",
+		readb_relaxed(phy->base + USB3_DP_QSERDES_TXB_TX_DRV_LVL));
+	dev_dbg(uphy->dev, "USB3:TXB_PRE_EMPH        :0x%02x\n",
+		readb_relaxed(phy->base + USB3_DP_QSERDES_TXB_PRE_EMPH));
+	dev_dbg(uphy->dev, "USB3:TXB_TX_EMP_POST1_LVL:0x%02x\n",
+		readb_relaxed(phy->base +
+					USB3_DP_QSERDES_TXB_TX_EMP_POST1_LVL));
+	dev_dbg(uphy->dev, "USB3:RXB_RX_EQU_ADAPTOR_CNTRL2:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL2));
+	dev_dbg(uphy->dev, "USB3:RXB_RX_EQU_ADAPTOR_CNTRL3:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL3));
+	dev_dbg(uphy->dev, "USB3:RXB_RX_EQU_ADAPTOR_CNTRL4:0x%02x\n",
+		readb_relaxed(phy->base +
+				USB3_DP_QSERDES_RXB_RX_EQU_ADAPTOR_CNTRL4));
+
+	/* USB3_RXA */
+	dev_dbg(uphy->dev, "USB3:RXA_RX_MODE_01_HIGH4     :0x%02x\n",
+		readb_relaxed(phy->base
+				+ USB3_DP_QSERDES_RXA_RX_MODE_01_HIGH4));
+
+	/* USB3_RXB */
+	dev_dbg(uphy->dev, "USB3:RXB_RX_MODE_01_HIGH4     :0x%02x\n",
+		readb_relaxed(phy->base
+				+ USB3_DP_QSERDES_RXB_RX_MODE_01_HIGH4));
+
+}
+
 /* SSPHY Initialization */
 static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 {
@@ -511,6 +740,11 @@ static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 		dev_err(uphy->dev, "Failed the main PHY configuration\n");
 		goto fail;
 	}
+
+	/* user dynamically change for debug */
+	msm_ssphy_dynamically_change(uphy);
+
+	msm_ssphy_param_output(uphy);
 
 	/* perform software reset of PCS/Serdes */
 	writel_relaxed(0x00, phy->base + phy->phy_reg[USB3_PHY_SW_RESET]);
@@ -1091,6 +1325,11 @@ static int msm_ssphy_qmp_probe(struct platform_device *pdev)
 		ret = PTR_ERR(phy->core_ldo);
 		goto err;
 	}
+
+	phy->rxa_equ_tuning_manual = of_property_read_bool(dev->of_node,
+						"rxa-equ-tuning-manual");
+	phy->rxb_equ_tuning_manual = of_property_read_bool(dev->of_node,
+						"rxb-equ-tuning-manual");
 
 	platform_set_drvdata(pdev, phy);
 
