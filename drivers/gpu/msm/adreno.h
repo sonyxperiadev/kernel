@@ -26,6 +26,8 @@
 #define SET_PSEUDO_NON_PRIV_SAVE_ADDR 3
 /* Used to inform CP where to save preemption counter data at the time of switch out */
 #define SET_PSEUDO_COUNTER 4
+/* Index to preemption scratch buffer to store KMD postamble */
+#define KMD_POSTAMBLE_IDX 100
 
 /* ADRENO_DEVICE - Given a kgsl_device return the adreno device struct */
 #define ADRENO_DEVICE(device) \
@@ -222,6 +224,9 @@ struct adreno_gpudev;
 /* Time to allow preemption to complete (in ms) */
 #define ADRENO_PREEMPT_TIMEOUT 10000
 
+#define PREEMPT_SCRATCH_ADDR(dev, id) \
+	((dev)->preempt.scratch->gpuaddr + (id * sizeof(u64)))
+
 /**
  * enum adreno_preempt_states
  * ADRENO_PREEMPT_NONE: No preemption is scheduled
@@ -271,6 +276,7 @@ struct adreno_protected_regs {
  * skipsaverestore: To skip saverestore during L1 preemption (for 6XX)
  * usesgmem: enable GMEM save/restore across preemption (for 6XX)
  * count: Track the number of preemptions triggered
+ * @postamble_len: Number of dwords in KMD postamble pm4 packet
  */
 struct adreno_preemption {
 	atomic_t state;
@@ -281,6 +287,7 @@ struct adreno_preemption {
 	bool skipsaverestore;
 	bool usesgmem;
 	unsigned int count;
+	u32 postamble_len;
 };
 
 struct adreno_busy_data {
@@ -622,6 +629,11 @@ struct adreno_device {
 	const struct adreno_dispatch_ops *dispatch_ops;
 	/** @hwsched: Container for the hardware dispatcher */
 	struct adreno_hwsched hwsched;
+	/*
+	 * @perfcounter: Flag to clear perfcounters across contexts and
+	 * controls perfcounter ioctl read
+	 */
+	bool perfcounter;
 };
 
 /**
