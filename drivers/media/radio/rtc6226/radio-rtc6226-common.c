@@ -18,6 +18,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 /*
  * 2008-01-12	Tobias Lorenz <tobias.lorenz@gmx.net>
@@ -1468,9 +1473,10 @@ int rtc6226_power_up(struct rtc6226_device *radio)
 
 	/* mpxconfig */
 	/* Disable Mute / De-emphasis / Volume 12 */
-	radio->registers[MPXCFG] = 0x000c |
+	radio->registers[MPXCFG] = 0x000f |
 		MPXCFG_CSR0_DIS_MUTE |
-		((de << 12) & MPXCFG_CSR0_DEEM);
+		((de << 12) & MPXCFG_CSR0_DEEM)|
+		(MPXCFG_CSR0_BLNDADJUST & 0x0200);
 	retval = rtc6226_set_register(radio, MPXCFG);
 	if (retval < 0)
 		goto done;
@@ -1669,6 +1675,9 @@ int rtc6226_vidioc_g_ctrl(struct file *file, void *priv,
 	/* intentional fallthrough */
 	case V4L2_CID_PRIVATE_RTC6226_RSSI_TH:
 		ctrl->value = radio->rssi_th;
+		break;
+	case V4L2_CID_PRIVATE_RTC6226_GET_DEVICEID:
+		ctrl->value = radio->registers[DEVICEID];
 		break;
 	default:
 		FMDBG("%s in default id:%d\n", __func__, ctrl->id);
@@ -1877,10 +1886,16 @@ int rtc6226_vidioc_s_ctrl(struct file *file, void *priv,
 			/* disable RDS interrupts */
 			radio->registers[SYSCFG] &= ~SYSCFG_CSR0_RDSIRQEN;
 			retval = rtc6226_set_register(radio, SYSCFG);
+			/* stop querying ST */
+			cancel_delayed_work_sync(&radio->work_st);
+			flush_workqueue(radio->wqueue_st);
 		} else {
 			/* enable RDS interrupts */
 			radio->registers[SYSCFG] |= SYSCFG_CSR0_RDSIRQEN;
 			retval = rtc6226_set_register(radio, SYSCFG);
+			/* start querying ST */
+			queue_delayed_work(radio->wqueue_st, &radio->work_st,
+				msecs_to_jiffies(QUERY_DELAY_MSEC));
 		}
 		break;
 	case V4L2_CID_PRIVATE_RTC6226_ANTENNA:
@@ -2122,6 +2137,14 @@ static int rtc6226_vidioc_g_tuner(struct file *file, void *priv,
 	if (retval < 0)
 		goto done;
 
+	/* check stereo indicator */
+	retval = rtc6226_get_register(radio, STATUS);
+	if (retval < 0)
+		goto done;
+	retval = rtc6226_get_register(radio, MPXCFG);
+	if (retval < 0)
+		goto done;
+
 	/* driver constants */
 	strlcpy(tuner->name, "FM", sizeof(tuner->name));
 	tuner->type = V4L2_TUNER_RADIO;
@@ -2149,7 +2172,11 @@ static int rtc6226_vidioc_g_tuner(struct file *file, void *priv,
 	/* mono/stereo selector */
 	if ((radio->registers[MPXCFG] & MPXCFG_CSR0_MONO) == 0) {
 		tuner->audmode = V4L2_TUNER_MODE_STEREO;
-		rtc6226_q_event(radio, RTC6226_EVT_STEREO);
+		if ((radio->registers[STATUS] & STATUS_SI) == 0) {
+			rtc6226_q_event(radio, RTC6226_EVT_MONO);
+		} else {
+			rtc6226_q_event(radio, RTC6226_EVT_STEREO);
+		}
 	} else {
 		tuner->audmode = V4L2_TUNER_MODE_MONO;
 		rtc6226_q_event(radio, RTC6226_EVT_MONO);

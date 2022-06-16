@@ -22,6 +22,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 /* kernel includes */
 #include <linux/i2c.h>
@@ -37,7 +42,7 @@
 #include <linux/workqueue.h>
 
 static const struct of_device_id rtc6226_i2c_dt_ids[] = {
-	{.compatible = "rtc6226"},
+	{.compatible = "richwave,rtc6226"},
 	{}
 };
 
@@ -219,6 +224,43 @@ int rtc6226_vidioc_querycap(struct file *file, void *priv,
 	return 0;
 }
 
+
+/*
+ * rtc6226_st_handler - query Stereo indicator
+ */
+static void rtc6226_st_handler(struct rtc6226_device *radio)
+{
+	int retval;
+
+	FMDBG("%s enter\n", __func__);
+	queue_delayed_work(radio->wqueue_st, &radio->work_st,
+		msecs_to_jiffies(QUERY_DELAY_MSEC));
+
+	/* check stereo indicator */
+	retval = rtc6226_get_register(radio, STATUS);
+	if (retval < 0){
+		goto end;
+	}
+
+	retval = rtc6226_get_register(radio, MPXCFG);
+	if (retval < 0){
+		goto end;
+	}
+
+	if ((radio->registers[MPXCFG] & MPXCFG_CSR0_MONO) == 0) {
+		/* stereo indicator == stereo (instead of mono) */
+		if ((radio->registers[STATUS] & STATUS_SI) == 0){
+			rtc6226_q_event(radio, RTC6226_EVT_MONO);
+		} else {
+			rtc6226_q_event(radio, RTC6226_EVT_STEREO);
+		}
+	} else {
+		rtc6226_q_event(radio, RTC6226_EVT_MONO);
+	}
+end:
+	FMDBG("%s exit %d\n", __func__, retval);
+}
+
 /*
  * rtc6226_i2c_interrupt - interrupt handler
  */
@@ -322,6 +364,15 @@ static irqreturn_t rtc6226_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void rtc6226_read_st(struct work_struct *work)
+{
+	struct rtc6226_device *radio;
+
+	radio = container_of(work, struct rtc6226_device, work_st.work);
+
+	rtc6226_st_handler(radio);
+}
+
 static void rtc6226_handler(struct work_struct *work)
 {
 	struct rtc6226_device *radio;
@@ -346,6 +397,8 @@ void rtc6226_disable_irq(struct rtc6226_device *radio)
 	flush_workqueue(radio->wqueue_rds);
 	cancel_delayed_work_sync(&radio->work_scan);
 	flush_workqueue(radio->wqueue_scan);
+	cancel_delayed_work_sync(&radio->work_st);
+	flush_workqueue(radio->wqueue_st);
 }
 
 int rtc6226_enable_irq(struct rtc6226_device *radio)
@@ -552,8 +605,11 @@ int rtc6226_fops_open(struct file *file)
 
 	INIT_DELAYED_WORK(&radio->work, rtc6226_handler);
 	INIT_DELAYED_WORK(&radio->work_scan, rtc6226_scan);
+	INIT_DELAYED_WORK(&radio->work_st, rtc6226_read_st);
 	INIT_WORK(&radio->rds_worker, rtc6226_rds_handler);
 
+	queue_delayed_work(radio->wqueue_st, &radio->work_st,
+		msecs_to_jiffies(QUERY_DELAY_MSEC));
 	/* Power up  Supply voltage to VDD and VIO */
 	retval = rtc6226_fm_power_cfg(radio, TURNING_ON);
 	if (retval) {
@@ -857,6 +913,7 @@ static int rtc6226_i2c_probe(struct i2c_client *client,
 	radio->wqueue = NULL;
 	radio->wqueue_scan = NULL;
 	radio->wqueue_rds = NULL;
+	radio->wqueue_st= NULL;
 	radio->band = -1;
 
 	/* rds buffer configuration */
@@ -884,6 +941,13 @@ static int rtc6226_i2c_probe(struct i2c_client *client,
 		goto err_wqueue_scan;
 	}
 
+	radio->wqueue_st  =
+		create_singlethread_workqueue("sifmradiosignal");
+	if (!radio->wqueue_st) {
+		retval = -ENOMEM;
+		goto err_wqueue_rds;
+	}
+
 	/* register video device */
 	retval = video_register_device(&radio->videodev, VFL_TYPE_RADIO,
 		radio_nr);
@@ -897,6 +961,8 @@ static int rtc6226_i2c_probe(struct i2c_client *client,
 	return 0;
 
 err_all:
+	destroy_workqueue(radio->wqueue_st);
+err_wqueue_rds:
 	destroy_workqueue(radio->wqueue_rds);
 err_wqueue_scan:
 	destroy_workqueue(radio->wqueue_scan);

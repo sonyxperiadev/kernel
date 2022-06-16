@@ -20,6 +20,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 /* driver definitions */
 /* #define _RDSDEBUG */
@@ -201,6 +206,7 @@
 #define START_SCAN 1
 #define TUNE_TIMEOUT_MSEC 3000
 #define SEEK_TIMEOUT_MSEC 30000
+#define QUERY_DELAY_MSEC 2000
 
 #define RTC6226_MIN_SRCH_MODE 0x00
 #define RTC6226_MAX_SRCH_MODE 0x02
@@ -506,12 +512,14 @@ struct rtc6226_device {
 	struct workqueue_struct *wqueue;
 	struct workqueue_struct *wqueue_scan;
 	struct workqueue_struct *wqueue_rds;
+	struct workqueue_struct *wqueue_st;
 	struct work_struct rds_worker;
 	struct rtc6226_af_info af_info1;
 	struct rtc6226_af_info af_info2;
 
 	struct delayed_work work;
 	struct delayed_work work_scan;
+	struct delayed_work work_st;
 
 	wait_queue_head_t event_queue;
 	u8 write_buf[WRITE_REG_NUM];
@@ -653,7 +661,8 @@ enum v4l2_cid_private_rtc6226_t {
 	V4L2_CID_PRIVATE_RTC6226_RMSSIFIRSTSTAGE,
 	V4L2_CID_PRIVATE_RTC6226_RXREPEATCOUNT,
 	V4L2_CID_PRIVATE_RTC6226_RSSI_TH, /* 0x800003E */
-	V4L2_CID_PRIVATE_RTC6226_AF_JUMP_RSSI_TH /* 0x800003F */
+	V4L2_CID_PRIVATE_RTC6226_AF_JUMP_RSSI_TH, /* 0x800003F */
+	V4L2_CID_PRIVATE_RTC6226_GET_DEVICEID /* 0x8000040 */
 };
 
 enum FMBAND {FMBAND_87_108_MHZ, FMBAND_76_108_MHZ, FMBAND_76_91_MHZ,
