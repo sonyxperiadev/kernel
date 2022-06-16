@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
@@ -36,6 +41,17 @@
 
 #define PWM_PERIOD_DEFAULT_NS		1000000
 
+#define set_sync_bit(target, id) \
+	target |= 1 << (TRILED_EN_CTL_MAX_BIT - id)
+
+#define clear_sync_bit(target, id) \
+	target &= ~(1 << (TRILED_EN_CTL_MAX_BIT - id))
+
+#define RGB_MAX_LEVEL			512
+#define RGB_CURR_DEFAULT_PATTERN	1
+#define RGB_CURR_UNIT_NUM		3
+#define CURRENT_INDEX_DEFAULT		109
+
 struct pwm_setting {
 	u64	pre_period_ns;
 	u64	period_ns;
@@ -48,6 +64,8 @@ struct led_setting {
 	enum led_brightness	brightness;
 	bool			blink;
 	bool			breath;
+	u16			single_pwm_value;
+	u16			mix_pwm_value;
 };
 
 struct qpnp_led_dev {
@@ -62,6 +80,7 @@ struct qpnp_led_dev {
 	u8			id;
 	bool			blinking;
 	bool			breathing;
+	u16			max_current;
 };
 
 struct qpnp_tri_led_chip {
@@ -74,7 +93,24 @@ struct qpnp_tri_led_chip {
 	u16			reg_base;
 	u8			subtype;
 	u8			bitmap;
+	u8			breath_sync;
+	u8			breath_enable;
 };
+
+static int rgb_current_index = CURRENT_INDEX_DEFAULT;
+#ifdef  CONFIG_PWM_QTI_LPG
+static int __init rgb_current_setup(char *str)
+{
+	unsigned int res;
+
+	if (str == NULL)
+		return 0;
+	if (!kstrtouint(str, 16, &res))
+		rgb_current_index = res;
+	return 1;
+}
+__setup("oemandroidboot.babe137e=", rgb_current_setup);
+#endif /*CONFIG_PWM_QTI_LPG*/
 
 static int qpnp_tri_led_read(struct qpnp_tri_led_chip *chip, u16 addr, u8 *val)
 {
@@ -199,12 +235,22 @@ static int __tri_led_set(struct qpnp_led_dev *led)
 		}
 	}
 
+	dev_dbg(led->chip->dev, "sync_blink:%x breath_flag:%x\n",
+				led->chip->breath_sync, led->chip->breath_enable);
+
+	if(led->led_setting.breath) {
+		val = led->chip->breath_enable & TRILED_EN_CTL_MASK;
+		mask = led->chip->breath_sync & TRILED_EN_CTL_MASK;
+		if (val != mask)
+			goto skip;
+	}
+
 	rc = qpnp_tri_led_masked_write(led->chip, TRILED_REG_EN_CTL,
 							mask, val);
 	if (rc < 0)
 		dev_err(led->chip->dev, "Update addr 0x%x failed, rc=%d\n",
 					TRILED_REG_EN_CTL, rc);
-
+skip:
 	return rc;
 }
 
@@ -274,8 +320,8 @@ static int qpnp_tri_led_set_brightness(struct led_classdev *led_cdev,
 	int rc = 0;
 
 	mutex_lock(&led->lock);
-	if (brightness > LED_FULL)
-		brightness = LED_FULL;
+	if (brightness > led->cdev.max_brightness)
+		brightness = led->cdev.max_brightness;
 
 	if (brightness == led->led_setting.brightness &&
 			!led->blinking && !led->breathing) {
@@ -290,6 +336,8 @@ static int qpnp_tri_led_set_brightness(struct led_classdev *led_cdev,
 		led->led_setting.on_ms = 0;
 	led->led_setting.blink = false;
 	led->led_setting.breath = false;
+
+	clear_sync_bit(led->chip->breath_enable, led->id);
 
 	rc = qpnp_tri_led_set(led);
 	if (rc)
@@ -338,6 +386,8 @@ static int qpnp_tri_led_set_blink(struct led_classdev *led_cdev,
 		led->led_setting.breath = false;
 	}
 
+	clear_sync_bit(led->chip->breath_enable, led->id);
+
 	rc = qpnp_tri_led_set(led);
 	if (rc)
 		dev_err(led->chip->dev, "Set led failed for %s, rc=%d\n",
@@ -379,6 +429,12 @@ static ssize_t breath_store(struct device *dev, struct device_attribute *attr,
 	led->led_setting.blink = false;
 	led->led_setting.breath = breath;
 	led->led_setting.brightness = breath ? LED_FULL : LED_OFF;
+
+	if (breath)
+		set_sync_bit(led->chip->breath_enable, led->id);
+	else
+		clear_sync_bit(led->chip->breath_enable, led->id);
+
 	rc = qpnp_tri_led_set(led);
 	if (rc < 0)
 		dev_err(led->chip->dev, "Set led failed for %s, rc=%d\n",
@@ -389,10 +445,86 @@ unlock:
 	return (rc < 0) ? rc : count;
 }
 
+static ssize_t rgbled_sync_blink_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct qpnp_led_dev *led;
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	ssize_t ret = -EINVAL;
+	unsigned long sync;
+
+	led = container_of(led_cdev, struct qpnp_led_dev, cdev);
+
+	ret = kstrtoul(buf, 10, &sync);
+	if (ret != 0)
+		return ret;
+	mutex_lock(&led->lock);
+
+	if (!!sync)
+		set_sync_bit(led->chip->breath_sync, led->id);
+	else
+		clear_sync_bit(led->chip->breath_sync, led->id);
+
+	pwm_rgbsync_lut(led->pwm_dev, !!sync);
+
+	mutex_unlock(&led->lock);
+
+	return count;
+}
+
+static ssize_t rgbled_sync_blink_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct qpnp_led_dev *led;
+
+	led = container_of(led_cdev, struct qpnp_led_dev, cdev);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n",
+		led->chip->breath_sync & (1 << (TRILED_EN_CTL_MAX_BIT - led->id)));
+}
+
+static ssize_t rgbled_single_value_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct qpnp_led_dev *led;
+
+	led = container_of(led_cdev, struct qpnp_led_dev, cdev);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n",
+		led->led_setting.single_pwm_value);
+}
+
+static ssize_t rgbled_mix_value_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct qpnp_led_dev *led;
+
+	led = container_of(led_cdev, struct qpnp_led_dev, cdev);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n",
+		led->led_setting.mix_pwm_value);
+}
+
+static DEVICE_ATTR(sync_blink, S_IRUGO | S_IWUSR | S_IWGRP,
+        rgbled_sync_blink_show, rgbled_sync_blink_store);
+static DEVICE_ATTR(max_single_brightness, S_IRUGO,
+        rgbled_single_value_show, NULL);
+static DEVICE_ATTR(max_mix_brightness, S_IRUGO,
+        rgbled_mix_value_show, NULL);
 static DEVICE_ATTR_RW(breath);
 static const struct attribute *breath_attrs[] = {
 	&dev_attr_breath.attr,
+	&dev_attr_sync_blink.attr,
 	NULL
+};
+static const struct attribute *rgbled_attrs[] = {
+    &dev_attr_max_single_brightness.attr,
+    &dev_attr_max_mix_brightness.attr,
+    NULL
 };
 
 static int qpnp_tri_led_register(struct qpnp_tri_led_chip *chip)
@@ -404,7 +536,7 @@ static int qpnp_tri_led_register(struct qpnp_tri_led_chip *chip)
 		led = &chip->leds[i];
 		mutex_init(&led->lock);
 		led->cdev.name = led->label;
-		led->cdev.max_brightness = LED_FULL;
+		led->cdev.max_brightness = led->max_current;
 		led->cdev.brightness_set_blocking = qpnp_tri_led_set_brightness;
 		led->cdev.brightness_get = qpnp_tri_led_get_brightness;
 		led->cdev.blink_set = qpnp_tri_led_set_blink;
@@ -424,6 +556,13 @@ static int qpnp_tri_led_register(struct qpnp_tri_led_chip *chip)
 					breath_attrs);
 			if (rc < 0) {
 				dev_err(chip->dev, "Create breath file for %s led failed, rc=%d\n",
+						led->label, rc);
+				goto err_out;
+			}
+			rc = sysfs_create_files(&led->cdev.dev->kobj,
+					rgbled_attrs);
+			if (rc < 0) {
+				dev_err(chip->dev, "Create rgbled file for %s led failed, rc=%d\n",
 						led->label, rc);
 				goto err_out;
 			}
@@ -476,6 +615,10 @@ static int qpnp_tri_led_parse_dt(struct qpnp_tri_led_chip *chip)
 	struct pwm_args pargs;
 	const __be32 *addr;
 	int rc = 0, id, i = 0;
+	int current_index = 0;
+	u32	color_variation_max_num;
+	u32 *rgb_current_table;
+	int j;
 
 	addr = of_get_address(chip->dev->of_node, 0, NULL, NULL);
 	if (!addr) {
@@ -554,6 +697,57 @@ static int qpnp_tri_led_parse_dt(struct qpnp_tri_led_chip *chip)
 
 		led->default_trigger = of_get_property(child_node,
 				"linux,default-trigger", NULL);
+
+		if ((strncmp(led->label, "red", strlen("red")) == 0) ||
+			(strncmp(led->label, "green", strlen("green")) == 0) ||
+			(strncmp(led->label, "blue", strlen("blue")) == 0)) {
+			rc = of_property_read_u32(child_node,
+				"somc,color_variation_max_num",
+				&color_variation_max_num);
+			if (rc < 0) {
+				dev_err(chip->dev, "Unable to read color_variation_max_num\n");
+				color_variation_max_num = RGB_CURR_DEFAULT_PATTERN;
+				rc = 0;
+			}
+			dev_info(chip->dev, "color_variation_max_num[%d] rgb_current_index[%d]\n",
+				color_variation_max_num, rgb_current_index);
+
+			rgb_current_table = devm_kzalloc(chip->dev,
+				sizeof(u32) * color_variation_max_num * RGB_CURR_UNIT_NUM,
+				GFP_KERNEL);
+			if (rgb_current_table != 0) {
+				rc = of_property_read_u32_array(child_node, "somc,max_current",
+					rgb_current_table,
+					color_variation_max_num * RGB_CURR_UNIT_NUM);
+				if (rc < 0) {
+					dev_err(chip->dev, "Unable to read max_mix_current\n");
+					led->led_setting.single_pwm_value = RGB_MAX_LEVEL - 1;
+					led->led_setting.mix_pwm_value = RGB_MAX_LEVEL - 1;
+					rc = 0;
+				} else {
+					for (j = 0; j < color_variation_max_num; j++) {
+						current_index = j * RGB_CURR_UNIT_NUM;
+						if (rgb_current_index == rgb_current_table[current_index]) {
+							break;
+						}
+					}
+					led->led_setting.single_pwm_value =
+						rgb_current_table[current_index + 1];
+					led->led_setting.mix_pwm_value =
+						rgb_current_table[current_index + 2];
+				}
+				devm_kfree(chip->dev, rgb_current_table);
+			} else {
+				dev_err(chip->dev, "Unable to allocate memory\n");
+				led->led_setting.single_pwm_value = RGB_MAX_LEVEL - 1;
+				led->led_setting.mix_pwm_value = RGB_MAX_LEVEL - 1;
+			}
+
+			led->max_current = (led->led_setting.single_pwm_value >
+				led->led_setting.mix_pwm_value ?
+				led->led_setting.single_pwm_value :
+				led->led_setting.mix_pwm_value);
+		}
 	}
 
 	return rc;

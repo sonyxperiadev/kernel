@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 #ifndef __LINUX_PWM_H
 #define __LINUX_PWM_H
 
@@ -671,5 +676,7 @@ static inline void pwmchip_sysfs_unexport(struct pwm_chip *chip)
 {
 }
 #endif /* CONFIG_PWM_SYSFS */
+
+int pwm_rgbsync_lut(struct pwm_device *pwm, bool sync);
 
 #endif /* __LINUX_PWM_H */

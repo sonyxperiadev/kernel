@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
@@ -180,6 +185,7 @@ struct qpnp_lpg_lut {
 	u32			reg_base;
 	u32			*pattern; /* patterns in percentage */
 	u32			ramp_step_tick_us;
+	unsigned long		pbs_en_bitmap;
 };
 
 struct qpnp_lpg_channel {
@@ -213,6 +219,24 @@ struct qpnp_lpg_chip {
 	unsigned long		pbs_en_bitmap;
 	bool			use_sdam;
 };
+
+static struct qpnp_lpg_channel *qpnp_lpg_from_pwm_dev(
+					struct pwm_device *pwm)
+{
+	struct qpnp_lpg_chip *chip;
+	u32 hw_idx;
+
+	chip = container_of(pwm->chip, struct qpnp_lpg_chip, pwm_chip);
+	hw_idx = pwm->hwpwm;
+
+	if (hw_idx >= chip->num_lpgs) {
+		dev_err(chip->dev, "hw index %d out of range [0-%d]\n",
+				hw_idx, chip->num_lpgs - 1);
+		return NULL;
+	}
+
+	return &chip->lpgs[hw_idx];
+}
 
 static int qpnp_lpg_read(struct qpnp_lpg_channel *lpg, u16 addr, u8 *val)
 {
@@ -1137,15 +1161,16 @@ static int qpnp_lpg_set_pbs_trigger(struct qpnp_lpg_chip *chip)
 static int qpnp_lpg_pbs_trigger_enable(struct qpnp_lpg_channel *lpg, bool en)
 {
 	struct qpnp_lpg_chip *chip = lpg->chip;
+	struct qpnp_lpg_lut *lut = chip->lut;
 	int rc = 0;
 
 	if (en) {
-		if (chip->pbs_en_bitmap == 0) {
+		set_bit(lpg->lpg_idx, &chip->pbs_en_bitmap);
+		if (lut->pbs_en_bitmap == chip->pbs_en_bitmap) {
 			rc = qpnp_lpg_set_pbs_trigger(chip);
 			if (rc < 0)
 				return rc;
 		}
-		set_bit(lpg->lpg_idx, &chip->pbs_en_bitmap);
 	} else {
 		clear_bit(lpg->lpg_idx, &chip->pbs_en_bitmap);
 		if (chip->pbs_en_bitmap == 0) {
@@ -1446,6 +1471,34 @@ static int qpnp_lpg_pwm_apply(struct pwm_chip *pwm_chip, struct pwm_device *pwm,
 
 	return 0;
 }
+
+int pwm_rgbsync_lut(struct pwm_device *pwm, bool sync)
+{
+	struct qpnp_lpg_channel *lpg;
+	struct qpnp_lpg_lut *lut;
+	int rc = 0;
+
+	if (pwm == NULL) {
+		pr_err("%s pwm error NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	lpg = qpnp_lpg_from_pwm_dev(pwm);
+	if (lpg == NULL) {
+		dev_err(lpg->chip->dev, "lpg not found\n");
+		return -EINVAL;
+	}
+
+	lut = lpg->chip->lut;
+
+	if (sync)
+		set_bit(lpg->lpg_idx, &lut->pbs_en_bitmap);
+	else
+		clear_bit(lpg->lpg_idx, &lut->pbs_en_bitmap);
+
+	return rc;
+}
+EXPORT_SYMBOL(pwm_rgbsync_lut);
 
 static const struct pwm_ops qpnp_lpg_pwm_ops = {
 	.apply = qpnp_lpg_pwm_apply,
