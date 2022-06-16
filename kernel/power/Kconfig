@@ -331,3 +331,10 @@ config ENERGY_MODEL
 	  The exact usage of the energy model is subsystem-dependent.
 
 	  If in doubt, say N.
+
+config WAKEUP_IRQ_DEBUG
+	tristate "Debug info of wakeup irq"
+	default n
+	help
+	  This enables debug information about wakeup interrupts using
+	  sysfs (/sys/kernel/).
