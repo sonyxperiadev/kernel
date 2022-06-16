@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012, 2015-2021, The Linux Foundation. All rights reserved.
@@ -252,18 +257,20 @@ unsigned int sched_get_cpu_util(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 	u64 util;
-	unsigned long capacity, flags;
+	unsigned long capacity;
 	unsigned int busy;
-	struct walt_rq *wrq = (struct walt_rq *) cpu_rq(cpu)->android_vendor_data1;
 
-	raw_spin_lock_irqsave(&rq->lock, flags);
+	u32 prev_run_sum, group_run_sum;
+
+	util = walt_get_prev_group_run_sum(rq);
+	group_run_sum = (u32) (util >> 32);
+	prev_run_sum = (u32) util;
+
+	util = prev_run_sum + group_run_sum;
+	util = div64_u64(util, sched_ravg_window >>
+			SCHED_CAPACITY_SHIFT);
 
 	capacity = capacity_orig_of(cpu);
-
-	util = wrq->prev_runnable_sum + wrq->grp_time.prev_runnable_sum;
-	util = div64_u64(util, sched_ravg_window >> SCHED_CAPACITY_SHIFT);
-	raw_spin_unlock_irqrestore(&rq->lock, flags);
-
 	util = (util >= capacity) ? capacity : util;
 	busy = div64_ul((util * 100), capacity);
 	return busy;

@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
@@ -13,6 +18,7 @@ static unsigned int one_hundred_thousand = 100000;
 static unsigned int two_hundred_million = 200000000;
 static int __maybe_unused two = 2;
 static int __maybe_unused four = 4;
+static int __maybe_unused six = 6;
 static int one_hundred = 100;
 static int one_thousand = 1000;
 
@@ -483,7 +489,7 @@ struct ctl_table walt_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= SYSCTL_ZERO,
-		.extra2		= &four,
+		.extra2		= &six,
 	},
 	{
 		.procname	= "sched_group_upmigrate",
@@ -898,7 +904,7 @@ void walt_tunables(void)
 
 	sysctl_sched_task_unfilter_period = 100000000;
 
-	sysctl_sched_window_stats_policy = WINDOW_STATS_MAX_RECENT_AVG;
+	sysctl_sched_window_stats_policy = WINDOW_STATS_EWMA;
 
 	sysctl_sched_ravg_window_nr_ticks = (HZ / NR_WINDOWS_PER_SEC);
 
