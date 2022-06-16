@@ -2065,6 +2065,9 @@ static int qcom_slim_ngd_ctrl_probe(struct platform_device *pdev)
 	ctrl->wait_for_adsp_up = of_property_read_bool(pdev->dev.of_node,
 					"qcom,wait_for_adsp_up");
 
+	ctrl->wait_for_adsp_up = of_property_read_bool(pdev->dev.of_node,
+					"qcom,wait_for_adsp_up");
+
 	/* Create IPC log context */
 	ctrl->ipc_slimbus_log = ipc_log_context_create(IPC_SLIMBUS_LOG_PAGES,
 						dev_name(&pdev->dev), 0);
