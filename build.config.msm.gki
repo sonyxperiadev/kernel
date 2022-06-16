@@ -31,6 +31,7 @@ android/abi_gki_aarch64_unisoc
 android/abi_gki_aarch64_virtual_device
 android/abi_gki_aarch64_vivo
 android/abi_gki_aarch64_xiaomi
+android/abi_gki_aarch64_sony
 "
 KMI_SYMBOL_LIST_MODULE_GROUPING=0
 KMI_SYMBOL_LIST_ADD_ONLY=1

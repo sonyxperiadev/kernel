@@ -61,6 +61,7 @@ phy-qcom-ufs-qmp-v4-cape.ko
 pinctrl-cape.ko
 pinctrl-diwali.ko
 pinctrl-msm.ko
+pinctrl-somc.ko
 proxy-consumer.ko
 qcom-dcvs.ko
 qcom-dload-mode.ko
