@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2014 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
@@ -19,6 +24,7 @@
 #include <linux/cdev.h>
 #include <linux/srcu.h>
 #include <linux/atomic.h>
+#include <linux/vmalloc.h>
 #include <soc/qcom/ramdump.h>
 #include <linux/of.h>
 #include "elf.h"
@@ -225,7 +231,7 @@ static ssize_t ramdump_read(struct file *filep, char __user *buf, size_t count,
 
 	origdevice_mem = device_mem;
 
-	alignbuf = kzalloc(copy_size, GFP_KERNEL);
+	alignbuf = vzalloc(copy_size);
 	if (!alignbuf) {
 		rd_dev->ramdump_status = -1;
 		ret = -ENOMEM;
@@ -262,7 +268,7 @@ static ssize_t ramdump_read(struct file *filep, char __user *buf, size_t count,
 		goto ramdump_done;
 	}
 
-	kfree(finalbuf);
+	vfree(finalbuf);
 
 	*pos += copy_size;
 
@@ -275,7 +281,7 @@ static ssize_t ramdump_read(struct file *filep, char __user *buf, size_t count,
 
 ramdump_done:
 	srcu_read_unlock(&rd_dev->rd_srcu, srcu_idx);
-	kfree(finalbuf);
+	vfree(finalbuf);
 	*pos = 0;
 	reset_ramdump_entry(entry);
 	return ret;
