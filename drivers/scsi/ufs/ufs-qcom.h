@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2020 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 /* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  */
 
@@ -494,6 +499,7 @@ out:
  *  SCSI_IOCTL_GET_PCI
  */
 #define UFS_IOCTL_QUERY			0x5388
+#define UFS_IOCTL_WRITE_BUFFER		0x53EF
 
 /**
  * struct ufs_ioctl_query_data - used to transfer data to and from user via
@@ -570,4 +576,17 @@ static inline void ufs_qcom_ice_disable(struct ufs_qcom_host *host)
 #define ufs_qcom_ice_program_key NULL
 #endif /* !CONFIG_SCSI_UFS_CRYPTO */
 
+struct ufs_ioctl_write_buffer_data {
+	__u32 buf_size;
+	__u8 buffer[0];
+};
+
+enum ffu_status {
+	FFU_STATUS_NO_INFOMATION	= 0x00,
+	FFU_STATUS_SUCCESS		= 0x01,
+	FFU_STATUS_CORRUPTION_ERROR	= 0x02,
+	FFU_STATUS_INTERNAL_ERROR	= 0x03,
+	FFU_STATUS_VERSION_MISMATCH	= 0x04,
+	FFU_STATUS_GENERAL_ERROR	= 0xFF,
+};
 #endif /* UFS_QCOM_H_ */
