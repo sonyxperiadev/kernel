@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2018 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * QTI Secure Execution Environment Communicator (QSEECOM) driver
@@ -3107,6 +3112,11 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 
 	if (!memcmp(data->client.app_name, "keymaste", strlen("keymaste"))) {
 		pr_debug("Do not unload keymaster app from tz\n");
+		goto unload_exit;
+	}
+
+	if (!memcmp(data->client.app_name, "tzxflattest", strlen("tzxflattest"))) {
+		pr_debug("Do not unload tzxflattest app from tz\n");
 		goto unload_exit;
 	}
 
