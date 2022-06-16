@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
@@ -1452,7 +1457,12 @@ static int cnss_driver_recovery_hdlr(struct cnss_plat_data *plat_priv,
 	cnss_pr_dbg("Driver recovery is triggered with reason: %s(%d)\n",
 		    cnss_recovery_reason_to_str(recovery_data->reason),
 		    recovery_data->reason);
+	snprintf(plat_priv->crash_reason_buf, sizeof(plat_priv->crash_reason_buf),
+		"Driver recovery is triggered with reason: %s(%d)\n",
+		cnss_recovery_reason_to_str(recovery_data->reason),
+		recovery_data->reason);
 
+	sysfs_notify(&plat_priv->plat_dev->dev.kobj, NULL, "crash_reason");
 	if (!plat_priv->driver_state) {
 		cnss_pr_err("Improper driver state, ignore recovery\n");
 		ret = -EINVAL;
@@ -3040,6 +3050,19 @@ static ssize_t charger_mode_store(struct device *dev,
 	return count;
 }
 
+static ssize_t crash_reason_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct cnss_plat_data *plat_priv = dev_get_drvdata(dev);
+	int r = 0;
+
+	r = snprintf(buf, PAGE_SIZE, "%s\n", plat_priv->crash_reason_buf);
+	memset(plat_priv->crash_reason_buf, 0, sizeof(plat_priv->crash_reason_buf));
+
+	return r;
+}
+
+static DEVICE_ATTR_RO(crash_reason);
 static DEVICE_ATTR_WO(fs_ready);
 static DEVICE_ATTR_WO(shutdown);
 static DEVICE_ATTR_WO(recovery);
@@ -3062,6 +3085,7 @@ static struct attribute *cnss_attrs[] = {
 	&dev_attr_hw_trace_override.attr,
 	&dev_attr_charger_mode.attr,
 	&dev_attr_time_sync_period.attr,
+	&dev_attr_crash_reason.attr,
 	NULL,
 };
 
