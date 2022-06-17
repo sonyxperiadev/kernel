@@ -229,6 +229,14 @@ config CS5535_CLOCK_EVENT_SRC
 	  MFGPTs have a better resolution and max interval than the
 	  generic PIT, and are suitable for use as high-res timers.
 
+config CS40L2X_HAPTIC
+	tristate "Cirrus Logic CS40L2X haptics support"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y to enable support for the CS CS40L2X haptics driver.
+	  To compile this driver as a module, choose M here.
+
 config HP_ILO
 	tristate "Channel interface driver for the HP iLO processor"
 	depends on PCI
