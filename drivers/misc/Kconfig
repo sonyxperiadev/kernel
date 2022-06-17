@@ -231,6 +231,14 @@ config HI6421V600_IRQ
 	  This driver provides IRQ handling for Hi6421v600, used on
 	  some Kirin chipsets, like the one at Hikey 970.
 
+config CS40L2X_HAPTIC
+	tristate "Cirrus Logic CS40L2X haptics support"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y to enable support for the CS CS40L2X haptics driver.
+	  To compile this driver as a module, choose M here.
+
 config HP_ILO
 	tristate "Channel interface driver for the HP iLO processor"
 	depends on PCI
