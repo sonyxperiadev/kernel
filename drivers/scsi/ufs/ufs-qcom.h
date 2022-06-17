@@ -581,6 +581,15 @@ struct ufs_ioctl_write_buffer_data {
 	__u8 buffer[0];
 };
 
+enum purge_status {
+	PURGE_STATUS_IDLE		= 0x00,
+	PURGE_STATUS_IN_PROGRESS	= 0x01,
+	PURGE_STATUS_STOPPED		= 0x02,
+	PURGE_STATUS_COMPLETED		= 0x03,
+	PURGE_STATUS_BUSY		= 0x04,
+	PURGE_STATUS_GENERAL_ERROR	= 0x05,
+};
+
 enum ffu_status {
 	FFU_STATUS_NO_INFOMATION	= 0x00,
 	FFU_STATUS_SUCCESS		= 0x01,
