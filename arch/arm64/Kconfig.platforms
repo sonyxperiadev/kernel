@@ -232,6 +232,24 @@ config ARCH_KALAMA
 	  KALAMA chipset. If you do not wish to build a kernel that
 	  runs on this chipset or if you are unsure, say 'N' here.
 
+config ARCH_SONY_NAGARA
+	bool "Sony Mobile Nagara platform"
+	depends on ARCH_WAIPIO
+	help
+	  Support for the SONY Mobile Nagara platform
+	  which is based on QCOM WAIPIO chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX223
+	bool "Sony Mobile PDX-223"
+	depends on ARCH_SONY_NAGARA
+	help
+	  Support for the SONY Mobile PDX-223 board
+	  which is based on SONY Nagara platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_KAKA
 	bool "Enable Support for Qualcomm Technologies, Inc. KAKA"
 	depends on ARCH_QCOM

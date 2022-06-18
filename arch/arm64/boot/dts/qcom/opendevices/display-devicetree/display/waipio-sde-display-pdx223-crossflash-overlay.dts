@@ -1,0 +1,13 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-sde-display-qrd.dtsi"
+#include "somc-nagara-display.dtsi"
+#include "somc-nagara-display-pdx223.dtsi"
+
+/{
+	model = "Sony Corporation. PDX223 Crossflash(Waipio QRD with PM8010)";
+	compatible = "qcom,waipio", "qcom,qrd";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>, <552 0x10000>;
+	qcom,board-id = <0x1030B 0>, <0x1050B 0>;
+};

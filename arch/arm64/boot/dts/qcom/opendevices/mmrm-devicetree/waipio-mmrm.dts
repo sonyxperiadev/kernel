@@ -1,0 +1,14 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,camcc-waipio.h>
+#include <dt-bindings/clock/qcom,videocc-waipio.h>
+#include <dt-bindings/clock/qcom,dispcc-waipio.h>
+#include "waipio-mmrm.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. waipio v1 SoC";
+	compatible = "qcom,waipio";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <552 0x10000>;
+	qcom,board-id = <0 0>; /* required by merge_dtbs.py */
+};

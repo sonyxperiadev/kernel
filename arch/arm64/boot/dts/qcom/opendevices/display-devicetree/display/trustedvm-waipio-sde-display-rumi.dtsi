@@ -1,0 +1,9 @@
+#include "trustedvm-waipio-sde-display.dtsi"
+
+&dsi_dual_sim_vid {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+};
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_dual_sim_vid>;
+};

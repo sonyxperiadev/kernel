@@ -1,0 +1,30 @@
+#include "waipio-sde-display-common.dtsi"
+
+&sde_dsi {
+	clocks = <&clock_cpucc 0>,
+			<&clock_cpucc 1>,
+			<&clock_cpucc 2>,
+			<&clock_cpucc 3>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+			"pll_byte_clk1", "pll_dsi_clk1";
+};
+
+&sde_dsi1 {
+	clocks = <&clock_cpucc 0>,
+			<&clock_cpucc 1>,
+			<&clock_cpucc 2>,
+			<&clock_cpucc 3>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+			"pll_byte_clk1", "pll_dsi_clk1";
+};
+
+&mdss_mdp {
+	connectors = <&sde_dsi &sde_dsi1 &smmu_sde_unsec>;
+};
+
+&dsi_sw43404_amoled_cmd {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <1023>;
+	qcom,mdss-brightness-max-level = <255>;
+};
