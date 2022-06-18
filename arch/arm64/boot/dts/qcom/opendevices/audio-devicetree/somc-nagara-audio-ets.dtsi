@@ -1,0 +1,3 @@
+&cs40l25a {
+	/delete-property/ cirrus,hiber-enable;
+};

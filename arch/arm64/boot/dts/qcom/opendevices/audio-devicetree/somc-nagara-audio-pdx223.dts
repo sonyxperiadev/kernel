@@ -1,0 +1,14 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-audio-qrd.dtsi"
+#include "somc-nagara-audio-common.dtsi"
+#include "somc-nagara-audio-pdx223.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-223(WAIPIO QRD with PM8010)";
+	compatible = "somc,pdx223-generic", "qcom,waipio", "qcom,qrd";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>, <552 0x10000>;
+	qcom,board-id = <0x1000b 0>, <0x2000B 0>;
+};
+

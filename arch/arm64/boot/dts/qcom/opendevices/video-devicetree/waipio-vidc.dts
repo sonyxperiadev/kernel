@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-waipio.h>
+#include <dt-bindings/interconnect/qcom,waipio.h>
+#include <dt-bindings/clock/qcom,videocc-waipio.h>
+#include "waipio-vidc.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. waipio/cape v1 SoC";
+	compatible = "qcom,waipio", "qcom,cape";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>,
+			<457 0x20000>, <482 0x20000>,
+			<530 0x10000>, <540 0x10000>,
+			<552 0x10000>;
+	qcom,board-id = <0 0>;
+};

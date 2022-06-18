@@ -1,0 +1,48 @@
+/* arch/arm64/boot/dts/qcom/sec_touchscreen.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se4_i2c {
+	status = "ok";
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 21 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1644 3840>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <0>;
+		sec,firmware_name = "touch_module_id_0x46.img";
+		sec,platform-touch-reset-gpio = <&tlmm 20 0>;
+		sec,device_id = /bits/ 8 <0xAC 0x37 0x92>;
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <0>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <0>;
+		sec,aod_mode_supported = <1>;
+		sec,sod_mode_supported = <1>;
+		sec,stamina_mode_supported = <1>;
+		sec,wireless_charging_supported = <1>;
+		sec,rejection_area_portrait = <40 240 90 300>;
+		sec,rejection_area_landscape = <240 30 300 90>;
+		sec,rejection_area_portrait_ge = <200 200>;
+		sec,rejection_area_landscape_ge = <200 200 200 200>;
+	};
+};

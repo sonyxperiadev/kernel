@@ -1,0 +1,176 @@
+/* arch/arm64/boot/dts/qcom/waipio-nagara-pdx223_common.dtsi */
+
+#include "waipio-nagara-common.dtsi"
+&soc {
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_8 &sm_gpio_50 &sm_gpio_104 &sm_gpio_120 &sm_gpio_145>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>.dtsi */
+	pinctrl-1 = <&pm8350b_gpio_1 &pm8350b_gpio_6>;
+};
+
+/* GPIO_1: CAM_PWR_A_CS */
+&pm8350b_gpio_1 {
+	pins = "gpio1";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <1>;
+};
+
+/* GPIO_6: CAM_PWR_LD_EN  */
+&pm8350b_gpio_6 {
+	pins = "gpio6";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <0>;
+};
+
+/* GPIO_4: WLC_TXPWR_EN  */
+/* Don't set here */
+
+/* GPIO_4 : WLC_I2C_SDA */
+/* Don't set here */
+
+/* GPIO_5 : WLC_I2C_SCL */
+/* Don't set here */
+
+/* GPIO_8 : WLC_INT_N */
+&sm_gpio_8 {
+	mux {
+		pins = "gpio8";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio8";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_50 : SBU_SW_OE(Follow QC) */
+&sm_gpio_50 {
+	mux {
+		pins = "gpio50";
+		/delete-property/ function;
+	};
+
+	config {
+		pins = "gpio50";
+		/delete-property/ drive-strength;
+		/delete-property/ bias-disable;
+		/delete-property/ output-low;
+	};
+};
+
+/* GPIO_104 : CAM_MCLK4 */
+&sm_gpio_104 {
+	mux {
+		pins = "gpio104";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio104";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_120 : CAM3_RESET_N(Follow QC) */
+&sm_gpio_120 {
+	mux {
+		pins = "gpio120";
+		/delete-property/ function;
+	};
+
+	config {
+		pins = "gpio120";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		/delete-property/ output-low;
+	};
+};
+
+&tlmm {
+
+	/* GPIO_145 : NC */
+	sm_gpio_145: sm_gpio_145 {
+		mux {
+			pins = "gpio145";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio145";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+};
+
+&pm8350c_rgb {
+	red {
+		somc,max_current = <
+			109 225 148
+			110 225 148
+			111 225 148>;
+	};
+	green {
+		somc,max_current = <
+			109 83 148
+			110 83 148
+			111 83 148>;
+	};
+	blue {
+		somc,max_current = <
+			109 255 80
+			110 255 80
+			111 255 80>;
+	};
+};
+
+&pm8350c_pwm_1 {
+	qcom,lut-patterns = <100 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 64 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0>;
+	lpg@1 {
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@2 {
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@3 {
+		qcom,ramp-low-index = <30>;
+		qcom,ramp-high-index = <59>;
+	};
+};
+
+#include "somc-charger-nagara-common.dtsi"
+#include "somc-charger-nagara-pdx223.dtsi"
+#include "somc-usb-dp-nagara-pdx223.dtsi"

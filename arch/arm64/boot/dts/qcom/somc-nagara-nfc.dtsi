@@ -1,0 +1,44 @@
+/* arch/arm64/boot/dts/qcom/somc-nagara-nfc.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se9_i2c {
+	nfc@28 {
+		compatible = "nxp,sn1x0-i2c";
+		reg = <0x28>;
+		nxp,ven = <&tlmm 34 GPIO_ACTIVE_HIGH>;
+		nxp,dwld = <&tlmm 45 GPIO_ACTIVE_HIGH>;
+		nxp,irq = <&tlmm 46 GPIO_ACTIVE_HIGH>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <46 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "nxp_sn1x0_irq";
+	};
+};
+
+&qupv3_se10_spi {
+	/* sm_gpio_36: SPI MISO */
+	/* sm_gpio_37: SPI MOSI */
+	/* sm_gpio_38: SPI CLK */
+	/* sm_gpio_39: SPI CS/SS */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sm_gpio_36 &sm_gpio_37 &sm_gpio_38>;
+	pinctrl-1 = <&sm_gpio_36 &sm_gpio_37 &sm_gpio_38>;
+	status = "okay";
+	/* SPI, The SPI lines must be exclusive by eSE device */
+	dev@0 {
+		compatible = "nxp,sn1x0-spi";
+		reg = <0x00>;
+		spi-max-frequency = <20000000>;
+		/* I2C device name: "nxp,sn1x0-i2c" */
+		nxp,nfcc = "nxp,sn1x0-i2c";
+		nxp,cs = <&tlmm 39 GPIO_ACTIVE_HIGH>;
+	};
+};

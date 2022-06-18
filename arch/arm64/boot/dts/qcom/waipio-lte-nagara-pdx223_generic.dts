@@ -1,0 +1,12 @@
+/dts-v1/;
+
+#include "waipio-lte.dtsi"
+#include "waipio-qrd.dtsi"
+#include "waipio-pm8010-spmi.dtsi"
+#include "waipio-nagara-pdx223_generic.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-223(WAIPIO LTE QRD with PM8010)";
+	compatible = "somc,pdx223-generic", "qcom,waipio", "qcom,qrd";
+	qcom,board-id = <0x1000b 0>;
+};

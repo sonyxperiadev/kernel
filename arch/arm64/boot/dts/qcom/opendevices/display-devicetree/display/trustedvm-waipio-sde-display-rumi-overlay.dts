@@ -1,0 +1,12 @@
+/dts-v1/;
+/plugin/;
+
+#include "trustedvm-waipio-sde.dtsi"
+#include "trustedvm-waipio-sde-display-rumi.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Waipio Rumi";
+	compatible = "qcom,waipio-rumi", "qcom,waipio";
+	qcom,msm-id = <457 0x10000>;
+	qcom,board-id = <15 0>;
+};

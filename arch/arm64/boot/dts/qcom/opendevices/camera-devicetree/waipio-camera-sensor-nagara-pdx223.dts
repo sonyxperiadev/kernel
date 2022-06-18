@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-waipio.h>
+#include <dt-bindings/clock/qcom,camcc-waipio.h>
+#include <dt-bindings/interconnect/qcom,waipio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "waipio-camera-sensor-nagara-pdx223.dtsi"
+/ {
+	model = "Sony Corporation. Nagara-PDX223(Waipio QRD with PM8010)";
+	compatible = "qcom,waipio", "qcom,qrd";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <0x1000B 0>, <0x2000B 0>, <0x1010B 0>, <0x2010B 0>;
+};
