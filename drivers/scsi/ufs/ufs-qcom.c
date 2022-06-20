@@ -2452,6 +2452,10 @@ static int ufshcd_write_buffer(struct ufs_hba *hba, void __user *buffer,
 	struct ufs_ioctl_write_buffer_data *fw_data = NULL;
 	unsigned char sense[SCSI_SENSE_BUFFERSIZE];
 	struct scsi_sense_hdr sshdr;
+	unsigned char *data = NULL;
+	u32 buf_size;
+	u32 buf_len;
+	u32 offset = 0;
 
 	ioctl_data = kmalloc(sizeof(struct ufs_ioctl_write_buffer_data),
 			GFP_KERNEL);
@@ -2486,35 +2490,64 @@ static int ufshcd_write_buffer(struct ufs_hba *hba, void __user *buffer,
 		goto out;
 	}
 
-	cmd[6] = (ioctl_data->buf_size >> 16) & 0xff;
-	cmd[7] = (ioctl_data->buf_size >> 8) & 0xff;
-	cmd[8] = ioctl_data->buf_size & 0xff;
+	buf_size = ioctl_data->buf_size;
+	if (buf_size > (queue_max_hw_sectors(sdev->request_queue) << 9))
+		buf_len = (queue_max_hw_sectors(sdev->request_queue) << 9);
+	else
+		buf_len = ioctl_data->buf_size;
 
-	if (!scsi_device_get(sdev)) {
-		err = scsi_execute(sdev, cmd, DMA_TO_DEVICE, fw_data->buffer,
-				ioctl_data->buf_size, sense, &sshdr, 10000, 1,
-				REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT |
-				REQ_FAILFAST_DRIVER, 0, NULL);
-		if (err) {
-			dev_err(hba->dev, "%s: Failed write buffer %d\n",
-				__func__, err);
-			goto out1;
-		}
-	} else {
+	data = kzalloc(buf_size, GFP_KERNEL);
+	if (!data) {
+		dev_err(hba->dev, "%s: Failed allocating fw_data\n", __func__);
+		err = -ENOMEM;
+		goto out;
+	}
+
+	err = scsi_device_get(sdev);
+	if (err) {
 		dev_err(hba->dev, "%s: Failed scsi device get %d\n",
 			__func__, err);
 		goto out;
 	}
 
-	if (scsi_normalize_sense(sense, SCSI_SENSE_BUFFERSIZE, &sshdr)) {
-		dev_err(hba->dev, "%s: print sense hdr\n", __func__);
-		__scsi_print_sense(sdev, "ffu", sense, SCSI_SENSE_BUFFERSIZE);
+	while (buf_size) {
+		if (buf_len > buf_size)
+			buf_len = buf_size;
+
+		memcpy(data, fw_data->buffer + offset, buf_len);
+
+		cmd[3] = (offset >> 16) & 0xff;
+		cmd[4] = (offset >> 8) & 0xff;
+		cmd[5] = offset & 0xff;
+		cmd[6] = (buf_len >> 16) & 0xff;
+		cmd[7] = (buf_len >> 8) & 0xff;
+		cmd[8] = buf_len & 0xff;
+
+		err = scsi_execute(sdev, cmd, DMA_TO_DEVICE, data,
+				   buf_len, sense, &sshdr, 10000, 1,
+				   REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT |
+				   REQ_FAILFAST_DRIVER, 0, NULL);
+		if (err) {
+			dev_err(hba->dev, "%s: Failed write buffer %d\n",
+				__func__, err);
+			goto out1;
+		}
+
+		if (scsi_normalize_sense(sense, SCSI_SENSE_BUFFERSIZE, &sshdr)) {
+			dev_err(hba->dev, "%s: print sense hdr\n", __func__);
+			__scsi_print_sense(sdev, "ffu", sense,
+                                           SCSI_SENSE_BUFFERSIZE);
+		}
+
+		offset += buf_len;
+		buf_size -= buf_len;
 	}
 
 out1:
 	if (sdev)
 		scsi_device_put(sdev);
 out:
+	kfree(data);
 	kfree(fw_data);
 	kfree(ioctl_data);
 
