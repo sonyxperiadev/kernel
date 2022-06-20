@@ -1,0 +1,77 @@
+/* Should extend holi-sde-display-atp.dtsi */
+#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include <dt-bindings/clock/qcom,dispcc-blair.h>
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>,
+		/*
+		 * Currently the dsi clock handles are under the dsi
+		 * controller DT node. As soon as the controller probe
+		 * finishes, the dispcc sync state can get called before
+		 * the dsi_display probe potentially disturbing the clock
+		 * votes for cont_splash use case. Hence we are no longer
+		 * protected by the component model in this case against the
+		 * disp cc sync state getting triggered after the dsi_ctrl
+		 * probe. To protect against this incorrect sync state trigger
+		 * add this dummy MDP clk vote handle to the dsi_display
+		 * DT node. Since the dsi_display driver does not parse
+		 * MDP clock nodes, no actual vote shall be added and this
+		 * change is done just to satisfy sync state requirements.
+		 */
+		<&dispcc DISP_CC_MDSS_MDP_CLK>;
+
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"cphy_byte_clk0", "cphy_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0",
+		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0",
+		"mdp_core_clk";
+};
+
+&dsi_sim_vid {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 1b 1b 01
+				01 02 02 04 00 0a 11];
+		};
+	};
+};
+
+&dsi_rm69299_visionox_amoled_video {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	/delete-property/ qcom,esd-check-enabled;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+				08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
+&dsi_rm69299_visionox_amoled_cmd {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	/delete-property/ qcom,esd-check-enabled;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+				08 08 02 04 00 1b 0d];
+		};
+	};
+};
+

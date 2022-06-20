@@ -1,0 +1,55 @@
+&soc {
+	wl2868c:wl2868c {
+		compatible = "qualcomm,gpio_wl2868c";
+		pinctrl-names = "default", "wl2868c_gpio_enp0", "wl2868c_gpio_enp1";
+		pinctrl-0 = <&wl2868c_pins_default>;
+		pinctrl-1 = <&wl2868c_pins_enp0>;
+		pinctrl-2 = <&wl2868c_pins_enp1>;
+		status = "okay";
+	};
+};
+
+&tlmm {
+	wl2868c_pins_enp1: wl2868c_pins_enp1 {
+		mux {
+			pins = "gpio58";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio58";
+			bias-pull-up;
+			output-low;
+			drive-strength = <2>;
+		};
+	};
+
+	wl2868c_pins_enp0: wl2868c_pins_enp0 {
+		mux {
+			pins = "gpio58";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio58";
+			bias-pull-up;
+			output-high;
+			drive-strength = <2>;
+		};
+	};
+
+	wl2868c_pins_default: wl2868c_pins_default {
+	};
+};
+
+&qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	i2c_wl2868c@2F{
+		compatible = "qualcomm,i2c_wl2868c";
+		reg = <0x2F>;
+		status = "okay";
+	};
+};
+

@@ -1,0 +1,53 @@
+/dts-v1/;
+/plugin/;
+
+#include "blair-mtp-usbc.dtsi"
+#include "holi-mtp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blair MTP USBC audio";
+	compatible = "qcom,blair-mtp", "qcom,blair", "qcom,mtp";
+	qcom,msm-id = <507 0x10000>;
+	qcom,board-id = <8 1>;
+};
+
+&swr0 {
+	qcom,is_wcd937x = <0>;
+};
+
+&wcd937x_tx_slave {
+	status = "disabled";
+};
+
+&wcd937x_rx_slave {
+	status = "disabled";
+};
+
+&wcd937x_codec {
+	status = "disabled";
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+};
+
+&wcd938x_tx_slave {
+	status = "ok";
+};
+
+&wcd938x_rx_slave {
+	status = "ok";
+};
+
+&wcd938x_codec {
+	status = "ok";
+};
+
+&holi_snd {
+	asoc-codec  = <&stub_codec>, <&bolero>,
+		      <&wcd938x_codec>, <&wsa881x_i2c_e>,
+		      <&wsa881x_i2c_f>;
+	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
+			   "wcd938x_codec", "wsa-codec0",
+			   "wsa-codec1";
+};

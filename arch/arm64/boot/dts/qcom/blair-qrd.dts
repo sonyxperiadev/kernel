@@ -1,0 +1,17 @@
+/dts-v1/;
+
+#include "blair.dtsi"
+#include "blair-qrd.dtsi"
+#include "holi-qrd-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blair QRD";
+	compatible = "qcom,blair-qrd", "qcom,blair", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x2E 0x0>;
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+};

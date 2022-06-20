@@ -1,0 +1,4 @@
+#include "blair-murray-common.dtsi"
+
+&soc {
+};

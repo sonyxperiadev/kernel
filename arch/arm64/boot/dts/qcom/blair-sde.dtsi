@@ -1,0 +1,40 @@
+#include "holi-sde.dtsi"
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L4A>;
+};
+
+&mdss_dsi_phy0 {
+	compatible = "qcom,dsi-phy-v4.1";
+	reg = <0x05e94400 0x800>,
+	      <0x05e94900 0x264>,
+	      <0x05f01004 0x8>,
+	      <0x05e94200 0x100>;
+	reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
+	pll-label = "dsi_pll_5nm";
+
+	qcom,platform-lane-config = [00 00 0a 0a
+				     00 00 0a 0a
+				     00 00 0a 0a
+				     00 00 0a 0a
+				     00 00 8a 8a];
+
+	vdda-0p9-supply = <&S1E_LEVEL>;
+	qcom,phy-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,phy-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vdda-0p9";
+			qcom,supply-min-voltage =
+				<RPMH_REGULATOR_LEVEL_SVS_L1>;
+			qcom,supply-max-voltage =
+				<RPMH_REGULATOR_LEVEL_TURBO_L1>;
+			qcom,supply-off-min-voltage =
+				<RPMH_REGULATOR_LEVEL_RETENTION>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+		};
+	};
+};
+

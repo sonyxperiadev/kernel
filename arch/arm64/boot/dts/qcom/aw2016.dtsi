@@ -1,0 +1,40 @@
+	aw2016@64 {/* add for breath led. */
+		compatible = "awinic,aw2016_led";
+		reg = <0x64>;
+
+		aw2016,red {
+			aw2016,name = "red";
+			aw2016,id = <0>;
+			aw2016,imax = <2>;
+			aw2016,led-current = <3>;
+			aw2016,max-brightness = <255>;
+			aw2016,rise-time-ms = <6>;
+			aw2016,hold-time-ms = <0>;
+			aw2016,fall-time-ms = <6>;
+			aw2016,off-time-ms = <4>;
+		};
+
+		aw2016,green {
+			aw2016,name = "green";
+			aw2016,id = <1>;
+			aw2016,imax = <2>;
+			aw2016,led-current = <3>;
+			aw2016,max-brightness = <255>;
+			aw2016,rise-time-ms = <6>;
+			aw2016,hold-time-ms = <0>;
+			aw2016,fall-time-ms = <6>;
+			aw2016,off-time-ms = <4>;
+		};
+
+		aw2016,blue {
+			aw2016,name = "blue";
+			aw2016,id = <2>;
+			aw2016,imax = <2>;
+			aw2016,led-current = <3>;
+			aw2016,max-brightness = <255>;
+			aw2016,rise-time-ms = <6>;
+			aw2016,hold-time-ms = <0>;
+			aw2016,fall-time-ms = <6>;
+			aw2016,off-time-ms = <4>;
+		};
+	};
