@@ -1,0 +1,74 @@
+/* AWINIC AW862XX Haptic */
+&qupv3_se10_i2c {
+	status = "ok";
+	awinic_haptic@58{
+		compatible = "awinic,haptic_nv";
+		reg = < 0x58 >;
+		aw862xx_i2c_addr = < 0x58 >;
+		reset-gpio = <&tlmm 100 0>;
+		irq-gpio = <&tlmm 48 0>;
+		/* --------aw8624 dts info-------- */
+		aw8624_vib_lk_f0_cali = <0>;
+		aw8624_vib_mode = < 0 >;  /*mode:  RAM mode->0; CONT mode -> 1*/
+		aw8624_vib_f0_pre = < 2350 >;
+		aw8624_vib_f0_cali_percen = < 7 >;
+		aw8624_vib_cont_drv_lev = < 125 >;
+		aw8624_vib_cont_drv_lvl_ov = < 155 >;
+		aw8624_vib_cont_td = < 0xF06C >;
+		aw8624_vib_cont_zc_thr = < 0x08F8 >;
+		aw8624_vib_cont_num_brk = < 3 >;
+		aw8624_vib_f0_coeff = < 260 >; /*Don't modify it*/
+		aw8624_vib_brake_cont_config = < 1 1 90 42 20 5 2 2 0 0 0  0  0  0 0 0 0 0 0   0  0  0 0 0 >;
+		aw8624_vib_f0_trace_parameter = < 0x05 0x03 0x02 0x0f >;
+		aw8624_vib_bemf_config = < 0x10 0x08 0x23 0xf8 >;
+		aw8624_vib_sw_brake = < 0x2c 0x08>; /*cont brake,other brake*/
+		aw8624_vib_trig_config = < 0 1 0 1 1 >;
+		aw8624_vib_tset = < 0x11 >;
+		aw8624_vib_duration_time = < 20 30 60 >;
+		/* --------aw8622x dts info-------- */
+		aw8622x_vib_lk_f0_cali = < 0 >;
+		aw8622x_vib_mode = < 0 >; /* mode: RAM mode->0; CONT mode->1 */
+		aw8622x_vib_f0_pre = < 2350 >;
+		aw8622x_vib_f0_cali_percen = < 7 >;
+		aw8622x_vib_cont_drv1_lvl = < 0x7F >;
+		aw8622x_vib_cont_drv2_lvl = < 0x36 >;
+		aw8622x_vib_cont_brk_time = < 0x06 >;
+		aw8622x_vib_cont_tset = < 0x06 >;
+		aw8622x_vib_cont_bemf_set = < 0x02 >;
+		aw8622x_vib_cont_drv_width = < 0x6A >;
+		aw8622x_vib_cont_wait_num = < 0x06 >;
+		aw8622x_vib_cont_brk_gain = < 0x08 >;
+		aw8622x_vib_cont_drv1_time = < 0x04 >;
+		aw8622x_vib_cont_drv2_time = < 0x14 >;
+		aw8622x_vib_cont_track_margin = < 0x12 >;
+		aw8622x_vib_sine_array = < 0x05 0xB2 0xFF 0xEF >; /* SIN_H SIN_L COS_H COS_L*/
+		aw8622x_vib_d2s_gain = < 0x05 >;
+		aw8622x_vib_prctmode = < 0x2D 0x3E 0x3F >;
+		aw8622x_vib_trig_config = < 0 0 0 1 0 2 0
+					    0 0 0 1 0 2 0
+					    0 0 0 1 0 2 0 >;
+		aw8622x_vib_duration_time = < 20 30 60 >;
+		/*aw8622x_vib_is_enabled_auto_brk;*/
+		/* --------aw86214 dts info-------- */
+		aw86214_vib_lk_f0_cali = < 0 >;
+		aw86214_vib_mode = < 0 >; /* mode: RAM mode->0; CONT mode->1 */
+		aw86214_vib_f0_ref = < 2350 >;
+		aw86214_vib_f0_cali_percent = < 7 >;
+		aw86214_vib_cont_drv1_lvl = < 0x7F >;
+		aw86214_vib_cont_drv2_lvl = < 0x36 >;
+		aw86214_vib_cont_brk_time = < 0x06 >;
+		aw86214_vib_cont_tset = < 0x06 >;
+		aw86214_vib_cont_bemf_set = < 0x02 >;
+		aw86214_vib_cont_drv_width = < 0x6A >;
+		aw86214_vib_cont_wait_num = < 0x06 >;
+		aw86214_vib_cont_drv1_time = < 0x04 >;
+		aw86214_vib_cont_drv2_time = < 0x14 >;
+		aw86214_vib_cont_track_margin = < 0x12 >;
+		aw86214_vib_sine_array = < 0x05 0xB2 0xFF 0xEF >;
+		aw86214_vib_d2s_gain = < 0x05 >;
+		aw86214_vib_prctmode = < 0x2D 0x3E 0x3F >;
+		aw86214_vib_duration_time = < 20 30 60 >;
+
+	};
+};
+

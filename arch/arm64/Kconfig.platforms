@@ -315,6 +315,24 @@ config ARCH_HOLI
 	  HOLI chipset. If you do not wish to build a kernel that
 	  runs on this chipset or if you are unsure, say 'N' here.
 
+config ARCH_SONY_MURRAY
+	bool "Sony Mobile Murray platform"
+	depends on ARCH_HOLI
+	help
+	  Support for the SONY Mobile Murray platform
+	  which is based on QCOM HOLI chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX225
+	bool "Sony Mobile PDX225"
+	depends on ARCH_SONY_MURRAY
+	help
+	  Support for the SONY Mobile PDX225 board
+	  which is based on SONY Murray platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_BLAIR
 	bool "Enable Support for Qualcomm Technologies, Inc. BLAIR"
 	depends on ARCH_QCOM

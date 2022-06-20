@@ -1,0 +1,95 @@
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&S1E_LEVEL>;
+};
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L4A>;
+};
+
+&icnss {
+	vdd-cx-mx-supply = <&L2E>;
+	vdd-1.8-xo-supply = <&L16A>;
+	vdd-1.3-rfa-supply = <&L2A>;
+	vdd-3.3-ch1-supply = <&L21A>;
+	vdd-3.3-ch0-supply = <&L23A>;
+	vdd-smps-supply = <&S5A>;
+	qcom,vdd-cx-mx-config = <640000 640000>;
+	qcom,vdd-3.3-ch1-config = <3000000 3312000>;
+	qcom,vdd-3.3-ch0-config = <3000000 3312000>;
+};
+
+&bluetooth {
+	qcom,bt-vdd-smps-supply = <&S5A>;  /* SMPS */
+	qcom,bt-vdd-io-supply = <&L9A>;  /* IO */
+	qcom,bt-vdd-core-supply = <&L2A>; /* RFA */
+	qcom,bt-vdd-pa-supply = <&L23A>; /* CH0 */
+	qcom,bt-vdd-xtal-supply = <&L16A>; /* XO */
+
+	qcom,bt-vdd-smps-config = <984000 984000 1 0>;
+};
+
+&dispcc {
+	vdd_cx-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpucc {
+	vdd_cx-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S1E_LEVEL>; /* VDD_MX_LEVEL */
+	vdd_gx-supply = <&S8A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gpu_cx_gdsc {
+	parent-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpu_gx_gdsc {
+	parent-supply = <&S8A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gcc {
+	vdd_cx-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S1E_LEVEL>; /* VDD_MX_LEVEL */
+};
+
+&msm_gpu {
+	vdd-parent-supply = <&S8A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&pil_turing {
+	vdd_cx-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_modem {
+	vdd_cx-supply = <&S2E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_lpass {
+	vdd_lpi_cx-supply = <&L1A_LEVEL>;
+	vdd_lpi_mx-supply = <&L17A_LEVEL>;
+};
+
+&msm_vidc {
+	qcom,cx-ipeak-data = <&cx_ipeak_lm 6>;
+	qcom,clock-freq-threshold = <300000000>;
+};
+
+&qusb_phy0 {
+	vdd-supply = <&L7A>;
+	vdda18-supply = <&L10A>;
+	vdda33-supply = <&L7E>;
+	refgen-supply = <&L4A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L18A>;
+	core-supply = <&L4A>;
+};
+
+&soc {
+	cx_ipeak_lm: cx_ipeak@3ed000 {
+		#size-cells = <1>;
+		compatible = "qcom,cx-ipeak-v2";
+		reg = <0x3ed000 0xe010>;
+		status = "ok";
+	};
+};

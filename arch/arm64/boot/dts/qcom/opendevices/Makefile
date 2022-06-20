@@ -91,6 +91,37 @@ dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-v2.1-qrd-hsp-pro.dts
 endif
 
+ifneq ($(CONFIG_ARCH_SONY_MURRAY),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo \
+	blair-mtp-overlay.dtbo \
+	blair-cdp-overlay.dtbo \
+	blair-atp-overlay.dtbo \
+	blair-qrd-overlay.dtbo \
+	blair-mtp-usbc-overlay.dtbo \
+	blair-mtp-nopmi-overlay.dtbo \
+	blair-qrd-nopmi-overlay.dtbo
+
+blair-rumi-overlay.dtbo-base := blair.dtb
+blair-mtp-overlay.dtbo-base := blair.dtb
+blair-cdp-overlay.dtbo-base := blair.dtb
+blair-atp-overlay.dtbo-base := blair.dtb
+blair-qrd-overlay.dtbo-base := blair.dtb
+blair-mtp-usbc-overlay.dtbo-base := blair.dtb
+blair-mtp-nopmi-overlay.dtbo-base := blair.dtb
+blair-qrd-nopmi-overlay.dtbo-base := blair.dtb
+else
+dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb \
+	blair-mtp.dtb \
+	blair-cdp.dtb \
+	blair-atp.dtb \
+	blair-qrd.dtb \
+	blair-mtp-usbc.dtb \
+	blair-mtp-nopmi.dtb \
+	blair-qrd-nopmi.dtb
+endif
+endif
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo

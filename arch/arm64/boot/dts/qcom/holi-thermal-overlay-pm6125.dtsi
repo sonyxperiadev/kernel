@@ -1,0 +1,60 @@
+#include <dt-bindings/thermal/thermal_qti.h>
+
+&mdss_mdp {
+	#cooling-cells = <2>;
+};
+
+&cxip_cdev {
+	status = "ok";
+};
+
+&thermal_zones {
+	pm6125_tz {
+		cooling-maps {
+			trip0_cpu6 {
+				trip = <&pm6125_trip0>;
+				cooling-device =
+					<&CPU6 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu4 {
+				trip = <&pm6125_trip0>;
+				cooling-device = <&cpu4_isolate 1 1>;
+			};
+
+			trip1_cpu5 {
+				trip = <&pm6125_trip0>;
+				cooling-device = <&cpu5_isolate 1 1>;
+			};
+
+			trip1_cpu6 {
+				trip = <&pm6125_trip0>;
+				cooling-device = <&cpu6_isolate 1 1>;
+			};
+
+			trip1_cpu7 {
+				trip = <&pm6125_trip0>;
+				cooling-device = <&cpu7_isolate 1 1>;
+			};
+		};
+	};
+
+	pmr735a_tz {
+		cooling-maps {
+			trip0_modem_tj {
+				trip = <&pmr735a_trip0>;
+				cooling-device =
+					<&modem_tj THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip0_modem_pa {
+				trip = <&pmr735a_trip0>;
+				cooling-device =
+					<&modem_pa THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+		};
+	};
+};

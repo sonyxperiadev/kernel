@@ -1,0 +1,123 @@
+&tlmm {
+	if_pmic_irq: if-pmic-irq {
+		pins = "gpio136";
+		function = "gpio";
+		drive-strength = <0x2>;
+		input-enable;
+		bias-disable;
+	};
+	usbpd_irq: usbpd_irq {
+		pins = "gpio134";
+		function = "gpio";
+		drive-strength = <0x8>;
+		input-enable;
+		bias-disable;
+	};
+};
+&qupv3_se0_i2c {
+	#address-cells = <0x1>;
+	#size-cells = <0x0>;
+	status = "ok";
+	sm5038@49 {
+		status = "ok";
+		compatible = "siliconmitus,sm5038mfd";
+		reg = <0x49>;
+		#io-channel-cells = <1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&if_pmic_irq
+				&pm6125_batt_therm_default
+				&pmr735a_charger_skin_therm_default
+				&pmk8350_batt_id_default
+				&pmk8350_usb_conn_therm_default>;
+		sm5038,irq-gpio = <&tlmm 136 0>;
+		sm5038,wakeup;
+		sm5038_charger: sm5038-charger{
+			battery,sw-jeita-enable;
+			battery,step-charging-enable;
+			battery,fcc-stepping-enable;
+			battery,thermal-mitigation = <3000000 1500000
+					1000000 500000 500000 500000 500000>;
+			battery,thermal-mitigation-sleep = <3000000 2500000
+					2000000 1500000 1000000 500000 500000>;
+			battery,chg-float-voltage-uv = <4480000>;
+			battery,chg-fastchg-current-ma = <3450>;
+			battery,jeita-fcc-ranges = <50  120  1000000
+						    121 150  2500000
+						    151 200  3000000
+						    201 450  3000000
+						    451 550  1500000>;
+			battery,jeita-fv-ranges = <50  120  4250000
+						    121 150  4480000
+						    151 200  4480000
+						    201 450  4480000
+						    451 550  4250000>;
+			battery,step-chg-ranges = <3600000  4150000  3000000
+			  			   4150001  4250000  3000000
+						   4250001  4300000  2500000
+						   4300001  4400000  1500000
+						   4400001  4480000  1500000>;
+			battery,ocv-based-step-chg;
+			battery,chg_float_voltage = <4480>;
+			battery,chg_ocp_current = <5400>;
+			battery,auto-recharge-soc = <950>;
+			io-channels = 	<&pm6125_vadc ADC5_GPIO2_100K_PU>,
+					<&pmr735a_vadc ADC7_GPIO3_100K_PU>,
+					<&pmk8350_vadc PMK8350_ADC7_AMUX_THM2_100K_PU>,
+					<&pmk8350_vadc PMK8350_ADC7_AMUX_THM4_100K_PU>;
+			io-channel-names = "pm6125_batt_therm",
+					"pmr735a_charger_skin_therm",
+					"pmk8350_batt_id",
+					"pmk8350_usb_conn_therm";
+		};
+		sm5038_fuelgauge: sm5038-fuelgauge {
+			fuelgauge,capacity_max = <1000>;
+			fuelgauge,capacity_min = <0>;
+			battery_params {
+				battery,id = <0>;
+				battery0,battery_type = <3400 4900 0x277A>;
+				battery0,battery_table0 = <
+						0x1400 0x1B51 0x1BA0 0x1C67 0x1CEE 0x1D50 0x1D6F 0x1D87 0x1D91 0x1D9B 0x1DFC 0x1E4F 0x1E69 0x1E9C 0x1EE4 0x1F34 0x1F7F 0x2031 0x2097 0x2146 0x2201 0x2304 0x2368 0x2733
+						>;
+				battery0,battery_table1 = <
+						0x0 0x66 0xB4 0x1B7 0x2BB 0x3BE 0x440 0x543 0x74A 0xAD6 0x11EE 0x1C10 0x2121 0x28BA 0x3053 0x3564 0x37ED 0x420E 0x471F 0x4EB9 0x5652 0x60F5 0x6400 0x64E6
+						>;
+				battery0,battery_table2 = <
+						0x4B75 0x363D 0x2C30 0x2427 0x2021 0x1D1F 0x1B1C 0x1A1A 0x4B75 0x363D 0x2C30 0x2427 0x2021 0x1D1F 0x1B1C 0x1A1A
+						>;
+				battery0,rs_value = <0x48 0x48 0x3800 0x10A 0x599 0x599 0x50>;
+				battery0,topoff = <500>;
+				battery0,i_cal = <1 0x0 0x0800 0x0800 0 0x0 0x0800 0x0810>;
+				battery0,v_cal = <1 0 0 1 0 0 0>;
+				battery0,temp_std = <25>;
+				battery0,aux_ctrl = <0x3322 0x5800>;
+				battery0,data_ver = <2>;
+			};
+		};
+		sm5038_fled: sm5038-fled{
+            compatible = "siliconmitus,sm5038-fled";
+			flash-brightness = <0xA>;
+			preflash-brightness = <0x4>;
+			torch-brightness = <0x2>;
+			timeout = <0xff>;
+		};
+	};
+};
+&qupv3_se7_i2c {
+	#address-cells = <0x1>;
+	#size-cells = <0x0>;
+	status = "ok";
+	sm5038_usbpd: sm5038-usbpd@33 {
+		status = "ok";
+		compatible = "sm5038-usbpd";
+		reg = <0x33>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&usbpd_irq>;
+		pinctrl-1 = <&qupv3_se9_2uart_sleep>;
+		usbpd,usbpd_int = <&tlmm 134 0>;
+		qcom,serial-tx-gpio = <&tlmm 26 0>;
+		qcom,serial-rx-gpio = <&tlmm 25 0>;
+	};
+};
+&usb0 {
+	extcon = <&sm5038_usbpd>;
+};
