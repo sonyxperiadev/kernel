@@ -1,0 +1,358 @@
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/input/qcom,qpnp-power-on.h>
+#include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pm5100.h>
+
+&spmi_bus {
+	#address-cells = <2>;
+	#size-cells = <0>;
+	interrupt-controller;
+	#interrupt-cells = <4>;
+
+	qcom,pm5100@0 {
+		compatible = "qcom,spmi-pmic";
+		reg = <0 SPMI_USID>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pon_hlos@1300 {
+			compatible = "qcom,qpnp-power-on";
+			reg = <0x1300>;
+			interrupts = <0x0 0x13 0x7 IRQ_TYPE_EDGE_BOTH>,
+				     <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "kpdpwr", "resin";
+
+			qcom,pon_1 {
+				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;
+				linux,code = <KEY_POWER>;
+			};
+
+			qcom,pon_2 {
+				qcom,pon-type = <PON_POWER_ON_TYPE_RESIN>;
+				linux,code = <KEY_VOLUMEDOWN>;
+			};
+		};
+
+		pm5100_tz: qcom,temp-alarm@a00 {
+			compatible = "qcom,spmi-temp-alarm";
+			reg = <0xa00>;
+			interrupts = <0x0 0xa 0x0 IRQ_TYPE_EDGE_BOTH>;
+			io-channels = <&pm5100_adc PM5100_ADC5_GEN3_DIE_TEMP>;
+			io-channel-names = "thermal";
+			#thermal-sensor-cells = <0>;
+		};
+
+		pm5100_adc: vadc@8000 {
+			compatible = "qcom,spmi-adc5-gen3";
+			reg = <0x8000>, <0x8300>;
+			reg-names = "adc5-gen3-base", "adc5-gen3-debug-base";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0x0 0x80 0x1 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "adc";
+			#io-channel-cells = <1>;
+			status = "disabled";
+
+			pm5100_ref_gnd {
+				reg = <PM5100_ADC5_GEN3_OFFSET_REF>;
+				label = "pm5100_ref_gnd";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_vref_1p25 {
+				reg = <PM5100_ADC5_GEN3_1P25VREF>;
+				label = "pm5100_vref_1p25";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_die_temp {
+				reg = <PM5100_ADC5_GEN3_DIE_TEMP>;
+				label = "pm5100_die_temp";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_xo_therm {
+				reg = <PM5100_ADC5_GEN3_AMUX1_THM_100K_PU>;
+				label = "pm5100_xo_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <700>;
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_usb_in_i_uv {
+				reg = <PM5100_ADC5_GEN3_USB_IN_I>;
+				label = "pm5100_usb_in_i_uv";
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_USB_IN_I>;
+			};
+
+			pm5100_chg_temp {
+				reg = <PM5100_ADC5_GEN3_CHG_TEMP>;
+				label = "pm5100_chg_temp";
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_CHG_TEMP>;
+			};
+
+			pm5100_usb_in_v {
+				reg = <PM5100_ADC5_GEN3_USB_SNS_V_16>;
+				label = "pm5100_usb_in_v";
+				qcom,pre-scaling = <1 16>;
+			};
+
+			pm5100_boost_out_v {
+				reg = <PM5100_ADC5_GEN3_VIN_DIV16_MUX>;
+				label = "pm5100_boost_out_v";
+				qcom,pre-scaling = <1 6>;
+			};
+
+			pm5100_bat_therm {
+				reg = <PM5100_ADC5_GEN3_BATT_THM_100K_PU>;
+				label = "pm5100_bat_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_BATT_THERM_100K>;
+			};
+
+			pm5100_bat_id {
+				reg = <PM5100_ADC5_GEN3_BAT_ID_100K_PU>;
+				label = "pm5100_bat_id";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_BATT_ID_100K>;
+			};
+
+			pm5100_vph_pwr {
+				reg = <PM5100_ADC5_GEN3_VPH_PWR>;
+				label = "pm5100_vph_pwr";
+				qcom,pre-scaling = <1 3>;
+			};
+
+			pm5100_vbat_sns {
+				reg = <PM5100_ADC5_GEN3_VBAT_SNS_QBG>;
+				label = "pm5100_vbat_sns";
+				qcom,pre-scaling = <1 3>;
+			};
+		};
+
+		pm5100_gpios: pinctrl@8800 {
+			compatible = "qcom,pm5100-gpio";
+			reg = <0x8800>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		pm5100_rtc: rtc@6400 {
+			compatible = "qcom,pm5100-rtc";
+			reg = <0x6400>, <0x6500>;
+			reg-names = "rtc", "alarm";
+			interrupts = <0x0 0x65 0x1 IRQ_TYPE_EDGE_RISING>;
+		};
+
+		pm5100_cdc: qcom,pm5100-cdc {
+			compatible = "qcom,pm5100-spmi";
+		};
+
+		pm5100_bcl: bcl@4700 {
+			compatible = "qcom,bcl-v5";
+			reg = <0x4700 0x100>;
+			interrupts = <0x0 0x47 0x0 IRQ_TYPE_NONE>,
+					<0x0 0x47 0x1 IRQ_TYPE_NONE>,
+					<0x0 0x47 0x2 IRQ_TYPE_NONE>;
+			interrupt-names = "bcl-lvl0",
+						"bcl-lvl1",
+						"bcl-lvl2";
+			qcom,pmic7-threshold;
+			qcom,ibat-ccm-hw-support;
+			#thermal-sensor-cells = <1>;
+		};
+
+		bcl_soc:bcl-soc {
+			compatible = "qcom,msm-bcl-soc";
+			#thermal-sensor-cells = <0>;
+		};
+	};
+};
+
+&thermal_zones {
+	pm5100-tz {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_tz>;
+
+		trips {
+			pm5100_trip0: trip0 {
+				temperature = <95000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			pm5100_trip1: trip1 {
+				temperature = <115000>;
+				hysteresis = <0>;
+				type = "critical";
+			};
+
+			pm5100_trip2: trip2 {
+				temperature = <145000>;
+				hysteresis = <0>;
+				type = "critical";
+			};
+		};
+	};
+
+	pm5100-ibat-lvl0 {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_bcl 0>;
+
+		trips {
+			ibat_lvl0:ibat-lvl0 {
+				temperature = <1100>;
+				hysteresis = <200>;
+				type = "passive";
+			};
+		};
+	};
+
+	pm5100-ibat-lvl1 {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_bcl 1>;
+
+		trips {
+			ibat_lvl1:ibat-lvl1 {
+				temperature = <1500>;
+				hysteresis = <200>;
+				type = "passive";
+			};
+		};
+	};
+
+	pm5100-bcl-lvl0 {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_bcl 5>;
+
+		trips {
+			bcl_lvl0: bcl-lvl0 {
+				temperature = <1>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+		};
+	};
+
+	pm5100-bcl-lvl1 {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_bcl 6>;
+
+		trips {
+			bcl_lvl1: bcl-lvl1 {
+				temperature = <1>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+		};
+	};
+
+	pm5100-bcl-lvl2 {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_bcl 7>;
+
+		trips {
+			bcl_lvl2: bcl-lvl2 {
+				temperature = <1>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+		};
+	};
+
+	socd {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&bcl_soc>;
+
+		trips {
+			socd_trip:socd-trip {
+				temperature = <90>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+	};
+};
+
+&thermal_zones {
+	pm5100_tz {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm5100_tz>;
+		wake-capable-sensor;
+
+		trips {
+			pm5100_trip0: trip0 {
+				temperature = <95000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			pm5100_trip1: trip1 {
+				temperature = <115000>;
+				hysteresis = <0>;
+				type = "critical";
+			};
+
+			trip2 {
+				temperature = <145000>;
+				hysteresis = <0>;
+				type = "critical";
+			};
+		};
+	};
+};
+
+&pm5100_gpios {
+	pmx_sde: pmx_sde {
+		sde_dsi_active: sde_dsi_active {
+			mux {
+				pins = "gpio1", "gpio2";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio1", "gpio2";
+				drive-strength = <8>;
+				bias-disable = <0>;
+			};
+		};
+
+		sde_dsi_suspend: sde_dsi_suspend {
+			mux {
+				pins = "gpio1", "gpio2";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio1", "gpio2";
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+	};
+};

@@ -1,0 +1,17 @@
+/dts-v1/;
+
+#include "blair.dtsi"
+#include "blair-mtp.dtsi"
+#include "holi-mtp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blair MTP";
+	compatible = "qcom,blair-mtp", "qcom,blair", "qcom,mtp";
+	qcom,board-id = <8 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x2E 0x0>;
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+};

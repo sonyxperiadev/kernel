@@ -1,0 +1,23 @@
+&pm6125_gpios {
+    camera_flash_pwm {
+        camera_flash_pwm_default: camera_flash_pwm_default {
+            pins = "gpio8";
+            function = "func1";
+            input-disable; /* No PULL */
+            output-low;
+            bias-disable;
+            power-source = <0>;
+            drive-strength = <3>;
+        };
+    };
+};
+
+&soc {
+    pm6125_flash_gpio:pm6125_flash_gpio {
+        compatible = "qualcomm,pm6125_flash_gpio";
+        pinctrl-names = "camera_flash_pwm_default";
+        pinctrl-0 = <&camera_flash_pwm_default>;
+        pwms = <&pm6125_pwm 0 0>;
+    };
+};
+

@@ -1,0 +1,277 @@
+/* Should extend holi-sde-display-cdp-pm6125.dtsi */
+#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include <dt-bindings/clock/qcom,dispcc-blair.h>
+#include "dsi-panel-nt36672e-fhd-plus-144hz-video-cphy.dtsi"
+
+&tlmm {
+	pmx_sde_bias_en: pmx_sde_bias_en {
+		lcd_bias_en_active: lcd_bias_en_active {
+			mux {
+				pins = "gpio47";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio47";
+				drive-strength = <8>;   /* 8 mA */
+				bias-disable = <0>;   /* no pull */
+			};
+		};
+
+		lcd_bias_en_suspend: lcd_bias_en_suspend {
+			mux {
+				pins = "gpio47";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio47";
+				drive-strength = <2>;   /* 2 mA */
+				bias-pull-down;         /* PULL DOWN */
+			};
+		};
+	};
+};
+
+&pm6125_gpios {
+	lcd_backlight_ctrl {
+		lcd_backlight_ctrl_default: lcd_backlight_ctrl_default {
+			pins = "gpio8";
+			function = "func1";
+			input-disable;
+			output-low;
+			bias-disable;
+			power-source = <0>;
+			qcom,drive-strength = <3>;
+		};
+	};
+};
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>,
+		/*
+		 * Currently the dsi clock handles are under the dsi
+		 * controller DT node. As soon as the controller probe
+		 * finishes, the dispcc sync state can get called before
+		 * the dsi_display probe potentially disturbing the clock
+		 * votes for cont_splash use case. Hence we are no longer
+		 * protected by the component model in this case against the
+		 * disp cc sync state getting triggered after the dsi_ctrl
+		 * probe. To protect against this incorrect sync state trigger
+		 * add this dummy MDP clk vote handle to the dsi_display
+		 * DT node. Since the dsi_display driver does not parse
+		 * MDP clock nodes, no actual vote shall be added and this
+		 * change is done just to satisfy sync state requirements.
+		 */
+		<&dispcc DISP_CC_MDSS_MDP_CLK>;
+
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"cphy_byte_clk0", "cphy_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0",
+		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0",
+		"mdp_core_clk";
+
+	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
+	pinctrl-0 = <&sde_te_active &disp_pins_reset &lcd_bias_en_active>;
+	pinctrl-1 = <&sde_te_suspend &lcd_bias_en_suspend>;
+	pinctrl-2 = <&lcd_backlight_ctrl_default>;
+};
+
+&dsi_sim_vid {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 1b 1b 01
+							01 02 02 04 00 0a 11];
+		};
+	};
+};
+
+&dsi_rm69299_visionox_amoled_video {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+							08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
+&dsi_r66451_amoled_cmd {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0b];
+		};
+
+		timing@2 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
+		};
+	};
+};
+
+&dsi_r66451_amoled_video {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
+		};
+	};
+};
+
+&dsi_rm69299_visionox_amoled_cmd {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+							08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
+&dsi_nt36672e_fhd_plus_60_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 24 09 0a 26 25 09
+				0a 09 02 04 00 1f 19];
+		};
+	};
+};
+
+&dsi_nt36672e_fhd_plus_120_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1e 08 08 24 22 08
+				08 08 02 04 00 1b 18];
+		};
+	};
+};
+
+&dsi_nt36672e_fhd_plus_144_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08
+				08 08 02 04 00 1c 18];
+		};
+	};
+};
+
+&dsi_nt36672e_fhd_plus_144hz_video_cphy {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"cphy_byte_clk0", "cphy_pixel_clk0";
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 22 1F 06
+				19 07 02 04 00 00 00];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};

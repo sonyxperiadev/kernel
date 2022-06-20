@@ -1,0 +1,130 @@
+&soc {
+    last_logs@ffbc0000 {
+		compatible = "rd_last_logs";
+		label = "last_logs";
+		memory-region = "log";
+	};
+
+    reboot_reason {
+		qcom,use_custom_reasons;
+	};
+
+	restart-reason {
+		none {
+			cmd = "none";
+			reg-val = <0x00 0x00000000>;
+		};
+
+		unknown {
+			cmd = "unknown";
+			reg-val = <0x01 0x77665501>;
+		};
+
+		recovery {
+			cmd = "recovery";
+			reg-val = <0x02 0x77665500>;
+			reboot-cmd;
+		};
+
+		bootloader {
+			cmd = "bootloader";
+			reg-val = <0x03 0x77665500>;
+			reboot-cmd;
+		};
+
+		rtc {
+			cmd = "rtc";
+			reg-val = <0x04 0x77665500>;
+			reboot-cmd;
+		};
+
+		dm-verity-device-corrupted {
+			cmd = "dm-verity device corrupted";
+			reg-val = <0x05 0x77665508>;
+			reboot-cmd;
+		};
+
+		dm-verity-enforcing {
+			cmd = "dm-verity enforcing";
+			reg-val = <0x06 0x77665509>;
+			reboot-cmd;
+		};
+
+		keys-clear {
+			cmd = "keys clear";
+			reg-val = <0x07 0x7766550A>;
+			reboot-cmd;
+		};
+
+		panic {
+			cmd = "panic";
+			reg-val = <0x40 0xC0DEDEAD>;
+		};
+
+		oem-N {
+			cmd = "oem-4E";
+			reg-val = <0x61 0x6F656D4E>;
+			reboot-cmd;
+		};
+
+		oem-S {
+			cmd = "oem-53";
+			reg-val = <0x60 0x6F656D53>;
+			reboot-cmd;
+		};
+
+		oem-P {
+			cmd = "oem-50";
+			reg-val = <0x51 0x6F656D50>;
+			reboot-cmd;
+		};
+
+                fota_crash {
+			cmd = "fota_crash";
+			reg-val = <0x42 0xABADF00D>;
+			reboot-cmd;
+		};
+
+		systemdump_success {
+			cmd = "systemdump_success";
+			reg-val = <0x49 0x000052D1>;
+			reboot-cmd;
+		};
+
+		systemdump_decryptextsd {
+			cmd = "systemdump_decryptextsd";
+			reg-val = <0x4A 0x000052D2>;
+			reboot-cmd;
+		};
+
+		systemdump_decryptfail {
+			cmd = "systemdump_decryptfail";
+			reg-val = <0x4B 0x000052D3>;
+			reboot-cmd;
+		};
+
+		systemdump_hwwd {
+			cmd = "systemdump_hwwd";
+			reg-val = <0x4C 0x000052D4>;
+			reboot-cmd;
+		};
+
+		systemdump_nospace {
+			cmd = "systemdump_nospace";
+			reg-val = <0x4D 0x000052D5>;
+			reboot-cmd;
+		};
+
+		systemdump_panic {
+			cmd = "systemdump_panic";
+			reg-val = <0x4E 0x000052DC>;
+			reboot-cmd;
+		};
+
+		systemdump_err {
+			cmd = "systemdump_err";
+			reg-val = <0x4F 0x000052DE>;
+			reboot-cmd;
+		};
+	};
+};

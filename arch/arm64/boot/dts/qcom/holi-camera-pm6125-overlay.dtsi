@@ -1,0 +1,33 @@
+&soc {
+	cam_csiphy0: qcom,csiphy0 {
+		mipi-csi-vdd1-supply = <&L7A>;
+		mipi-csi-vdd2-supply = <&L4A>;
+		rgltr-min-voltage = <0 880000 1200000>;
+		rgltr-max-voltage = <0 1050000 1300000>;
+		rgltr-load-current = <0 15900 8900>;
+	};
+
+	cam_csiphy1: qcom,csiphy1 {
+		mipi-csi-vdd1-supply = <&L7A>;
+		mipi-csi-vdd2-supply = <&L4A>;
+		rgltr-min-voltage = <0 880000 1200000>;
+		rgltr-max-voltage = <0 1050000 1300000>;
+		rgltr-load-current = <0 15900 8900>;
+	};
+
+	cam_csiphy2: qcom,csiphy2 {
+		mipi-csi-vdd1-supply = <&L7A>;
+		mipi-csi-vdd2-supply = <&L4A>;
+		rgltr-min-voltage = <0 880000 1200000>;
+		rgltr-max-voltage = <0 1050000 1300000>;
+		rgltr-load-current = <0 15900 8900>;
+	};
+
+	cam_csiphy3: qcom,csiphy3 {
+		mipi-csi-vdd1-supply = <&L7A>;
+		mipi-csi-vdd2-supply = <&L4A>;
+		rgltr-min-voltage = <0 880000 1200000>;
+		rgltr-max-voltage = <0 1050000 1300000>;
+		rgltr-load-current = <0 15900 8900>;
+	};
+};

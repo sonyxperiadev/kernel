@@ -1,0 +1,127 @@
+&soc {
+	fp_egistec {
+		status = "ok";
+		compatible = "fp-egistec";
+		fp-ctrl-power;
+		fp-gpio-vcc-enable;
+		egistec,gpio_vcc_en = <&tlmm 87 0x00>;
+		egistec,gpio_vdd_en = <&tlmm 93 0x00>;
+		egistec,gpio_reset = <&tlmm 18 0x00>;
+		egistec,gpio_irq = <&tlmm 17 0x00>;
+		egis-fp,vcc-voltage = <3000000 3000000>;
+		egis-fp,vcc-current = <100000>;
+		pinctrl-names = "egis_rst_high", "egis_rst_low", "egis_irq_active", "egis_vcc_high", "egis_vcc_low", "egis_vdd_high", "egis_vdd_low";
+		pinctrl-0 = <&fingerfp_rst_high>;
+		pinctrl-1 = <&fingerfp_rst_low>;
+		pinctrl-2 = <&fingerfp_irq_active>;
+		pinctrl-3 = <&fingerfp_vcc_high>;
+		pinctrl-4 = <&fingerfp_vcc_low>;
+		pinctrl-5 = <&fingerfp_vdd_high>;
+		pinctrl-6 = <&fingerfp_vdd_low>;
+	};
+};
+&tlmm {
+	fingerfp_rst_pin: fingerfp_rst_pin {
+		fingerfp_rst_high: fingerfp_rst_high {
+			mux {
+				pins = "gpio18";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio18";
+				drive-strength = <8>;
+				output-high;
+				bias-pull-up;
+			};
+		};
+
+		fingerfp_rst_low: fingerfp_rst_low {
+			mux {
+				pins = "gpio18";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio18";
+				drive-strength = <8>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+	};
+
+	fingerfp_irq_active: fingerfp_irq_active {
+		mux {
+			pins = "gpio17";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio17";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
+	fingerfp_vcc_pin: fingerfp_vcc_pin {
+		fingerfp_vcc_high: fingerfp_vcc_high {
+			mux {
+				pins = "gpio87";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio87";
+				drive-strength = <8>;
+				output-high;
+				bias-pull-up;
+			};
+		};
+
+		fingerfp_vcc_low: fingerfp_vcc_low {
+			mux {
+				pins = "gpio87";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio87";
+				drive-strength = <8>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+	};
+	
+	fingerfp_vdd_pin: fingerfp_vdd_pin {
+		fingerfp_vdd_high: fingerfp_vdd_high {
+			mux {
+				pins = "gpio93";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio93";
+				drive-strength = <8>;
+				output-high;
+				bias-pull-up;
+			};
+		};
+
+		fingerfp_vdd_low: fingerfp_vdd_low {
+			mux {
+				pins = "gpio93";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio93";
+				drive-strength = <8>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+	};
+};

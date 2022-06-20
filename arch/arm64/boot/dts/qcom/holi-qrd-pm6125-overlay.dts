@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include "holi-pm6125-overlay.dtsi"
+#include "holi-regulators-pm6125.dtsi"
+#include "holi-qrd-pm7250b.dtsi"
+#include "holi-qrd-pm6125.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Holi QRD PM6125";
+	compatible = "qcom,holi-qrd", "qcom,holi", "qcom,qrd";
+	qcom,msm-id = <454 0x10000>, <472 0x10000>;
+	qcom,board-id = <0xb 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x2E 0x0>;
+};

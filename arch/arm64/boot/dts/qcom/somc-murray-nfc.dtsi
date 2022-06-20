@@ -1,0 +1,192 @@
+/* arch/arm64/boot/dts/qcom/somc-murrary-nfc.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se7_i2c {
+	status = "ok";
+	nfc@28 {
+		compatible = "nxp,sn1x0-i2c";
+		reg = <0x28>;
+		nxp,ven = <&tlmm 6 GPIO_ACTIVE_LOW>;
+		nxp,dwld = <&tlmm 8 GPIO_ACTIVE_HIGH>;
+		nxp,irq = <&tlmm 9 GPIO_ACTIVE_HIGH>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <9 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "nxp_sn1x0_irq";
+	};
+};
+
+&qupv3_se2_spi {
+	/* sm_gpio_45: SPI MISO */
+	/* sm_gpio_46: SPI MOSI */
+	/* sm_gpio_56: SPI CLK */
+	/* sm_gpio_57: SPI CS/SS */
+	status = "ok";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sm_gpio_45 &sm_gpio_46 &sm_gpio_56>;
+	pinctrl-1 = <&sm_gpio_45_suspend &sm_gpio_46_suspend &sm_gpio_56_suspend>;
+
+	/* SPI, The SPI lines must be exclusive by eSE device */
+	dev@0 {
+		compatible = "nxp,sn1x0-spi";
+		reg = <0x00>;
+		spi-max-frequency = <20000000>;
+		/* I2C device name: nxp,sn1x0-i2c */
+		nxp,nfcc = "nxp,sn1x0-i2c";
+		nxp,cs = <&tlmm 57 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&tlmm {
+	/* GPIO_6 : NFC_EN */
+	sm_gpio_6: sm_gpio_6 {
+		mux {
+			pins = "gpio6";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio6";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_7 : NFC_CLK_REQ */
+	sm_gpio_7: sm_gpio_7 {
+		mux {
+			pins = "gpio7";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio7";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_8 : NFC_DWL_REQ */
+	sm_gpio_8: sm_gpio_8 {
+		mux {
+			pins = "gpio8";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio8";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_9 : NFC_IRQ */
+	sm_gpio_9: sm_gpio_9 {
+		mux {
+			pins = "gpio9";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio9";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	sm_gpio_45: sm_gpio_45 {
+		mux {
+			pins = "gpio45";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio45";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	sm_gpio_45_suspend: sm_gpio_45_suspend {
+		mux {
+			pins = "gpio45";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio45";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	sm_gpio_46: sm_gpio_46 {
+		mux {
+			pins = "gpio46";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio46";
+			drive-strength = <6>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	sm_gpio_46_suspend: sm_gpio_46_suspend {
+		mux {
+			pins = "gpio46";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio46";
+			drive-strength = <6>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	sm_gpio_56: sm_gpio_56 {
+		mux {
+			pins = "gpio56";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio56";
+			drive-strength = <6>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	sm_gpio_56_suspend: sm_gpio_56_suspend {
+		mux {
+			pins = "gpio56";
+			function = "qup02";
+		};
+
+		config {
+			pins = "gpio56";
+			drive-strength = <6>;
+			bias-disable;
+			output-high;
+		};
+	};
+};

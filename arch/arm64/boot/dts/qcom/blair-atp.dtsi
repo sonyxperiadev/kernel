@@ -1,0 +1,795 @@
+#include "holi-audio-overlay.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include "holi-pmic-overlay.dtsi"
+#include "holi-sde-display-atp.dtsi"
+#include "blair-sde-display-atp.dtsi"
+#include "holi-thermal-overlay.dtsi"
+#include <dt-bindings/iio/qti_power_supply_iio.h>
+
+&rpm_bus {
+	/* Delete all PM6125 and PMR735a rpm-regulators */
+	/delete-node/ rpm-regulator-smpa6;
+	/delete-node/ rpm-regulator-smpa7;
+	/delete-node/ rpm-regulator-smpa8;
+	/delete-node/ rpm-regulator-ldoa1;
+	/delete-node/ rpm-regulator-ldoa2;
+	/delete-node/ rpm-regulator-ldoa3;
+	/delete-node/ rpm-regulator-ldoa4;
+	/delete-node/ rpm-regulator-ldoa5;
+	/delete-node/ rpm-regulator-ldoa6;
+	/delete-node/ rpm-regulator-ldoa7;
+	/delete-node/ rpm-regulator-ldoa8;
+	/delete-node/ rpm-regulator-ldoa9;
+	/delete-node/ rpm-regulator-ldoa10;
+	/delete-node/ rpm-regulator-ldoa11;
+	/delete-node/ rpm-regulator-ldoa12;
+	/delete-node/ rpm-regulator-ldoa13;
+	/delete-node/ rpm-regulator-ldoa14;
+	/delete-node/ rpm-regulator-ldoa15;
+	/delete-node/ rpm-regulator-ldoa16;
+	/delete-node/ rpm-regulator-ldoa17;
+	/delete-node/ rpm-regulator-ldoa18;
+	/delete-node/ rpm-regulator-ldoa19;
+	/delete-node/ rpm-regulator-ldoa20;
+	/delete-node/ rpm-regulator-ldoa21;
+	/delete-node/ rpm-regulator-ldoa22;
+	/delete-node/ rpm-regulator-ldoa23;
+	/delete-node/ rpm-regulator-ldoa24;
+
+	/delete-node/ rpm-regulator-smpe1;
+	/delete-node/ rpm-regulator-smpe2;
+	/delete-node/ rpm-regulator-ldoe1;
+	/delete-node/ rpm-regulator-ldoe2;
+	/delete-node/ rpm-regulator-ldoe3;
+	/delete-node/ rpm-regulator-ldoe4;
+	/delete-node/ rpm-regulator-ldoe5;
+	/delete-node/ rpm-regulator-ldoe7;
+
+	/* Disable all PM6125 and PMR735a rpm-regulators */
+	rpm-regulator-smpa6 {
+		status = "disabled";
+		regulator-s6 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-smpa7 {
+		status = "disabled";
+		regulator-s7 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-smpa8 {
+		status = "disabled";
+		regulator-s8 {
+			status = "disabled";
+		};
+
+		S3A_LEVEL {
+			status = "disabled";
+		};
+
+		S3A_LEVEL_ao {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa1 {
+		status = "disabled";
+		regulator-l1 {
+			status = "disabled";
+		};
+
+		regulator-l1-level {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa2 {
+		status = "disabled";
+		regulator-l2 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa3 {
+		status = "disabled";
+		regulator-l3 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa4 {
+		status = "disabled";
+		regulator-l4 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa5 {
+		status = "disabled";
+		regulator-l5 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa6 {
+		status = "disabled";
+		regulator-l6 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa7 {
+		status = "disabled";
+		regulator-l7 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa8 {
+		status = "disabled";
+		regulator-l8 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa9 {
+		status = "disabled";
+		regulator-l9 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa10 {
+		status = "disabled";
+		regulator-l10 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa11 {
+		status = "disabled";
+		regulator-l11 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa12 {
+		status = "disabled";
+		regulator-l12 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa13 {
+		status = "disabled";
+		regulator-l13 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa14 {
+		status = "disabled";
+		regulator-l14 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa15 {
+		status = "disabled";
+		regulator-l15 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa16 {
+		status = "disabled";
+		regulator-l16 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa17 {
+		status = "disabled";
+		regulator-l17 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa18 {
+		status = "disabled";
+		regulator-l18 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa19 {
+		status = "disabled";
+		regulator-l19 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa20 {
+		status = "disabled";
+		regulator-l20 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa21 {
+		status = "disabled";
+		regulator-l21 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa22 {
+		status = "disabled";
+		regulator-l22 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa23 {
+		status = "disabled";
+		regulator-l23 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoa24 {
+		status = "disabled";
+		regulator-l24 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-smpe1 {
+		status = "disabled";
+		regulator-s1 {
+			status = "disabled";
+		};
+
+		mx_cdev {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-smpe2 {
+		status = "disabled";
+		regulator-s2 {
+			status = "disabled";
+		};
+
+		regulator-s2-level {
+			status = "disabled";
+		};
+
+		regulator-s2-floor-level {
+			status = "disabled";
+		};
+
+		regulator-s2-level-ao {
+			status = "disabled";
+		};
+
+		cx_cdev {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe1 {
+		status = "disabled";
+		regulator-l1 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe2 {
+		status = "disabled";
+		regulator-l2 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe3 {
+		status = "disabled";
+		regulator-l3 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe4 {
+		status = "disabled";
+		regulator-l4 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe5 {
+		status = "disabled";
+		regulator-l5 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe6 {
+		status = "disabled";
+		regulator-l6 {
+			status = "disabled";
+		};
+	};
+
+	rpm-regulator-ldoe7 {
+		status = "disabled";
+		regulator-l7 {
+			status = "disabled";
+		};
+	};
+};
+
+#include "pm6350-rpm-regulator.dtsi"
+#include "pm6150l-rpm-regulator.dtsi"
+#include "holi-regulators-pm6350.dtsi"
+
+/* Enable explicitly disabled regulator resources nodes */
+&rpm_bus {
+	/* Enable gfx_cdev for PM6350 */
+	rpm-regulator-smpa3 {
+		regulator-s3-level {
+			status = "okay";
+		};
+
+		regulator-s3-level-ao {
+			status = "okay";
+		};
+	};
+
+	/* Enable mx_cdev for PM6350 */
+	rpm-regulator-smpa5 {
+		proxy-supply = <&S5A_LEVEL>;
+		regulator-s5-level {
+			status = "okay";
+		};
+
+		regulator-s5-floor-level {
+			status = "okay";
+		};
+
+		regulator-s5-level-ao {
+			status = "okay";
+		};
+
+		mx-cdev-lvl {
+			status = "okay";
+		};
+	};
+
+	/* Enable mx_cdev for PM6150A */
+	rpm-regulator-smpe1 {
+		regulator-s1-level {
+			status = "okay";
+		};
+
+		regulator-s1-floor-level {
+			status = "okay";
+		};
+
+		regulator-s1-level-ao {
+			status = "okay";
+		};
+
+		cx-cdev-lvl {
+			status = "okay";
+		};
+	};
+
+	/* VDD_LPI_CX supply */
+	rpm-regulator-ldoa1 {
+		regulator-l1-level {
+			status = "okay";
+		};
+	};
+
+	rpm-regulator-ldoa3 {
+		proxy-supply = <&pm6350_l3>;
+	};
+
+	rpm-regulator-ldoa8 {
+		proxy-supply = <&pm6350_l8>;
+	};
+
+	/* VDD_LPI_MX supply */
+	rpm-regulator-ldoa17 {
+		regulator-l17-level {
+			status = "okay";
+		};
+	};
+};
+
+
+
+&sdhc_1 {
+	status = "ok";
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc1_on>;
+	pinctrl-1 = <&sdc1_off>;
+
+	vdd-supply = <&L7E>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 570000>;
+
+	vdd-io-supply = <&L12A>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-lpm-sup;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <325000 325000>;
+};
+
+&sdhc_2 {
+	status = "ok";
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	vdd-supply = <&L9E>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 800000>;
+
+	vdd-io-supply = <&L6E>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 22000>;
+
+	cd-gpios = <&tlmm 94 GPIO_ACTIVE_LOW>;
+};
+
+&ufsphy_mem {
+		compatible = "qcom,ufs-phy-qmp-v4-yupik";
+
+		vdda-phy-supply = <&L18A>;
+		vdda-pll-supply = <&L22A>;
+		vdda-phy-max-microamp = <85700>;
+		vdda-pll-max-microamp = <18300>;
+
+		status = "ok";
+};
+
+&ufshc_mem {
+		vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+		vdd-hba-fixed-regulator;
+
+		vcc-supply = <&L7E>;
+		vcc-voltage-level = <2950000 2960000>;
+		vcc-max-microamp = <800000>;
+
+		vccq2-supply = <&L12A>;
+		vccq2-max-microamp = <800000>;
+		vccq2-voltage-level = <1800000 1800000>;
+
+		qcom,vddp-ref-clk-supply = <&L22A>;
+		qcom,vddp-ref-clk-max-microamp = <100>;
+
+		status = "ok";
+};
+
+&qupv3_se0_i2c {
+	status = "ok";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	nq@28 {
+		compatible = "qcom,sn-nci";
+		reg = <0x28>;
+		qcom,sn-irq = <&tlmm 9 0x00>;
+		qcom,sn-ven = <&tlmm 6 0x00>;
+		qcom,sn-firm = <&tlmm 8 0x00>;
+		qcom,sn-clkreq = <&tlmm 7 0x00>;
+		qcom,sn-vdd-1p8-supply = <&L11A>;
+		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+		qcom,sn-vdd-1p8-current = <157000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <9 0>;
+		interrupt-names = "nfc_irq";
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	};
+};
+
+&soc {
+	gpio_keys {
+		compatible = "gpio-keys";
+		label = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default>;
+
+		vol_up {
+			label = "volume_up";
+			gpios = <&pm6350_gpios 2 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEUP>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+&qupv3_se10_i2c {
+	status = "disabled";
+};
+
+&pm8008_8 {
+	status = "disabled";
+};
+
+&pm8008_9 {
+	status = "disabled";
+};
+
+&pm6150a_amoled {
+	status = "ok";
+};
+
+&pm7250b_charger {
+	status = "ok";
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_vadc ADC5_USB_IN_V_16>,
+		      <&pm7250b_vadc ADC5_USB_IN_I>,
+		      <&pm7250b_vadc ADC5_CHG_TEMP>,
+		      <&pm7250b_vadc ADC5_DIE_TEMP>,
+		      <&pm7250b_vadc ADC5_AMUX_THM3_100K_PU>,
+		      <&pm7250b_vadc ADC5_SBUx>,
+		      <&pm7250b_vadc ADC5_VPH_PWR>,
+		      <&pm7250b_vadc ADC5_AMUX_THM1_100K_PU>,
+		      <&pm7250b_qg PSY_IIO_RESISTANCE_ID>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_NOW>,
+		      <&pm7250b_qg PSY_IIO_TEMP>,
+		      <&pm7250b_qg PSY_IIO_CAPACITY>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_OCV>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_AVG>,
+		      <&pm7250b_qg PSY_IIO_DEBUG_BATTERY>,
+		      <&pm7250b_qg PSY_IIO_REAL_CAPACITY>,
+		      <&pm7250b_qg PSY_IIO_CC_SOC>,
+		      <&pm7250b_qg PSY_IIO_CURRENT_NOW>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_MAX>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_FULL>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_COUNTER>,
+		      <&pm7250b_qg PSY_IIO_CYCLE_COUNT>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_FULL_DESIGN>,
+		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>;
+	io-channel-names = "usb_in_voltage",
+			   "usb_in_current",
+			   "chg_temp",
+			   "die_temp",
+			   "conn_temp",
+			   "sbux_res",
+			   "vph_voltage",
+			   "skin_temp",
+			   "resistance_id",
+			   "voltage_now",
+			   "temp",
+			   "capacity",
+			   "voltage_ocv",
+			   "voltage_avg",
+			   "debug_battery",
+			   "real_capacity",
+			   "cc_soc",
+			   "current_now",
+			   "voltage_max",
+			   "charge_full",
+			   "charge_counter",
+			   "cycle_count",
+			   "charge_full_design",
+			   "time_to_full_now";
+	qcom,batteryless-platform;
+	qcom,sec-charger-config = <0>;
+	qcom,auto-recharge-soc = <98>;
+	qcom,step-charging-enable;
+	qcom,sw-jeita-enable;
+	qcom,charger-temp-max = <800>;
+	qcom,smb-temp-max = <800>;
+	qcom,suspend-input-on-debug-batt;
+};
+
+&pm7250b_qg {
+	status = "ok";
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_vadc ADC5_BAT_THERM_100K_PU>,
+		      <&pm7250b_vadc ADC5_BAT_ID_100K_PU>,
+		      <&pm7250b_charger PSY_IIO_INPUT_CURRENT_LIMITED>,
+		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
+		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
+		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>;
+	io-channel-names = "batt-therm",
+			   "batt-id",
+			   "input_current_limited",
+			   "recharge_soc",
+			   "force_recharge",
+			   "charge_done";
+	qcom,qg-iterm-ma = <150>;
+	qcom,hold-soc-while-full;
+	qcom,linearize-soc;
+	qcom,cl-feedback-on;
+};
+
+&qupv3_se8_i2c {
+	status = "okay";
+	qcom,i2c-touch-active="synaptics,tcm-i2c";
+
+	synaptics_tcm@20 {
+		compatible = "synaptics,tcm-i2c";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <22 0x2008>;
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&pmx_ts_release>;
+		vdd-supply = <&L11A>;
+		avdd-supply = <&L6A>;
+		synaptics,pwr-reg-name = "avdd";
+		synaptics,bus-reg-name = "vdd";
+		synaptics,irq-gpio = <&tlmm 22 0x2008>;
+		synaptics,irq-on-state = <0>;
+		synaptics,reset-gpio = <&tlmm 21 0x00>;
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <20>;
+		synaptics,reset-delay-ms = <200>;
+		synaptics,power-delay-ms = <200>;
+		synaptics,ubl-i2c-addr = <0x20>;
+		synaptics,extend_report;
+		synaptics,firmware-name = "synaptics_firmware.img";
+
+		panel = <&dsi_rm69299_visionox_amoled_video
+			&dsi_rm69299_visionox_amoled_cmd>;
+	};
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+
+	smb5_vbus: qcom,smb5-vbus {
+		regulator-name = "smb5-vbus";
+	};
+
+	smb5_vconn: qcom,smb5-vconn {
+		regulator-name = "smb5-vconn";
+	};
+};
+
+&pm7250b_pdphy {
+	vdd-pdphy-supply = <&L7E>;
+	vbus-supply = <&smb5_vbus>;
+	vconn-supply = <&smb5_vconn>;
+
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_charger PSY_IIO_PD_ACTIVE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_CC_ORIENTATION>,
+		      <&pm7250b_charger PSY_IIO_CONNECTOR_TYPE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_POWER_ROLE>,
+		      <&pm7250b_charger PSY_IIO_PD_USB_SUSPEND_SUPPORTED>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_SRC_RP>,
+		      <&pm7250b_charger PSY_IIO_PD_IN_HARD_RESET>,
+		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
+		      <&pm7250b_charger PSY_IIO_PR_SWAP>,
+		      <&pm7250b_charger PSY_IIO_PD_VOLTAGE_MIN>,
+		      <&pm7250b_charger PSY_IIO_PD_VOLTAGE_MAX>,
+		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_MODE>,
+		      <&pm7250b_charger PSY_IIO_PE_START>;
+	io-channel-names = "pd_active",
+			   "typec_cc_orientation",
+			   "connector_type",
+			   "typec_power_role",
+			   "pd_usb_suspend_supported",
+			   "typec_src_rp",
+			   "pd_in_hard_reset",
+			   "pr_current_max",
+			   "pr_swap",
+			   "pd_voltage_min",
+			   "pd_voltage_max",
+			   "real_type",
+			   "typec_mode",
+			   "pe_start";
+};
+
+&usb0 {
+	extcon = <&pm7250b_pdphy>, <&pm7250b_charger>, <&eud>;
+
+	#io-channel-cells = <1>;
+	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
+	io-channel-names = "chg_type";
+};
+
+&usb2_phy0 {
+	vdd-supply = <&L18A>;
+	vdda18-supply = <&L2A>;
+	vdda33-supply = <&L3A>;
+	refgen-supply = <&L22A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L16A>;
+	core-supply = <&L22A>;
+};
+
+&icnss {
+	vdd-cx-mx-supply = <&L4A>;
+	vdd-1.8-xo-supply = <&L7A>;
+	vdd-1.3-rfa-supply = <&L2E>;
+	vdd-3.3-ch1-supply = <&L11E>;
+	vdd-3.3-ch0-supply = <&L10E>;
+	qcom,vdd-cx-mx-config = <640000 640000>;
+	qcom,vdd-3.3-ch1-config = <3000000 3312000>;
+	qcom,vdd-3.3-ch0-config = <3000000 3312000>;
+};
+
+&bluetooth {
+	qcom,bt-vdd-smps-supply = <>;  /* SMPS */
+	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
+	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
+	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
+	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L22A>;
+};
+
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&S5A_LEVEL>;
+};
+
+&dispcc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpucc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S5A_LEVEL>; /* VDD_MX_LEVEL */
+	vdd_gx-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gpu_cx_gdsc {
+	parent-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpu_gx_gdsc {
+	parent-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gcc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S5A_LEVEL>; /* VDD_MX_LEVEL */
+};
+
+&msm_gpu {
+	vdd-parent-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&pil_turing {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_modem {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_lpass {
+	vdd_lpi_cx-supply = <&L1A_LEVEL>;
+	vdd_lpi_mx-supply = <&L17A_LEVEL>;
+};
+
+&refgen {
+	compatible = "qcom,refgen-kona-regulator";
+	reg = <0x162F000 0x84>;
+};
+

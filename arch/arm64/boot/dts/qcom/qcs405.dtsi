@@ -1,0 +1,493 @@
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,rpmcc.h>
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/gpio/gpio.h>
+
+
+/ {
+	model = "Qualcomm Technologies, Inc. QCS405";
+	compatible = "qcom,qcs405";
+	qcom,msm-id = <352 0x0>, <452 0x0>;
+	interrupt-parent = <&intc>;
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &blsp1_uart2_console;
+	};
+
+	chosen {
+	};
+
+	memory { device_type = "memory"; reg = <0 0 0 0>; };
+
+	reserved_mem: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		removed_region0: removed_region@85900000 {
+			no-map;
+			reg = <0x0 0x85900000 0x0 0x600000>;
+		};
+
+		smem_region: smem@85f00000 {
+			no-map;
+			reg = <0x0 0x85f00000 0x0 0x200000>;
+		};
+
+		removed_region1: removed_region@86100000 {
+			no-map;
+			reg = <0x0 0x86100000 0x0 0x300000>;
+		};
+
+		wlan_fw_mem: wlan_fw_mem@86400000 {
+			no-map;
+			reg = <0x0 0x86400000 0x0 0x1000000>;
+		};
+
+		adsp_fw_mem: adsp_fw_mem@87400000 {
+			no-map;
+			reg = <0x0 0x87400000 0x0 0x1400000>;
+		};
+
+		cdsp_fw_mem: cdsp_fw_mem@88800000 {
+			no-map;
+			reg = <0x0 0x88800000 0x0 0x800000>;
+		};
+
+		wlan_msa_mem: wlan_msa_region@88E00000 {
+			no-map;
+			reg = <0x0 0x89000000 0x0 0x100000>;
+		};
+
+		secure_mem: secure_region {
+			status = "disabled";
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x7000000>;
+		};
+
+		mdf_mem: mdf_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x800000>;
+		};
+
+		qseecom_mem: qseecom_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x1000000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x400000>;
+		};
+
+		adsp_mem: adsp_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x800000>;
+		};
+
+		dump_mem: mem_dump_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x400000>;
+		};
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x1000000>;
+			linux,cma-default;
+		};
+	};
+
+	soc: soc { };
+
+};
+
+&soc {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges = <0 0 0 0xffffffff>;
+	compatible = "simple-bus";
+
+	intc: interrupt-controller@b000000 {
+		compatible = "qcom,msm-qgic2";
+		interrupt-controller;
+		interrupt-parent = <&intc>;
+		#interrupt-cells = <3>;
+		reg = <0x0b000000 0x1000>,
+		      <0x0b002000 0x1000>;
+	};
+
+	wakegic: wake-gic {
+		compatible = "qcom,mpm-gic-qcs405", "qcom,mpm";
+		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x601b8 0x1000>,
+			<0xb011008 0x4>;  /* MSM_APCS_GCC_BASE 4K */
+		reg-names = "vmpm", "ipc";
+		qcom,num-mpm-irqs = <96>;
+		interrupt-controller;
+		interrupt-parent = <&intc>;
+		#interrupt-cells = <2>;
+	};
+
+	arch_timer: timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 2 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 3 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 4 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 1 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
+		clock-frequency = <19200000>;
+	};
+
+	timer@b120000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		compatible = "arm,armv7-timer-mem";
+		reg = <0xb120000 0x1000>;
+		clock-frequency = <19200000>;
+
+		frame@b121000 {
+			frame-number = <0>;
+			interrupts = <0 8 0x4>,
+				     <0 7 0x4>;
+			reg = <0xb121000 0x1000>,
+			      <0xb122000 0x1000>;
+		};
+
+		frame@b123000 {
+			frame-number = <1>;
+			interrupts = <0 9 0x4>;
+			reg = <0xb123000 0x1000>;
+			status = "disabled";
+		};
+
+		frame@b124000 {
+			frame-number = <2>;
+			interrupts = <0 10 0x4>;
+			reg = <0xb124000 0x1000>;
+			status = "disabled";
+		};
+
+		frame@b125000 {
+			frame-number = <3>;
+			interrupts = <0 11 0x4>;
+			reg = <0xb125000 0x1000>;
+			status = "disabled";
+		};
+
+		frame@b126000 {
+			frame-number = <4>;
+			interrupts = <0 12 0x4>;
+			reg = <0xb126000 0x1000>;
+			status = "disabled";
+		};
+
+		frame@b127000 {
+			frame-number = <5>;
+			interrupts = <0 13 0x4>;
+			reg = <0xb127000 0x1000>;
+			status = "disabled";
+		};
+
+		frame@b128000 {
+			frame-number = <6>;
+			interrupts = <0 14 0x4>;
+			reg = <0xb128000 0x1000>;
+			status = "disabled";
+		};
+	};
+
+	clocks {
+		xo_board {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <19200000>;
+			clock-output-names = "xo_board";
+		};
+	};
+
+	restart@4ab000 {
+		compatible = "qcom,pshold";
+		reg = <0x4ab000 0x4>,
+			<0x193d100 0x4>;
+		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+	};
+
+	qcom,msm-rtb {
+		compatible = "qcom,msm-rtb";
+		qcom,rtb-size = <0x100000>;
+	};
+
+	blsp1_uart2_console: serial@78b1000 {
+		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
+		reg = <0x078b1000 0x200>;
+		interrupts = <0 118 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&blsp1_uart2_default>;
+		status = "okay";
+	};
+
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-smd";
+		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+	};
+
+	qcom,msm-imem@8600000 {
+		compatible = "qcom,msm-imem";
+		reg = <0x08600000 0x1000>; /* Address and size of IMEM */
+		ranges = <0x0 0x08600000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mem_dump_table@10 {
+			compatible = "qcom,msm-imem-mem_dump_table";
+			reg = <0x10 0x8>;
+		};
+
+		dload_type@18 {
+			compatible = "qcom,msm-imem-dload-type";
+			reg = <0x18 0x4>;
+		};
+
+		restart_reason@65c {
+			compatible = "qcom,msm-imem-restart_reason";
+			reg = <0x65c 0x4>;
+		};
+
+		boot_stats@6b0 {
+			compatible = "qcom,msm-imem-boot_stats";
+			reg = <0x6b0 0x20>;
+		};
+
+		pil@94c {
+			compatible = "qcom,msm-imem-pil";
+			reg = <0x94c 0xc8>;
+		};
+
+		diag_dload@c8 {
+			compatible = "qcom,msm-imem-diag-dload";
+			reg = <0xc8 0xc8>;
+		};
+
+		kaslr_offset@6d0 {
+			compatible = "qcom,msm-imem-kaslr_offset";
+			reg = <0x6d0 0xc>;
+		};
+	};
+
+	tcsr_mutex_block: syscon@1905000 {
+		compatible = "syscon";
+		reg = <0x1905000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	smem: qcom,smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_region>;
+		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	apcs: syscon@b011008 {
+		compatible = "syscon";
+		reg = <0xb011008 0x4>;
+	};
+
+	apcs_glb: mailbox@b011000 {
+		compatible = "qcom,msm8916-apcs-kpss-global";
+		reg = <0xb011000 0x10>;
+
+		#mbox-cells = <1>;
+	};
+
+	smp2p_sleepstate: qcom,smp2p_sleepstate {
+		compatible = "qcom,smp2p-sleepstate";
+		qcom,smem-states = <&sleepstate_smp2p_out 0>;
+	};
+
+	rpm_msg_ram: memory@60000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x60000 0x6000>;
+	};
+
+	rpm-glink {
+		compatible = "qcom,glink-rpm";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		mboxes = <&apcs_glb 0>;
+
+		qcom,rpm_glink_ssr {
+			qcom,glink-channels = "glink_ssr";
+			qcom,notify-edges = <&glink_adsp>,
+					    <&glink_cdsp>;
+		};
+	};
+
+	qcom,glink {
+		compatible = "qcom,glink";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		glink_adsp: adsp {
+			qcom,remote-pid = <2>;
+			transport = "smem";
+			mboxes = <&apcs_glb 8>;
+			mbox-names = "adsp_smem";
+			interrupts = <GIC_SPI 289 IRQ_TYPE_EDGE_RISING>;
+
+			label = "adsp";
+			qcom,glink-label = "lpass";
+
+			qcom,adsp_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,apr_tal_rpmsg {
+				qcom,glink-channels = "apr_audio_svc";
+				qcom,intents = <0x200 20>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,adsp_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_cdsp>;
+			};
+		};
+
+		glink_cdsp: cdsp {
+			qcom,remote-pid = <5>;
+			transport = "smem";
+			mboxes = <&apcs_glb 12>;
+			mbox-names = "cdsp_smem";
+			interrupts = <GIC_SPI 141 IRQ_TYPE_EDGE_RISING>;
+
+			label = "cdsp";
+			qcom,glink-label = "cdsp";
+
+			qcom,cdsp_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,msm_fastrpc_rpmsg {
+				compatible = "qcom,msm-fastrpc-rpmsg";
+				qcom,glink-channels = "fastrpcglink-apps-dsp";
+				qcom,intents = <0x64 64>;
+			};
+
+			qcom,cdsp_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_adsp>;
+			};
+		};
+	};
+
+	qcom,glinkpkt {
+		compatible = "qcom,glinkpkt";
+
+		qcom,glinkpkt-apr-apps2 {
+			qcom,glinkpkt-edge = "adsp";
+			qcom,glinkpkt-ch-name = "apr_apps2";
+			qcom,glinkpkt-dev-name = "apr_apps2";
+		};
+	};
+
+	qcom,smp2p-adsp {
+		compatible = "qcom,smp2p";
+		qcom,smem = <443>, <429>;
+		interrupts = <GIC_SPI 291 IRQ_TYPE_EDGE_RISING>;
+		qcom,ipc = <&apcs 0 10>;
+		qcom,local-pid = <0>;
+		qcom,remote-pid = <2>;
+
+		adsp_smp2p_out: master-kernel {
+			qcom,entry-name = "master-kernel";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		adsp_smp2p_in: slave-kernel {
+			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		sleepstate_smp2p_out: sleepstate-out {
+			qcom,entry-name = "sleepstate";
+			#qcom,smem-state-cells = <1>;
+		};
+	};
+
+	qcom,smp2p-cdsp {
+		compatible = "qcom,smp2p";
+		qcom,smem = <94>, <432>;
+		interrupts = <GIC_SPI 143 IRQ_TYPE_EDGE_RISING>;
+		qcom,ipc = <&apcs 0 14>;
+		qcom,local-pid = <0>;
+		qcom,remote-pid = <5>;
+
+		cdsp_smp2p_out: master-kernel {
+			qcom,entry-name = "master-kernel";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		cdsp_smp2p_in: slave-kernel {
+			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+
+	wdog: qcom,wdt@b017000 {
+		compatible = "qcom,msm-watchdog";
+		reg = <0xb017000 0x1000>;
+		reg-names = "wdt-base";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,bark-time = <11000>;
+		qcom,pet-time = <9744>;
+		qcom,ipi-ping;
+		qcom,wakeup-enable;
+		status = "okay";
+	};
+};
+
+#include "qcs405-pinctrl.dtsi"
+#include "qcs405-cpu.dtsi"
+#include "pms405-rpm-regulator.dtsi"
+#include "qcs405-regulator.dtsi"
+#include "qcs405-ion.dtsi"

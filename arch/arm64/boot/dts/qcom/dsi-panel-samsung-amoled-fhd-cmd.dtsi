@@ -1,0 +1,116 @@
+&mdss_mdp {
+	dsi_samsung_amoled_cmd: qcom,mdss_dsi_samsung_fhd_amoled_cmd {
+		qcom,mdss-dsi-panel-name =
+		"samsung amoled fhd cmd dsi panel";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-physical-type = "oled";
+		qcom,mdss-pan-physical-width-dimension = <60>;
+		qcom,mdss-pan-physical-height-dimension = <139>;
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-lane-map = "lane_map_0123";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+
+        somc,area_count_table_size = <24>;
+        somc,area_count_table = <0 96 199 301 404
+                    507 609 712 815 917
+                    1020 1225 1431 1636 1841
+                    2047 2226 2582 2938 3294
+                    3650 4006 4094 4095>;
+
+        somc,brightness-adjust-type = <3>;
+
+		qcom,mdss-dsi-display-timings {
+			timing@0 {
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2520>;
+				qcom,mdss-dsi-h-front-porch = <8>;
+				qcom,mdss-dsi-h-back-porch = <8>;
+				qcom,mdss-dsi-h-pulse-width = <8>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-front-porch = <8>;
+				qcom,mdss-dsi-v-pulse-width = <8>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+                                qcom,mdss-dsi-panel-clockrate = <1132293600>;
+				qcom,mdss-dsi-on-command = [
+                                                05 01 00 00 78 00 02 11 00
+                                                15 01 00 00 00 00 02 35 00
+                                                39 01 00 00 00 00 05 2A 00 00 04 37
+                                                39 01 00 00 00 00 05 2B 00 00 09 D7
+
+                                                39 01 00 00 00 00 03 F0 5A 5A
+                                                39 01 00 00 00 00 03 B0 27 F2
+                                                15 01 00 00 00 00 02 F2 80
+                                                15 01 00 00 00 00 02 F7 07
+                                                39 01 00 00 00 00 03 F0 A5 A5
+
+                                                39 01 00 00 00 00 03 F0 5A 5A
+                                                15 01 00 00 00 00 02 E5 15  //ERR_FG Enable
+                                                39 01 00 00 00 00 04 ED 04 4C 20
+                                                39 01 00 00 00 00 03 F0 A5 A5
+
+                                                39 01 00 00 00 00 03 F0 5A 5A
+                                                39 01 00 00 00 00 03 B0 02 8F
+                                                39 01 00 00 00 00 03 8F 27 05  //FLM1 On, FLM2 Off
+                                                39 01 00 00 00 00 03 F0 A5 A5
+
+                                                39 01 00 00 00 00 03 F0 5A 5A
+                                                39 01 00 00 00 00 03 B0 92 63
+                                                15 01 00 00 00 00 02 63 05  //dimming speed setting
+                                                39 01 00 00 00 00 03 F0 A5 A5
+
+                                                15 01 00 00 00 00 02 53 28
+                                                39 01 00 00 00 00 03 51 00 00
+                                                15 01 00 00 00 00 02 55 00
+
+                                                05 01 00 00 10 00 02 29 00];
+				qcom,mdss-dsi-off-command = [
+						05 01 00 00 78 00 02 28 00
+						05 01 00 00 64 00 02 10 00];
+				qcom,mdss-dsi-hbm-on-command = [
+						39 01 00 00 00 00 03 F0 5A 5A
+						15 01 00 00 0A 00 02 53 E8  //smooth transition
+						39 01 00 00 96 00 03 51 0F FF  //650nit
+						39 01 00 00 00 00 03 F0 A5 A5
+						];
+				qcom,mdss-dsi-hbm-off-command = [
+						39 01 00 00 00 00 03 F0 5A 5A
+						15 01 00 00 0A 00 02 53 28  //dimming speed setting
+						39 01 00 00 96 00 03 51 07 FF  //400nit
+						39 01 00 00 00 00 03 F0 A5 A5
+						];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-hbm-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-hbm-off-command-state = "dsi_lp_mode";
+			};
+		};
+	};
+};

@@ -1,0 +1,19 @@
+/dts-v1/;
+
+#include "../qcom/blair.dtsi"
+#include "../qcom/blair-qrd.dtsi"
+#include "../qcom/holi-qrd-pm7250b.dtsi"
+#include "blair-murray-pdx225_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. PDX225(BLAIR v1)";
+	compatible = "somc,pdx225", "qcom,blair", "qcom,qrd";
+	qcom,msm-id = <507 0x10000>;
+	qcom,board-id = <0x1000B 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x2E 0x0>;
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+};
