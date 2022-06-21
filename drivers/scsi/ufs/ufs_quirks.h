@@ -53,7 +53,7 @@ struct ufs_dev_fix {
 #else
 #define UFS_FIX(_vendor, _model, _quirk) \
 		{						  \
-				.w_manufacturer_id = (_vendor),   \
+				.wmanufacturerid = (_vendor),   \
 				.model = (_model),		  \
 				.revision = (UFS_ANY_VER),	  \
 				.quirk = (_quirk),		  \
@@ -61,7 +61,7 @@ struct ufs_dev_fix {
 
 #define UFS_FIX_REVISION(_vendor, _model, _revision, _quirk) \
 		{						  \
-				.w_manufacturer_id = (_vendor),   \
+				.wmanufacturerid = (_vendor),   \
 				.model = (_model),		  \
 				.revision = (_revision),	  \
 				.quirk = (_quirk),		  \

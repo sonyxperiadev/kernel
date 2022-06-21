@@ -4394,7 +4394,7 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 			DL_AFC0ReqTimeOutVal_Default);
 
 #ifdef UFS_TARGET_SONY_PLATFORM
-	if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH) {
+	if (hba->dev_quirks & UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH) {
 		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG1SyncLength), 0x48);
 		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG2SyncLength), 0x48);
 		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG3SyncLength), 0x48);
@@ -7380,11 +7380,11 @@ void ufshcd_fixup_dev_quirks(struct ufs_hba *hba, struct ufs_dev_fix *fixups)
 #else
   #define UFS_PURGE_SPEC_VER 0x210
 	if (hba->dev_info.wspecversion < UFS_PURGE_SPEC_VER)
-		hba->dev_info.quirks |= UFS_DEVICE_QUIRK_NO_PURGE;
+		hba->dev_quirks |= UFS_DEVICE_QUIRK_NO_PURGE;
 
 	for (f = fixups; f->quirk; f++) {
-		if (((f->w_manufacturer_id == dev_info->wmanufacturerid ||
-			f->w_manufacturer_id == UFS_ANY_VENDOR)) &&
+		if (((f->wmanufacturerid == dev_info->wmanufacturerid ||
+			f->wmanufacturerid == UFS_ANY_VENDOR)) &&
 			/* and same model*/
 			(STR_PRFX_EQUAL(f->model, dev_info->model) ||
 			!strncmp(f->model, UFS_ANY_MODEL, strlen(UFS_ANY_MODEL))) &&
@@ -7393,6 +7393,7 @@ void ufshcd_fixup_dev_quirks(struct ufs_hba *hba, struct ufs_dev_fix *fixups)
 			!strncmp(f->revision, UFS_ANY_VER, strlen(UFS_ANY_VER)))) {
 			/* update quirks */
 			hba->dev_quirks |= f->quirk;
+		}
 	}
 #endif
 
@@ -7460,16 +7461,16 @@ static int ufs_get_device_desc(struct ufs_hba *hba)
 #ifdef UFS_TARGET_SONY_PLATFORM
 	memset(desc_buf, 0, QUERY_DESC_MAX_SIZE);
 	err = ufshcd_read_string_desc(hba, hba->dev_info.revision,
-				      desc_buf, SD_ASCII_STD);
+				      &desc_buf, SD_ASCII_STD);
 	if (err)
 		goto out;
 
 	desc_buf[QUERY_DESC_MAX_SIZE] = '\0';
-	strlcpy(dev_desc->fw_revision, (desc_buf + QUERY_DESC_HDR_SIZE),
+	strlcpy(dev_info->fw_revision, (desc_buf + QUERY_DESC_HDR_SIZE),
 		min_t(u8, desc_buf[QUERY_DESC_LENGTH_OFFSET],
 		      MAX_REVISION_LEN));
 	/* Null terminate the fw_revision string */
-	dev_desc->fw_revision[MAX_REVISION_LEN] = '\0';
+	dev_info->fw_revision[MAX_REVISION_LEN] = '\0';
 #endif
 
 	ufs_fixup_device_setup(hba);
