@@ -1206,6 +1206,17 @@ static int set_machine_constraints(struct regulator_dev *rdev)
 		}
 	}
 
+	/* If the constraints say the regulator should be on at this point
+	 * and we have control then make sure it is enabled.
+	 */
+	if (rdev->constraints->always_on || rdev->constraints->boot_on) {
+		ret = _regulator_do_enable(rdev);
+		if (ret < 0 && ret != -EINVAL) {
+			rdev_err(rdev, "failed to enable\n");
+			return ret;
+		}
+	}
+
 	if ((rdev->constraints->ramp_delay || rdev->constraints->ramp_disable)
 		&& ops->set_ramp_delay) {
 		ret = ops->set_ramp_delay(rdev, rdev->constraints->ramp_delay);
@@ -1249,27 +1260,6 @@ static int set_machine_constraints(struct regulator_dev *rdev)
 			rdev_err(rdev, "failed to set active discharge\n");
 			return ret;
 		}
-	}
-
-	/* If the constraints say the regulator should be on at this point
-	 * and we have control then make sure it is enabled.
-	 */
-	if (rdev->constraints->always_on || rdev->constraints->boot_on) {
-		if (rdev->supply) {
-			ret = regulator_enable(rdev->supply);
-			if (ret < 0) {
-				_regulator_put(rdev->supply);
-				rdev->supply = NULL;
-				return ret;
-			}
-		}
-
-		ret = _regulator_do_enable(rdev);
-		if (ret < 0 && ret != -EINVAL) {
-			rdev_err(rdev, "failed to enable\n");
-			return ret;
-		}
-		rdev->use_count++;
 	}
 
 	print_constraints(rdev);
@@ -1641,13 +1631,13 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 {
 	struct regulator_dev *r;
 	struct device *dev = rdev->dev.parent;
-	int ret = 0;
+	int ret;
 
 	/* No supply to resovle? */
 	if (!rdev->supply_name)
 		return 0;
 
-	/* Supply already resolved? (fast-path without locking contention) */
+	/* Supply already resolved? */
 	if (rdev->supply)
 		return 0;
 
@@ -1657,7 +1647,7 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 
 		/* Did the lookup explicitly defer for us? */
 		if (ret == -EPROBE_DEFER)
-			goto out;
+			return ret;
 
 		if (have_full_constraints()) {
 			r = dummy_regulator_rdev;
@@ -1665,18 +1655,15 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 		} else {
 			dev_err(dev, "Failed to resolve %s-supply for %s\n",
 				rdev->supply_name, rdev->desc->name);
-			ret = -EPROBE_DEFER;
-			goto out;
+			return -EPROBE_DEFER;
 		}
 	}
 
 	if (r == rdev) {
 		dev_err(dev, "Supply for %s (%s) resolved to itself\n",
 			rdev->desc->name, rdev->supply_name);
-		if (!have_full_constraints()) {
-			ret = -EINVAL;
-			goto out;
-		}
+		if (!have_full_constraints())
+			return -EINVAL;
 		r = dummy_regulator_rdev;
 		get_device(&r->dev);
 	}
@@ -1690,8 +1677,7 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 	if (r->dev.parent && r->dev.parent != rdev->dev.parent) {
 		if (!device_is_bound(r->dev.parent)) {
 			put_device(&r->dev);
-			ret = -EPROBE_DEFER;
-			goto out;
+			return -EPROBE_DEFER;
 		}
 	}
 
@@ -1699,48 +1685,26 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 	ret = regulator_resolve_supply(r);
 	if (ret < 0) {
 		put_device(&r->dev);
-		goto out;
-	}
-
-	/*
-	 * Recheck rdev->supply with rdev->mutex lock held to avoid a race
-	 * between rdev->supply null check and setting rdev->supply in
-	 * set_supply() from concurrent tasks.
-	 */
-	regulator_lock(rdev);
-
-	/* Supply just resolved by a concurrent task? */
-	if (rdev->supply) {
-		regulator_unlock(rdev);
-		put_device(&r->dev);
-		goto out;
+		return ret;
 	}
 
 	ret = set_supply(rdev, r);
 	if (ret < 0) {
-		regulator_unlock(rdev);
 		put_device(&r->dev);
-		goto out;
+		return ret;
 	}
 
-	regulator_unlock(rdev);
-
-	/*
-	 * In set_machine_constraints() we may have turned this regulator on
-	 * but we couldn't propagate to the supply if it hadn't been resolved
-	 * yet.  Do it now.
-	 */
-	if (rdev->use_count) {
+	/* Cascade always-on state to supply */
+	if (_regulator_is_enabled(rdev)) {
 		ret = regulator_enable(rdev->supply);
 		if (ret < 0) {
 			_regulator_put(rdev->supply);
 			rdev->supply = NULL;
-			goto out;
+			return ret;
 		}
 	}
 
-out:
-	return ret;
+	return 0;
 }
 
 /* Internal regulator request function */

@@ -652,12 +652,10 @@ exit:
 		kobject_uevent(&part_to_dev(part)->kobj, KOBJ_ADD);
 	disk_part_iter_exit(&piter);
 
-	if (disk->queue->backing_dev_info->dev) {
-		err = sysfs_create_link(&ddev->kobj,
-			  &disk->queue->backing_dev_info->dev->kobj,
-			  "bdi");
-		WARN_ON(err);
-	}
+	err = sysfs_create_link(&ddev->kobj,
+				&disk->queue->backing_dev_info->dev->kobj,
+				"bdi");
+	WARN_ON(err);
 }
 
 /**

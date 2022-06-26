@@ -1921,45 +1921,29 @@ bool __weak arch_kprobe_on_func_entry(unsigned long offset)
 	return !offset;
 }
 
-/**
- * kprobe_on_func_entry() -- check whether given address is function entry
- * @addr: Target address
- * @sym:  Target symbol name
- * @offset: The offset from the symbol or the address
- *
- * This checks whether the given @addr+@offset or @sym+@offset is on the
- * function entry address or not.
- * This returns 0 if it is the function entry, or -EINVAL if it is not.
- * And also it returns -ENOENT if it fails the symbol or address lookup.
- * Caller must pass @addr or @sym (either one must be NULL), or this
- * returns -EINVAL.
- */
-int kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
+bool kprobe_on_func_entry(kprobe_opcode_t *addr, const char *sym, unsigned long offset)
 {
 	kprobe_opcode_t *kp_addr = _kprobe_addr(addr, sym, offset);
 
 	if (IS_ERR(kp_addr))
-		return PTR_ERR(kp_addr);
+		return false;
 
-	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset))
-		return -ENOENT;
+	if (!kallsyms_lookup_size_offset((unsigned long)kp_addr, NULL, &offset) ||
+						!arch_kprobe_on_func_entry(offset))
+		return false;
 
-	if (!arch_kprobe_on_func_entry(offset))
-		return -EINVAL;
-
-	return 0;
+	return true;
 }
 
 int register_kretprobe(struct kretprobe *rp)
 {
-	int ret;
+	int ret = 0;
 	struct kretprobe_instance *inst;
 	int i;
 	void *addr;
 
-	ret = kprobe_on_func_entry(rp->kp.addr, rp->kp.symbol_name, rp->kp.offset);
-	if (ret)
-		return ret;
+	if (!kprobe_on_func_entry(rp->kp.addr, rp->kp.symbol_name, rp->kp.offset))
+		return -EINVAL;
 
 	/* If only rp->kp.addr is specified, check reregistering kprobes */
 	if (rp->kp.addr && check_kprobe_rereg(&rp->kp))

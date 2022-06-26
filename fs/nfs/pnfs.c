@@ -2301,13 +2301,7 @@ pnfs_layout_process(struct nfs4_layoutget *lgp)
 		 * We got an entirely new state ID.  Mark all segments for the
 		 * inode invalid, and retry the layoutget
 		 */
-		struct pnfs_layout_range range = {
-			.iomode = IOMODE_ANY,
-			.length = NFS4_MAX_UINT64,
-		};
-		pnfs_set_plh_return_info(lo, IOMODE_ANY, 0);
-		pnfs_mark_matching_lsegs_return(lo, &lo->plh_return_segs,
-						&range, 0);
+		pnfs_mark_layout_stateid_invalid(lo, &free_me);
 		goto out_forget;
 	}
 

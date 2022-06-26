@@ -209,10 +209,13 @@ int elevator_init(struct request_queue *q)
 	struct elevator_type *e = NULL;
 	int err = 0;
 
-	WARN_ON_ONCE(test_bit(QUEUE_FLAG_REGISTERED, &q->queue_flags));
-
+	/*
+	 * q->sysfs_lock must be held to provide mutual exclusion between
+	 * elevator_switch() and here.
+	 */
+	mutex_lock(&q->sysfs_lock);
 	if (unlikely(q->elevator))
-		goto out;
+		goto out_unlock;
 
 	if (*chosen_elevator) {
 		e = elevator_get(q, chosen_elevator, false);
@@ -232,7 +235,8 @@ int elevator_init(struct request_queue *q)
 	err = e->ops.sq.elevator_init_fn(q, e);
 	if (err)
 		elevator_put(e);
-out:
+out_unlock:
+	mutex_unlock(&q->sysfs_lock);
 	return err;
 }
 

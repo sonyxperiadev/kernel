@@ -1051,9 +1051,11 @@ static struct sock *chtls_recv_sock(struct sock *lsk,
 	tcph = (struct tcphdr *)(iph + 1);
 	n = dst_neigh_lookup(dst, &iph->saddr);
 	if (!n || !n->dev)
-		goto free_dst;
+		goto free_sk;
 
 	ndev = n->dev;
+	if (!ndev)
+		goto free_dst;
 	if (is_vlan_dev(ndev))
 		ndev = vlan_dev_real_dev(ndev);
 
@@ -1115,8 +1117,7 @@ static struct sock *chtls_recv_sock(struct sock *lsk,
 free_csk:
 	chtls_sock_release(&csk->kref);
 free_dst:
-	if (n)
-		neigh_release(n);
+	neigh_release(n);
 	dst_release(dst);
 free_sk:
 	inet_csk_prepare_forced_close(newsk);
