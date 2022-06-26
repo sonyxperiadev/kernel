@@ -31,11 +31,8 @@ FEATURE_TESTS_BASIC :=                  \
         backtrace                       \
         dwarf                           \
         dwarf_getlocations              \
-        eventfd                         \
         fortify-source                  \
         sync-compare-and-swap           \
-        get_current_dir_name            \
-        gettid				\
         glibc                           \
         gtk2                            \
         gtk2-infobar                    \
