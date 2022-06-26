@@ -59,8 +59,9 @@ static BRPORT_ATTR(_name, 0644,					\
 static int store_flag(struct net_bridge_port *p, unsigned long v,
 		      unsigned long mask)
 {
-	unsigned long flags = p->flags;
-	int err;
+	unsigned long flags;
+
+	flags = p->flags;
 
 	if (v)
 		flags |= mask;
@@ -68,10 +69,6 @@ static int store_flag(struct net_bridge_port *p, unsigned long v,
 		flags &= ~mask;
 
 	if (flags != p->flags) {
-		err = br_switchdev_set_port_flag(p, flags, mask);
-		if (err)
-			return err;
-
 		p->flags = flags;
 		br_port_flags_change(p, mask);
 	}

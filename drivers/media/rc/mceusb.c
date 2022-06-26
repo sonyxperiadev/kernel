@@ -685,18 +685,11 @@ static void mceusb_dev_printdata(struct mceusb_dev *ir, u8 *buf, int buf_len,
 				data[0], data[1]);
 			break;
 		case MCE_RSP_EQIRCFS:
-			if (!data[0] && !data[1]) {
-				dev_dbg(dev, "%s: no carrier", inout);
-				break;
-			}
-			// prescaler should make sense
-			if (data[0] > 8)
-				break;
 			period = DIV_ROUND_CLOSEST((1U << data[0] * 2) *
 						   (data[1] + 1), 10);
 			if (!period)
 				break;
-			carrier = USEC_PER_SEC / period;
+			carrier = (1000 * 1000) / period;
 			dev_dbg(dev, "%s carrier of %u Hz (period %uus)",
 				 inout, carrier, period);
 			break;
