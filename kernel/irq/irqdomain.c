@@ -1249,15 +1249,8 @@ static void irq_domain_free_irqs_hierarchy(struct irq_domain *domain,
 					   unsigned int irq_base,
 					   unsigned int nr_irqs)
 {
-	unsigned int i;
-
-	if (!domain->ops->free)
-		return;
-
-	for (i = 0; i < nr_irqs; i++) {
-		if (irq_domain_get_irq_data(domain, irq_base + i))
-			domain->ops->free(domain, irq_base + i, 1);
-	}
+	if (domain->ops->free)
+		domain->ops->free(domain, irq_base, nr_irqs);
 }
 
 int irq_domain_alloc_irqs_hierarchy(struct irq_domain *domain,

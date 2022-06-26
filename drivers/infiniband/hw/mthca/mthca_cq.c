@@ -609,7 +609,7 @@ static inline int mthca_poll_one(struct mthca_dev *dev,
 			entry->byte_len  = MTHCA_ATOMIC_BYTE_LEN;
 			break;
 		default:
-			entry->opcode = 0xFF;
+			entry->opcode    = MTHCA_OPCODE_INVALID;
 			break;
 		}
 	} else {

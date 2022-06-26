@@ -366,8 +366,7 @@ parse_server_interfaces(struct network_interface_info_ioctl_rsp *buf,
 		goto out;
 	}
 
-	/* Azure rounds the buffer size up 8, to a 16 byte boundary */
-	if ((bytes_left > 8) || p->Next)
+	if (bytes_left || p->Next)
 		cifs_dbg(VFS, "%s: incomplete interface info\n", __func__);
 
 

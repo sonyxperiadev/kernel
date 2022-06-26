@@ -3593,10 +3593,8 @@ static int bcmgenet_probe(struct platform_device *pdev)
 	clk_disable_unprepare(priv->clk);
 
 	err = register_netdev(dev);
-	if (err) {
-		bcmgenet_mii_exit(dev);
+	if (err)
 		goto err;
-	}
 
 	return err;
 

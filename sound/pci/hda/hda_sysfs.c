@@ -138,7 +138,7 @@ static int reconfig_codec(struct hda_codec *codec)
 			   "The codec is being used, can't reconfigure.\n");
 		goto error;
 	}
-	err = device_reprobe(hda_codec_dev(codec));
+	err = snd_hda_codec_configure(codec);
 	if (err < 0)
 		goto error;
 	err = snd_card_register(codec->card);

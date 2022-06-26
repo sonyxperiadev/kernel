@@ -664,8 +664,7 @@ next_wqe:
 	}
 
 	if (unlikely(qp_type(qp) == IB_QPT_RC &&
-		psn_compare(qp->req.psn, (qp->comp.psn +
-				RXE_MAX_UNACKED_PSNS)) > 0)) {
+		     qp->req.psn > (qp->comp.psn + RXE_MAX_UNACKED_PSNS))) {
 		qp->req.wait_psn = 1;
 		goto exit;
 	}
