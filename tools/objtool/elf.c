@@ -226,11 +226,8 @@ static int read_symbols(struct elf *elf)
 
 	symtab = find_section_by_name(elf, ".symtab");
 	if (!symtab) {
-		/*
-		 * A missing symbol table is actually possible if it's an empty
-		 * .o file.  This can happen for thunk_64.o.
-		 */
-		return 0;
+		WARN("missing symbol table");
+		return -1;
 	}
 
 	symbols_nr = symtab->sh.sh_size / symtab->sh.sh_entsize;
