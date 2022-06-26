@@ -201,18 +201,14 @@ static int uhdlc_init(struct ucc_hdlc_private *priv)
 	priv->rx_skbuff = kcalloc(priv->rx_ring_size,
 				  sizeof(*priv->rx_skbuff),
 				  GFP_KERNEL);
-	if (!priv->rx_skbuff) {
-		ret = -ENOMEM;
+	if (!priv->rx_skbuff)
 		goto free_ucc_pram;
-	}
 
 	priv->tx_skbuff = kcalloc(priv->tx_ring_size,
 				  sizeof(*priv->tx_skbuff),
 				  GFP_KERNEL);
-	if (!priv->tx_skbuff) {
-		ret = -ENOMEM;
+	if (!priv->tx_skbuff)
 		goto free_rx_skbuff;
-	}
 
 	priv->skb_curtx = 0;
 	priv->skb_dirtytx = 0;

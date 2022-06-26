@@ -168,8 +168,7 @@ static inline void red_set_vars(struct red_vars *v)
 	v->qcount	= -1;
 }
 
-static inline bool red_check_params(u32 qth_min, u32 qth_max, u8 Wlog,
-				    u8 Scell_log, u8 *stab)
+static inline bool red_check_params(u32 qth_min, u32 qth_max, u8 Wlog, u8 Scell_log)
 {
 	if (fls(qth_min) + Wlog > 32)
 		return false;
@@ -179,13 +178,6 @@ static inline bool red_check_params(u32 qth_min, u32 qth_max, u8 Wlog,
 		return false;
 	if (qth_max < qth_min)
 		return false;
-	if (stab) {
-		int i;
-
-		for (i = 0; i < RED_STAB_SIZE; i++)
-			if (stab[i] >= 32)
-				return false;
-	}
 	return true;
 }
 

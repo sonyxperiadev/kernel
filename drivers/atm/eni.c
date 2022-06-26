@@ -2279,8 +2279,7 @@ out:
 	return rc;
 
 err_eni_release:
-	dev->phy = NULL;
-	iounmap(ENI_DEV(dev)->ioaddr);
+	eni_do_release(dev);
 err_unregister:
 	atm_dev_deregister(dev);
 err_free_consistent:

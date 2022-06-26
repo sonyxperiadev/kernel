@@ -122,16 +122,14 @@ __le64 *squashfs_read_xattr_id_table(struct super_block *sb, u64 table_start,
 		start = le64_to_cpu(table[n]);
 		end = le64_to_cpu(table[n + 1]);
 
-		if (start >= end || (end - start) >
-				(SQUASHFS_METADATA_SIZE + SQUASHFS_BLOCK_OFFSET)) {
+		if (start >= end || (end - start) > SQUASHFS_METADATA_SIZE) {
 			kfree(table);
 			return ERR_PTR(-EINVAL);
 		}
 	}
 
 	start = le64_to_cpu(table[indexes - 1]);
-	if (start >= table_start || (table_start - start) >
-				(SQUASHFS_METADATA_SIZE + SQUASHFS_BLOCK_OFFSET)) {
+	if (start >= table_start || (table_start - start) > SQUASHFS_METADATA_SIZE) {
 		kfree(table);
 		return ERR_PTR(-EINVAL);
 	}
