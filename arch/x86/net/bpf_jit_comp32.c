@@ -2201,16 +2201,7 @@ notyet:
 		}
 
 		if (image) {
-			/*
-			 * When populating the image, assert that:
-			 *
-			 *  i) We do not write beyond the allocated space, and
-			 * ii) addrs[i] did not change from the prior run, in order
-			 *     to validate assumptions made for computing branch
-			 *     displacements.
-			 */
-			if (unlikely(proglen + ilen > oldproglen ||
-				     proglen + ilen != addrs[i])) {
+			if (unlikely(proglen + ilen > oldproglen)) {
 				pr_err("bpf_jit: fatal error\n");
 				return -EFAULT;
 			}

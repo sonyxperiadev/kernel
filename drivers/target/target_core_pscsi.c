@@ -970,14 +970,6 @@ new_bio:
 
 	return 0;
 fail:
-	if (bio)
-		bio_put(bio);
-	while (req->bio) {
-		bio = req->bio;
-		req->bio = bio->bi_next;
-		bio_put(bio);
-	}
-	req->biotail = NULL;
 	return TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
 }
 
