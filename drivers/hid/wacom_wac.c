@@ -2557,12 +2557,7 @@ static void wacom_wac_finger_event(struct hid_device *hdev,
 		wacom_wac->hid_data.tipswitch = value;
 		break;
 	case HID_DG_CONTACTMAX:
-		if (!features->touch_max) {
-			features->touch_max = value;
-		} else {
-			hid_warn(hdev, "%s: ignoring attempt to overwrite non-zero touch_max "
-				 "%d -> %d\n", __func__, features->touch_max, value);
-		}
+		features->touch_max = value;
 		return;
 	}
 

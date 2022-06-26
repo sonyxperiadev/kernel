@@ -2084,22 +2084,17 @@ int t4_mgmt_tx(struct adapter *adap, struct sk_buff *skb)
  *	@skb: the packet
  *
  *	Returns true if a packet can be sent as an offload WR with immediate
- *	data.
- *	FW_OFLD_TX_DATA_WR limits the payload to 255 bytes due to 8-bit field.
- *      However, FW_ULPTX_WR commands have a 256 byte immediate only
- *      payload limit.
+ *	data.  We currently use the same limit as for Ethernet packets.
  */
 static inline int is_ofld_imm(const struct sk_buff *skb)
 {
 	struct work_request_hdr *req = (struct work_request_hdr *)skb->data;
 	unsigned long opcode = FW_WR_OP_G(ntohl(req->wr_hi));
 
-	if (unlikely(opcode == FW_ULPTX_WR))
-		return skb->len <= MAX_IMM_ULPTX_WR_LEN;
-	else if (opcode == FW_CRYPTO_LOOKASIDE_WR)
+	if (opcode == FW_CRYPTO_LOOKASIDE_WR)
 		return skb->len <= SGE_MAX_WR_LEN;
 	else
-		return skb->len <= MAX_IMM_OFLD_TX_DATA_WR_LEN;
+		return skb->len <= MAX_IMM_TX_PKT_LEN;
 }
 
 /**

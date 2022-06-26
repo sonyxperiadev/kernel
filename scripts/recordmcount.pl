@@ -263,11 +263,7 @@ if ($arch eq "x86_64") {
 
     # force flags for this arch
     $ld .= " -m shlelf_linux";
-    if ($endian eq "big") {
-        $objcopy .= " -O elf32-shbig-linux";
-    } else {
-        $objcopy .= " -O elf32-sh-linux";
-    }
+    $objcopy .= " -O elf32-sh-linux";
 
 } elsif ($arch eq "powerpc") {
     my $ldemulation;

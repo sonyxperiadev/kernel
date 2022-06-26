@@ -955,10 +955,14 @@ int em28xx_alloc_urbs(struct em28xx *dev, enum em28xx_mode mode, int xfer_bulk,
 
 		usb_bufs->buf[i] = kzalloc(sb_size, GFP_KERNEL);
 		if (!usb_bufs->buf[i]) {
+			em28xx_uninit_usb_xfer(dev, mode);
+
 			for (i--; i >= 0; i--)
 				kfree(usb_bufs->buf[i]);
 
-			em28xx_uninit_usb_xfer(dev, mode);
+			kfree(usb_bufs->buf);
+			usb_bufs->buf = NULL;
+
 			return -ENOMEM;
 		}
 

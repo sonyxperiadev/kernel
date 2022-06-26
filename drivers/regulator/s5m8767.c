@@ -548,18 +548,14 @@ static int s5m8767_pmic_dt_parse_pdata(struct platform_device *pdev,
 	rdata = devm_kcalloc(&pdev->dev,
 			     pdata->num_regulators, sizeof(*rdata),
 			     GFP_KERNEL);
-	if (!rdata) {
-		of_node_put(regulators_np);
+	if (!rdata)
 		return -ENOMEM;
-	}
 
 	rmode = devm_kcalloc(&pdev->dev,
 			     pdata->num_regulators, sizeof(*rmode),
 			     GFP_KERNEL);
-	if (!rmode) {
-		of_node_put(regulators_np);
+	if (!rmode)
 		return -ENOMEM;
-	}
 
 	pdata->regulators = rdata;
 	pdata->opmode = rmode;

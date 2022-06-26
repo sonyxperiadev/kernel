@@ -1316,10 +1316,8 @@ int hci_inquiry(void __user *arg)
 		 * cleared). If it is interrupted by a signal, return -EINTR.
 		 */
 		if (wait_on_bit(&hdev->flags, HCI_INQUIRY,
-				TASK_INTERRUPTIBLE)) {
-			err = -EINTR;
-			goto done;
-		}
+				TASK_INTERRUPTIBLE))
+			return -EINTR;
 	}
 
 	/* for unlimited number of responses we will use buffer with

@@ -1866,12 +1866,10 @@ static int usdhi6_probe(struct platform_device *pdev)
 
 	ret = mmc_add_host(mmc);
 	if (ret < 0)
-		goto e_release_dma;
+		goto e_clk_off;
 
 	return 0;
 
-e_release_dma:
-	usdhi6_dma_release(host);
 e_clk_off:
 	clk_disable_unprepare(host->clk);
 e_free_mmc:

@@ -269,12 +269,7 @@ static int __init acpi_configfs_init(void)
 
 	acpi_table_group = configfs_register_default_group(root, "table",
 							   &acpi_tables_type);
-	if (IS_ERR(acpi_table_group)) {
-		configfs_unregister_subsystem(&acpi_configfs);
-		return PTR_ERR(acpi_table_group);
-	}
-
-	return 0;
+	return PTR_ERR_OR_ZERO(acpi_table_group);
 }
 module_init(acpi_configfs_init);
 

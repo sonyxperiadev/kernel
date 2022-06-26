@@ -708,7 +708,7 @@ void wbt_enable_default(struct request_queue *q)
 		return;
 
 	/* Queue not registered? Maybe shutting down... */
-	if (!blk_queue_registered(q))
+	if (!test_bit(QUEUE_FLAG_REGISTERED, &q->queue_flags))
 		return;
 
 	if ((q->mq_ops && IS_ENABLED(CONFIG_BLK_WBT_MQ)) ||

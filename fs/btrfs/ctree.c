@@ -267,12 +267,9 @@ int btrfs_copy_root(struct btrfs_trans_handle *trans,
 		ret = btrfs_inc_ref(trans, root, cow, 1);
 	else
 		ret = btrfs_inc_ref(trans, root, cow, 0);
-	if (ret) {
-		btrfs_tree_unlock(cow);
-		free_extent_buffer(cow);
-		btrfs_abort_transaction(trans, ret);
+
+	if (ret)
 		return ret;
-	}
 
 	btrfs_mark_buffer_dirty(cow);
 	*cow_ret = cow;

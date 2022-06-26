@@ -431,7 +431,7 @@ struct spu_hw {
 	u32 num_chan;
 };
 
-struct bcm_device_private {
+struct device_private {
 	struct platform_device *pdev;
 
 	struct spu_hw spu;
@@ -478,6 +478,6 @@ struct bcm_device_private {
 	struct mbox_chan **mbox;
 };
 
-extern struct bcm_device_private iproc_priv;
+extern struct device_private iproc_priv;
 
 #endif
