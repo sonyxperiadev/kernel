@@ -87,8 +87,7 @@ void lapb_kick(struct lapb_cb *lapb)
 		skb = skb_dequeue(&lapb->write_queue);
 
 		do {
-			skbn = skb_copy(skb, GFP_ATOMIC);
-			if (!skbn) {
+			if ((skbn = skb_clone(skb, GFP_ATOMIC)) == NULL) {
 				skb_queue_head(&lapb->write_queue, skb);
 				break;
 			}

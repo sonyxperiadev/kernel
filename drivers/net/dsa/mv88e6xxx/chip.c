@@ -1658,11 +1658,7 @@ static int mv88e6xxx_port_db_load_purge(struct mv88e6xxx_chip *chip, int port,
 		if (!entry.portvec)
 			entry.state = MV88E6XXX_G1_ATU_DATA_STATE_UNUSED;
 	} else {
-		if (state == MV88E6XXX_G1_ATU_DATA_STATE_UC_STATIC)
-			entry.portvec = BIT(port);
-		else
-			entry.portvec |= BIT(port);
-
+		entry.portvec |= BIT(port);
 		entry.state = state;
 	}
 
