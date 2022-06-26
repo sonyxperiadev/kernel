@@ -229,7 +229,7 @@ cifs_statfs(struct dentry *dentry, struct kstatfs *buf)
 		rc = server->ops->queryfs(xid, tcon, buf);
 
 	free_xid(xid);
-	return rc;
+	return 0;
 }
 
 static long cifs_fallocate(struct file *file, int mode, loff_t off, loff_t len)

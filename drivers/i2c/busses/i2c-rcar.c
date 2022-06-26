@@ -117,7 +117,6 @@ enum rcar_i2c_type {
 };
 
 struct rcar_i2c_priv {
-	u32 flags;
 	void __iomem *io;
 	struct i2c_adapter adap;
 	struct i2c_msg *msg;
@@ -128,6 +127,7 @@ struct rcar_i2c_priv {
 
 	int pos;
 	u32 icccr;
+	u32 flags;
 	u8 recovery_icmcr;	/* protected by adapter lock */
 	enum rcar_i2c_type devtype;
 	struct i2c_client *slave;

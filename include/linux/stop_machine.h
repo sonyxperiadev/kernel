@@ -138,7 +138,7 @@ int stop_machine_from_inactive_cpu(cpu_stop_fn_t fn, void *data,
 				   const struct cpumask *cpus);
 #else	/* CONFIG_SMP || CONFIG_HOTPLUG_CPU */
 
-static __always_inline int stop_machine_cpuslocked(cpu_stop_fn_t fn, void *data,
+static inline int stop_machine_cpuslocked(cpu_stop_fn_t fn, void *data,
 					  const struct cpumask *cpus)
 {
 	unsigned long flags;
@@ -149,15 +149,14 @@ static __always_inline int stop_machine_cpuslocked(cpu_stop_fn_t fn, void *data,
 	return ret;
 }
 
-static __always_inline int
-stop_machine(cpu_stop_fn_t fn, void *data, const struct cpumask *cpus)
+static inline int stop_machine(cpu_stop_fn_t fn, void *data,
+			       const struct cpumask *cpus)
 {
 	return stop_machine_cpuslocked(fn, data, cpus);
 }
 
-static __always_inline int
-stop_machine_from_inactive_cpu(cpu_stop_fn_t fn, void *data,
-			       const struct cpumask *cpus)
+static inline int stop_machine_from_inactive_cpu(cpu_stop_fn_t fn, void *data,
+						 const struct cpumask *cpus)
 {
 	return stop_machine(fn, data, cpus);
 }
