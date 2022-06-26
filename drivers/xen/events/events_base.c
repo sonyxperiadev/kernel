@@ -1782,7 +1782,7 @@ static void lateeoi_ack_dynirq(struct irq_data *data)
 
 	if (VALID_EVTCHN(evtchn)) {
 		do_mask(info, EVT_MASK_REASON_EOI_PENDING);
-		ack_dynirq(data);
+		event_handler_exit(info);
 	}
 }
 
@@ -1793,7 +1793,7 @@ static void lateeoi_mask_ack_dynirq(struct irq_data *data)
 
 	if (VALID_EVTCHN(evtchn)) {
 		do_mask(info, EVT_MASK_REASON_EXPLICIT);
-		ack_dynirq(data);
+		event_handler_exit(info);
 	}
 }
 

@@ -449,7 +449,6 @@ ENDPROC(__fstate_restore)
 
 
 	.section ".rodata"
-	.align LGREG
 	/* Exception vector table */
 ENTRY(excp_vect_table)
 	RISCV_PTR do_trap_insn_misaligned
