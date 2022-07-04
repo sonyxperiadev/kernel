@@ -1245,6 +1245,198 @@ static ssize_t product_code_show(struct class *c, struct class_attribute *attr,
 }
 static CLASS_ATTR_RO(product_code);
 
+static ssize_t sdm_therm_store(struct class *c, struct class_attribute *attr,
+						const char *buf, size_t count)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+
+	if (kstrtoint(buf, 10, &bcext_dev->sdm_therm))
+		return -EINVAL;
+
+	if (bcext_dev->sdm_therm_delivery)
+		somc_bcext_set_prop(bcext_dev, BATTMNGR_SOMC_PROP_SDM_THERM,
+						(u32)bcext_dev->sdm_therm);
+
+	return count;
+}
+static ssize_t sdm_therm_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bcext_dev->sdm_therm);
+}
+static CLASS_ATTR_RW(sdm_therm);
+
+static ssize_t pdo1_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO1, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo1);
+
+static ssize_t pdo2_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO2, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo2);
+
+static ssize_t pdo3_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO3, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo3);
+
+static ssize_t pdo4_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO4, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo4);
+
+static ssize_t pdo5_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO5, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo5);
+
+static ssize_t pdo6_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO6, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo6);
+
+static ssize_t pdo7_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+
+	somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO7, &pdo);
+
+	return scnprintf(buf, PAGE_SIZE, "%08x\n", pdo);
+}
+static CLASS_ATTR_RO(pdo7);
+
+static ssize_t pdo_h_show(struct class *c, struct class_attribute *attr,
+								char *buf)
+{
+	struct somc_bcext_dev *bcext_dev = container_of(c,
+					struct somc_bcext_dev, bcext_class);
+	u32 pdo;
+	int i;
+	ssize_t cnt = 0;
+
+	for (i = 0; i < NUM_PDOS; i++) {
+		somc_bcext_get_prop(bcext_dev, BATTMNGR_SOMC_PROP_PDO1 + i,
+									&pdo);
+
+		if (pdo == 0)
+			break;
+
+		cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt, "PDO %d\n", i + 1);
+
+		if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_FIXED) {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"\tFixed supply\n"
+					"\tDual-Role Power:%d\n"
+					"\tUSB Suspend Supported:%d\n"
+					"\tExternally Powered:%d\n"
+					"\tUSB Communications Capable:%d\n"
+					"\tData Role Swap:%d\n"
+					"\tPeak Current:%d\n"
+					"\tVoltage:%d (mV)\n"
+					"\tMax Current:%d (mA)\n",
+					PD_SRC_PDO_FIXED_PR_SWAP(pdo),
+					PD_SRC_PDO_FIXED_USB_SUSP(pdo),
+					PD_SRC_PDO_FIXED_EXT_POWERED(pdo),
+					PD_SRC_PDO_FIXED_USB_COMM(pdo),
+					PD_SRC_PDO_FIXED_DR_SWAP(pdo),
+					PD_SRC_PDO_FIXED_PEAK_CURR(pdo),
+					PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50,
+					PD_SRC_PDO_FIXED_MAX_CURR(pdo) * 10);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_BATTERY) {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"\tBattery supply\n"
+					"\tMax Voltage:%d (mV)\n"
+					"\tMin Voltage:%d (mV)\n"
+					"\tMax Power:%d (mW)\n",
+					PD_SRC_PDO_VAR_BATT_MAX_VOLT(pdo) * 50,
+					PD_SRC_PDO_VAR_BATT_MIN_VOLT(pdo) * 50,
+					PD_SRC_PDO_VAR_BATT_MAX(pdo) * 250);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_VARIABLE) {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"\tVariable supply\n"
+					"\tMax Voltage:%d (mV)\n"
+					"\tMin Voltage:%d (mV)\n"
+					"\tMax Current:%d (mA)\n",
+					PD_SRC_PDO_VAR_BATT_MAX_VOLT(pdo) * 50,
+					PD_SRC_PDO_VAR_BATT_MIN_VOLT(pdo) * 50,
+					PD_SRC_PDO_VAR_BATT_MAX(pdo) * 10);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_AUGMENTED) {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"\tProgrammable Power supply\n"
+					"\tMax Voltage:%d (mV)\n"
+					"\tMin Voltage:%d (mV)\n"
+					"\tMax Current:%d (mA)\n",
+					PD_APDO_MAX_VOLT(pdo) * 100,
+					PD_APDO_MIN_VOLT(pdo) * 100,
+					PD_APDO_MAX_CURR(pdo) * 50);
+		} else {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"Invalid PDO\n");
+		}
+
+		cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt, "\n");
+	}
+
+	return cnt;
+}
+static CLASS_ATTR_RO(pdo_h);
+
 static struct attribute *somc_bcext_class_attrs[] = {
 	&class_attr_ets_mode.attr,
 	&class_attr_batt_id.attr,
@@ -1283,6 +1475,15 @@ static struct attribute *somc_bcext_class_attrs[] = {
 	&class_attr_vcell_max.attr,
 	&class_attr_wls_negotiated_pwr.attr,
 	&class_attr_product_code.attr,
+	&class_attr_sdm_therm.attr,
+	&class_attr_pdo1.attr,
+	&class_attr_pdo2.attr,
+	&class_attr_pdo3.attr,
+	&class_attr_pdo4.attr,
+	&class_attr_pdo5.attr,
+	&class_attr_pdo6.attr,
+	&class_attr_pdo7.attr,
+	&class_attr_pdo_h.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(somc_bcext_class);
@@ -1651,11 +1852,16 @@ static int somc_bcext_parse_dt(struct somc_bcext_dev *bcext_dev)
 							therm_mitig_params[i];
 	}
 
+	if (of_property_read_bool(node, "somc,sdm-therm-delivery"))
+		bcext_dev->sdm_therm_delivery = true;
+
 	bcext_dev->wls_gpio_irq = of_get_named_gpio(node,
 							"somc,wls-irq-gpio", 0);
 
 	return 0;
 }
+
+#define DEFAULT_SDM_THERM	250
 
 static int somc_bcext_probe(struct platform_device *pdev)
 {
@@ -1670,6 +1876,8 @@ static int somc_bcext_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	bcext_dev->dev = dev;
+
+	bcext_dev->sdm_therm = DEFAULT_SDM_THERM;
 
 	bcext_dev->psy_nb.notifier_call = somc_bcext_psy_notifier_cb;
 	rc = power_supply_reg_notifier(&bcext_dev->psy_nb);

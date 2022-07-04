@@ -208,6 +208,14 @@ enum {
 	BATTMNGR_SOMC_PROP_SYSTEM_TEMP_LEVEL,
 	BATTMNGR_SOMC_PROP_USB_APSD_RESULT,
 	BATTMNGR_SOMC_PROP_PRODUCT_CODE,
+	BATTMNGR_SOMC_PROP_SDM_THERM,
+	BATTMNGR_SOMC_PROP_PDO1,
+	BATTMNGR_SOMC_PROP_PDO2,
+	BATTMNGR_SOMC_PROP_PDO3,
+	BATTMNGR_SOMC_PROP_PDO4,
+	BATTMNGR_SOMC_PROP_PDO5,
+	BATTMNGR_SOMC_PROP_PDO6,
+	BATTMNGR_SOMC_PROP_PDO7,
 };
 
 enum {
@@ -244,5 +252,31 @@ enum {
 #define SMART_CHARGE_WDOG_DELAY_MS	(30 * 60 * 1000) /* 30min */
 #define OFFCHG_TERMINATION_DELAY_MS	1000
 #define UNPLUG_WAKE_PERIOD		5000
+
+#define NUM_PDOS				7
+
+#define PD_SRC_PDO_TYPE(pdo)			(((pdo) >> 30) & 3)
+#define PD_SRC_PDO_TYPE_FIXED			0
+#define PD_SRC_PDO_TYPE_BATTERY			1
+#define PD_SRC_PDO_TYPE_VARIABLE		2
+#define PD_SRC_PDO_TYPE_AUGMENTED		3
+
+#define PD_SRC_PDO_FIXED_PR_SWAP(pdo)		(((pdo) >> 29) & 1)
+#define PD_SRC_PDO_FIXED_USB_SUSP(pdo)		(((pdo) >> 28) & 1)
+#define PD_SRC_PDO_FIXED_EXT_POWERED(pdo)	(((pdo) >> 27) & 1)
+#define PD_SRC_PDO_FIXED_USB_COMM(pdo)		(((pdo) >> 26) & 1)
+#define PD_SRC_PDO_FIXED_DR_SWAP(pdo)		(((pdo) >> 25) & 1)
+#define PD_SRC_PDO_FIXED_PEAK_CURR(pdo)		(((pdo) >> 20) & 3)
+#define PD_SRC_PDO_FIXED_VOLTAGE(pdo)		(((pdo) >> 10) & 0x3FF)
+#define PD_SRC_PDO_FIXED_MAX_CURR(pdo)		((pdo) & 0x3FF)
+
+#define PD_SRC_PDO_VAR_BATT_MAX_VOLT(pdo)	(((pdo) >> 20) & 0x3FF)
+#define PD_SRC_PDO_VAR_BATT_MIN_VOLT(pdo)	(((pdo) >> 10) & 0x3FF)
+#define PD_SRC_PDO_VAR_BATT_MAX(pdo)		((pdo) & 0x3FF)
+
+#define PD_APDO_PPS(pdo)			(((pdo) >> 28) & 3)
+#define PD_APDO_MAX_VOLT(pdo)			(((pdo) >> 17) & 0xFF)
+#define PD_APDO_MIN_VOLT(pdo)			(((pdo) >> 8) & 0xFF)
+#define PD_APDO_MAX_CURR(pdo)			((pdo) & 0x7F)
 
 #endif /* _SOMC_BATTCHG_EXT_H_ */
