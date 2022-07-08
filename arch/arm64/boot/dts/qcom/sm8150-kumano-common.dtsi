@@ -566,6 +566,7 @@
 	/* UART: QUP13 */
 	qcom,qup_uart@c8c000 {
 		status = "okay";
+		qcom,auto-suspend-disable = <1>;
 	};
 
 	qcom,wdt@17c10000 {
