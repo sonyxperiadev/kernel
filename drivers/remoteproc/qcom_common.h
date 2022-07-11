@@ -71,7 +71,7 @@ void qcom_add_ssr_subdev(struct rproc *rproc, struct qcom_rproc_ssr *ssr,
 void qcom_notify_early_ssr_clients(struct rproc_subdev *subdev);
 void qcom_remove_ssr_subdev(struct rproc *rproc, struct qcom_rproc_ssr *ssr);
 
-#if IS_ENABLED(CONFIG_QCOM_SYSMON)
+#if defined(CONFIG_QCOM_SYSMON)
 struct qcom_sysmon *qcom_add_sysmon_subdev(struct rproc *rproc,
 					   const char *name,
 					   int ssctl_instance);
@@ -101,8 +101,6 @@ static inline uint32_t qcom_sysmon_get_txn_id(struct qcom_sysmon *sysmon)
 	return 0;
 }
 
-int qcom_sysmon_get_reason(struct qcom_sysmon *sysmon, char *buf, size_t len)
-{ return -ENODEV; }
 #endif
 
 #endif
