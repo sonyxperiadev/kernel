@@ -604,7 +604,7 @@ static int pil_init_image_trusted(struct pil_desc *pil,
 	if (ret)
 		return ret;
 
-	scm_ret = qcom_scm_pas_init_image(d->pas_id, metadata, size);
+	scm_ret = qcom_scm_pas_init_image(d->pas_id, metadata);
 
 	scm_pas_disable_bw();
 	return scm_ret;
