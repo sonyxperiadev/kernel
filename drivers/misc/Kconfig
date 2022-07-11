@@ -93,6 +93,13 @@ config IBMVMC
 	  To compile this driver as a module, choose M here: the
 	  module will be called ibmvmc.
 
+config INPUT_BU520X1NVX
+	tristate "BU520X1NVX driver support"
+	default n
+	help
+	  Say Y here if you want to support BU520X1NVX
+	  as bipolar detection device.
+
 config PHANTOM
 	tristate "Sensable PHANToM (PCI)"
 	depends on PCI
