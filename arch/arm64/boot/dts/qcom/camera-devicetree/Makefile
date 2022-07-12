@@ -1,9 +1,8 @@
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY), y)
 
-# Use the current MSM_ARCH as the target config/ Makefile
-# Since Kernel SI can support multiple ARCH's this allows only the current selected target ARCH
-# to compile.
-include $(CAMERA_DEVICETREE_ROOT)/config/$(MSM_ARCH).mk
+dtbo-$(CONFIG_ARCH_WAIPIO) += waipio-camera.dtbo
+dtbo-$(CONFIG_ARCH_WAIPIO) += waipio-camera-overlay-v2.dtbo
+dtbo-$(CONFIG_ARCH_WAIPIO) += waipio-camera-sensor-nagara-pdx223.dtbo
 
 else
 $(error CONFIG_BUILD_ARM64_DT_OVERLAY is: $(CONFIG_BUILD_ARM64_DT_OVERLAY))
