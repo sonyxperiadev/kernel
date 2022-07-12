@@ -100,7 +100,7 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 
 dtbo-$(CONFIG_ARCH_SONY_SAGAMI) += lahaina-sagami-pdx214_generic-overlay.dtbo
 dtbo-$(CONFIG_ARCH_SONY_SAGAMI) += lahaina-sagami-pdx215_generic-overlay.dtbo
-dtbo-$(CONFIG_ARCH_SONY_NAGARA) += waipio-nagara-pdx223_generic-crossflash-overlay.dtbo
+dtbo-$(CONFIG_ARCH_SONY_NAGARA) += waipio-nagara-pdx223_generic-overlay.dtbo
 
 lahaina-sagami-pdx214_generic-overlay.dtbo-base	:= lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-sagami-pdx215_generic-overlay.dtbo-base	:= lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
@@ -117,7 +117,6 @@ dtb-$(CONFIG_MACH_SONY_PDX223) += \
 
 endif
 
-dtbo-$(CONFIG_ARCH_WAIPIO) += waipio-nagara-pdx223_generic-overlay.dtbo
 
 always-y	:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
