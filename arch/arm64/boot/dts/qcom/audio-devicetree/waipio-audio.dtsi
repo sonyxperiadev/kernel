@@ -1,5 +1,5 @@
-#include <bindings/qcom,audio-ext-clk.h>
-#include <bindings/qcom,gpr.h>
+#include <dt-bindings/qcom,audio-ext-clk.h>
+#include <dt-bindings/qcom,gpr.h>
 #include "msm-audio-lpass.dtsi"
 
 &soc {
