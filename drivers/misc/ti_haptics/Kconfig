@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menuconfig LEDS_HAPTICS
+	bool "LED Haptics support"
+	depends on LEDS_CLASS
+	help
+	  This option enables haptics support for the leds class.
+	  These triggers allow kernel events to drive the LEDs and can
+	  be configured via sysfs. If unsure, say Y.
+
+if LEDS_HAPTICS
+
+config LEDS_HAPTICS_DRV2624_RAM
+	tristate "LED Support for TI DRV2624 HAPTIC driver chip"
+	depends on LEDS_CLASS && I2C
+	select REGMAP_I2C
+	select PM_WAKELOCKS 
+	help
+	  If you say yes here you get support for TI DRV2624 HAPTIC driver.
+	  It is 4 channels chip with programmable engines.
+	  Driver provides direct control via LED class and interface for
+	  programming the engines.
+endif # NEW_HAPTICS
