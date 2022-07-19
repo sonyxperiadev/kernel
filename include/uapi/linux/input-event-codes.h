@@ -521,6 +521,8 @@
 #define KEY_INS_LINE		0x1c2
 #define KEY_DEL_LINE		0x1c3
 #define KEY_SIDE_GESTURE	0x1c6
+#define KEY_SIDE_GESTURE_RIGHT	0x1ca
+#define KEY_SIDE_GESTURE_LEFT	0x1cb
 #define KEY_BLACK_UI_GESTURE	0x1c7
 #define KEY_MULTI		0x1c8
 #define KEY_G_ASSIST		0x1c9
@@ -696,6 +698,14 @@
 #define BTN_TRIGGER_HAPPY39		0x2e6
 #define BTN_TRIGGER_HAPPY40		0x2e7
 
+/* Custom fingerprint gestures keys */
+#define KEY_FP_GESTURE_UP		0x2e8
+#define KEY_FP_GESTURE_DOWN		0x2e9
+#define KEY_FP_GESTURE_LEFT		0x2ea
+#define KEY_FP_GESTURE_RIGHT		0x2eb
+#define KEY_FP_GESTURE_LONG_PRESS	0x2ec
+#define KEY_FP_GESTURE_TAP		0x2ed
+
 /* We avoid low common keys in module aliases so they don't get huge. */
 #define KEY_MIN_INTERESTING	KEY_MUTE
 #define KEY_MAX			0x2ff
@@ -816,6 +826,8 @@
 #define SW_GLOVE		0x0f	/* set = glove mode */
 #define SW_PEN_INSERTED		0x0f  /* set = pen inserted */
 #define SW_MACHINE_COVER	0x10  /* set = cover closed */
+#define SW_FLIP                 0x15  /* set = flip cover */
+#define SW_CERTIFYHALL          0x1b  /* set = certify_hall... */
 #define SW_MAX			0x3f
 #define SW_CNT			(SW_MAX+1)
 
