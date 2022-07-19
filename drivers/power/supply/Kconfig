@@ -724,6 +724,16 @@ config CHARGER_WILCO
 	  information can be found in
 	  Documentation/ABI/testing/sysfs-class-power-wilco
 
+config IFPM_SM5038
+	tristate "Siliconmitus SM5038 IFPM Support"
+	depends on I2C=y
+	help
+		Say yes here to support for Siliconmitus SM5038.
+		This is a Power Management IC with Single Flash, Charger, Type-C, MUIC, FG
+		controls on chip.
+		This driver provides common support for accessing the device;
+		additional drivers
+
 source "drivers/power/supply/qcom/Kconfig"
 
 endif # POWER_SUPPLY
