@@ -61,6 +61,22 @@ config TYPEC_TPS6598X
 	  If you choose to build this driver as a dynamically linked module, the
 	  module will be called tps6598x.ko.
 
+config SM5038_WATER_DETECTION_ENABLE
+	bool "Using sm5714 Type-C Water Detection"
+	depends on I2C
+	default n
+	help
+		If you say yes here you will get support for
+		the SM5038 Type-C Water detection functions.
+
+config SM5038_SUPPORT_SBU
+	bool "Using sm5714 Type-C support sbu"
+	depends on I2C
+	default n
+	help
+		If you say yes here you will get support for
+		the SM5038 Type-C support SBU.
+
 source "drivers/usb/typec/mux/Kconfig"
 
 source "drivers/usb/typec/altmodes/Kconfig"
