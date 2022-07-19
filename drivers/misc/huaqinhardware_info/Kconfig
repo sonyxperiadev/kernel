@@ -1,0 +1,14 @@
+#
+#  Driver
+#
+
+config HQHARDWARE_INFO
+	tristate "Huaqin hardwareinfo"
+	help
+	  Say Y here if you want use it 
+	  chip in your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mpr121_touchkey.
