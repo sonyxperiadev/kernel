@@ -125,6 +125,10 @@ struct somc_bcext_dev {
 	int				therm_level;
 	struct thermal_mitigation	therm_mitig[NUM_THERM_MITIG_STEPS];
 
+	/* real temp */
+	bool				sdm_therm_delivery;
+	int				sdm_therm;
+
 	/* wireless charge */
 	struct device			*vdev;
 	struct class			*vcls;
