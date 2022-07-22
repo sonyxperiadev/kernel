@@ -1144,6 +1144,13 @@ config REGULATOR_VEXPRESS
 	  This driver provides support for voltage regulators available
 	  on the ARM Ltd's Versatile Express platform.
 
+config REGULATOR_WL2868C
+	tristate "Will Semiconductor WL2868C PMIC regulator"
+	depends on OF && I2C
+	help
+	  This driver provides support for the WL2868C 7-channel LDO PMIC
+	  voltage regulator.
+
 config REGULATOR_WM831X
 	tristate "Wolfson Microelectronics WM831x PMIC regulators"
 	depends on MFD_WM831X
