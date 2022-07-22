@@ -1,0 +1,143 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/regulator/willsemi,wl2868c.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Will Semiconductor WL2868C regulator
+
+maintainers:
+  - Sebastian Raase <sebastian.raase@sony.com>
+
+description: |
+  The WL2868C is a 7-channel LDO PMIC for Camera Applications
+  controlled through an I2C interface.
+
+  LDO1 and LDO2 have an input range of 0.6V to 3V, an output
+  range of 0.496V to 1.512V and an output current of up to 1.2A
+  LDO3 to LDO7 have an input range of 2.1V to 5.5V, an output
+  range of 1.504V to 3.544V and an output current of up to 0.4A.
+
+  The regulators are sub-nodes of the "willsemi,wl2868c" device,
+  which is a sub-node of the I2C bus it is connected to.
+
+properties:
+  compatible:
+    enum:
+      - willsemi,wl2868c
+
+  reg:
+    maxItems: 1
+
+  rstn-gpio:
+    description: |
+      GPIO for controlling the RSTN line.
+      If this property is missing, RSTN is
+      assumed to be permanently high.
+
+  vin12-supply:
+    description: |
+      Supply for LDO1 and LDO2.
+
+  vin34-supply:
+    description: |
+      Supply for LDO3 and LDO4.
+
+  vin5-supply:
+    description: |
+      Supply for LDO5.
+
+  vin6-supply:
+    description: |
+      Supply for LDO6.
+
+  vin7-supply:
+    description: |
+      Supply for LDO7.
+
+  regulators:
+    type: object
+    $ref: regulator.yaml#
+
+    description: |
+      List of regulators provided by this driver.
+      Must be named ldo[1-7].
+
+    patternProperties:
+      "^ldo[1-7]$":
+        type: object
+        $ref: regulator.yaml#
+        unevaluatedProperties: false
+
+  additionalProperties: false
+
+additionalProperties: false
+
+required:
+  - compatible
+  - reg
+  - regulators
+
+examples:
+  - |
+    i2c {
+        wl2868c@2F {
+            compatible = "willsemi,wl2868c";
+            reg = <0x2F>;
+
+            rstn-gpio = <&tlmm 58 0>;
+
+            vin12-supply = <&cam_vdig>;
+            vin34-supply = <&cam_vana>;
+            vin5-supply  = <&cam_vaf1>;
+            vin6-supply  = <&cam_vaf2>;
+            vin7-supply  = <&cam_vio>;
+
+            #address-cells = <0>;
+            #size-cells = <0>;
+            regulators {
+                wl2868c_ldo1: ldo1 {
+                    regulator-name = "cam-dvdd1";
+                    regulator-min-microvolt = <496000>;
+                    regulator-max-microvolt = <1512000>;
+                };
+
+                wl2868c_ldo2: ldo2 {
+                    regulator-name = "cam-dvdd2";
+                    regulator-min-microvolt = <496000>;
+                    regulator-max-microvolt = <1512000>;
+                };
+
+                wl2868c_ldo3: ldo3 {
+                    regulator-name = "cam-avdd1";
+                    regulator-min-microvolt = <1504000>;
+                    regulator-max-microvolt = <3544000>;
+                };
+
+                wl2868c_ldo4: ldo4 {
+                    regulator-name = "cam-avdd2";
+                    regulator-min-microvolt = <1504000>;
+                    regulator-max-microvolt = <3544000>;
+                };
+
+                wl2868c_ldo5: ldo5 {
+                    regulator-name = "cam-vddaf";
+                    regulator-min-microvolt = <1504000>;
+                    regulator-max-microvolt = <3544000>;
+                };
+
+                wl2868c_ldo6: ldo6 {
+                    regulator-name = "cam-vddois";
+                    regulator-min-microvolt = <1504000>;
+                    regulator-max-microvolt = <3544000>;
+                };
+
+                wl2868c_ldo7: ldo7 {
+                    regulator-name = "cam-vddio";
+                    regulator-min-microvolt = <1504000>;
+                    regulator-max-microvolt = <3544000>;
+                };
+            };
+        };
+    };
+...
