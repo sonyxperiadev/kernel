@@ -2158,6 +2158,9 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 					   bool intentless)
 {
 	struct qcom_glink *glink;
+	u32 *arr;
+	int size;
+	int irq;
 	int ret;
 
 	glink = devm_kzalloc(dev, sizeof(*glink), GFP_KERNEL);
@@ -2212,13 +2215,58 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 		return ERR_CAST(glink->task);
 	}
 
+	ret = subsys_register_early_notifier(glink->name, XPORT_LAYER_NOTIF,
+					     qcom_glink_notif_reset, glink);
+	if (ret)
+		dev_err(dev, "failed to register early notif %d\n", ret);
+
 	snprintf(glink->irqname, 32, "glink-native-%s", glink->name);
+
+	irq = of_irq_get(dev->of_node, 0);
+	ret = devm_request_irq(dev, irq,
+			       qcom_glink_native_intr,
+			       IRQF_NO_SUSPEND | IRQF_SHARED,
+			       glink->irqname, glink);
+	if (ret) {
+		dev_err(dev, "failed to request IRQ\n");
+		goto unregister;
+	}
+
+	glink->irq = irq;
+
+	size = of_property_count_u32_elems(dev->of_node, "cpu-affinity");
+	if (size > 0) {
+		arr = kmalloc_array(size, sizeof(u32), GFP_KERNEL);
+		if (!arr) {
+			ret = -ENOMEM;
+			goto unregister;
+		}
+		ret = of_property_read_u32_array(dev->of_node, "cpu-affinity",
+						 arr, size);
+		if (!ret)
+			qcom_glink_set_affinity(glink, arr, size);
+		kfree(arr);
+	}
+
+	ret = qcom_glink_send_version(glink);
+	if (ret) {
+		dev_err(dev, "failed to send version %d\n", ret);
+		goto unregister;
+	}
+
+	ret = qcom_glink_create_chrdev(glink);
+	if (ret)
+		dev_err(glink->dev, "failed to register chrdev\n");
 
 	glink->ilc = ipc_log_context_create(GLINK_LOG_PAGE_CNT, glink->name, 0);
 
 	return glink;
+
+unregister:
+	subsys_unregister_early_notifier(glink->name, XPORT_LAYER_NOTIF);
+	return ERR_PTR(ret);
 }
-EXPORT_SYMBOL(qcom_glink_native_probe);
+EXPORT_SYMBOL_GPL(qcom_glink_native_probe);
 
 int qcom_glink_native_start(struct qcom_glink *glink)
 {
@@ -2284,6 +2332,7 @@ void qcom_glink_native_remove(struct qcom_glink *glink)
 	int cid;
 	int ret;
 
+	subsys_unregister_early_notifier(glink->name, XPORT_LAYER_NOTIF);
 	qcom_glink_notif_reset(glink);
 	disable_irq(glink->irq);
 	qcom_glink_cancel_rx_work(glink);
