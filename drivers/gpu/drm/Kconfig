@@ -334,8 +334,6 @@ source "drivers/gpu/drm/bochs/Kconfig"
 
 source "drivers/gpu/drm/virtio/Kconfig"
 
-source "drivers/gpu/drm/msm/Kconfig"
-
 source "drivers/gpu/drm/fsl-dcu/Kconfig"
 
 source "drivers/gpu/drm/tegra/Kconfig"
@@ -481,3 +479,26 @@ config DRM_PANEL_ORIENTATION_QUIRKS
 config DRM_LIB_RANDOM
 	bool
 	default n
+
+config DRM_MSM
+	tristate "MSM DRM"
+	depends on DRM
+	depends on ARCH_QCOM || SOC_IMX5 || (ARM && COMPILE_TEST)
+	depends on IOMMU_SUPPORT
+	depends on OF && COMMON_CLK
+	depends on QCOM_OCMEM || QCOM_OCMEM=n
+	select IOMMU_IO_PGTABLE
+	select QCOM_MDT_LOADER if ARCH_QCOM
+	select REGULATOR
+	select DRM_KMS_HELPER
+	select DRM_PANEL
+	select SHMEM
+	select TMPFS
+	select QCOM_SCM if ARCH_QCOM
+	select QCOM_COMMAND_DB if ARCH_QCOM
+	select WANT_DEV_COREDUMP
+	select SND_SOC_HDMI_CODEC if SND_SOC
+	select SYNC_FILE
+	select PM_OPP
+	help
+		DRM/KMS driver for MSM/snapdragon.
