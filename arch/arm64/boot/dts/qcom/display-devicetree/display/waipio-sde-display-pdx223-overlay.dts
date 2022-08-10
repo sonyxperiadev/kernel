@@ -1,6 +1,3 @@
-/dts-v1/;
-/plugin/;
-
 #include "waipio-sde-display-qrd.dtsi"
 #include "somc-nagara-display.dtsi"
 #include "somc-nagara-display-pdx223.dtsi"
