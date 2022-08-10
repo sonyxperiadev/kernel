@@ -547,7 +547,6 @@ int qcom_spss_set_fw_name(struct rproc *rproc, const char *fw_name)
 		return -ENOMEM;
 
 	mutex_lock(&rproc->lock);
-	kfree(rproc->firmware);
 	rproc->firmware = p;
 	mutex_unlock(&rproc->lock);
 
