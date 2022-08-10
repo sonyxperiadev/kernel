@@ -2940,33 +2940,6 @@
 };
 
 &tlmm {
-	somc_ts_int_active: somc_ts_int_active {
-		mux {
-			pin = "gpio21";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio21";
-			driver-strength = <2>;
-			bias-disable;
-			input-enable;
-		};
-	};
-	somc_ts_int_suspend: somc_ts_int_suspend {
-		mux {
-			pin = "gpio21";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio21";
-			driver-strength = <2>;
-			bias-disable;
-			input-enable;
-		};
-	};
-
 	/* GPIO_21, TS_INT_N */
 	sm_gpio_21: sm_gpio_21 {
 		mux {

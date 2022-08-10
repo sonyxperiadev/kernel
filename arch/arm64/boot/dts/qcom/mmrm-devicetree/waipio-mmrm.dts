@@ -1,6 +1,3 @@
-/dts-v1/;
-/plugin/;
-
 #include <dt-bindings/clock/qcom,camcc-waipio.h>
 #include <dt-bindings/clock/qcom,videocc-waipio.h>
 #include <dt-bindings/clock/qcom,dispcc-waipio.h>
