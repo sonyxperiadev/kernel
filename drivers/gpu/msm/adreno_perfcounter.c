@@ -72,8 +72,7 @@ void adreno_perfcounter_restore(struct adreno_device *adreno_dev)
 	const struct adreno_perfcount_group *group;
 	unsigned int counter, groupid;
 
-	/* Do not save/restore if not requested */
-	if (counters == NULL || !adreno_dev->perfcounter)
+	if (counters == NULL)
 		return;
 
 	for (groupid = 0; groupid < counters->group_count; groupid++) {
@@ -107,8 +106,7 @@ inline void adreno_perfcounter_save(struct adreno_device *adreno_dev)
 	const struct adreno_perfcount_group *group;
 	unsigned int counter, groupid;
 
-	/* Do not save/restore if not requested */
-	if (counters == NULL || !adreno_dev->perfcounter)
+	if (counters == NULL)
 		return;
 
 	for (groupid = 0; groupid < counters->group_count; groupid++) {

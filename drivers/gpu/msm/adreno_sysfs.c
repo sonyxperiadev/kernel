@@ -188,19 +188,6 @@ static int _bcl_store(struct adreno_device *adreno_dev, bool val)
 					val);
 }
 
-static bool _perfcounter_show(struct adreno_device *adreno_dev)
-{
-	return adreno_dev->perfcounter;
-}
-
-static int _perfcounter_store(struct adreno_device *adreno_dev, bool val)
-{
-	if (adreno_dev->perfcounter == val)
-		return 0;
-
-	return adreno_power_cycle_bool(adreno_dev, &adreno_dev->perfcounter, val);
-}
-
 ssize_t adreno_sysfs_store_u32(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -279,7 +266,6 @@ static ADRENO_SYSFS_BOOL(ifpc);
 static ADRENO_SYSFS_RO_U32(ifpc_count);
 static ADRENO_SYSFS_BOOL(acd);
 static ADRENO_SYSFS_BOOL(bcl);
-static ADRENO_SYSFS_BOOL(perfcounter);
 
 
 static const struct attribute *_attr_list[] = {
@@ -299,7 +285,6 @@ static const struct attribute *_attr_list[] = {
 	&adreno_attr_ifpc_count.attr.attr,
 	&adreno_attr_acd.attr.attr,
 	&adreno_attr_bcl.attr.attr,
-	&adreno_attr_perfcounter.attr.attr,
 	NULL,
 };
 
@@ -326,14 +311,7 @@ void adreno_sysfs_close(struct adreno_device *adreno_dev)
 int adreno_sysfs_init(struct adreno_device *adreno_dev)
 {
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
-	int ret;
 
-	ret = sysfs_create_files(&device->dev->kobj, _attr_list);
-
-	/* Notify userspace */
-	if (!ret)
-		kobject_uevent(&device->dev->kobj, KOBJ_ADD);
-
-	return ret;
+	return sysfs_create_files(&device->dev->kobj, _attr_list);
 }
 

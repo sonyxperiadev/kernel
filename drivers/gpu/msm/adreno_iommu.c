@@ -129,12 +129,6 @@ static unsigned int _adreno_iommu_set_pt_v2_a3xx(struct kgsl_device *device,
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	unsigned int *cmds = cmds_orig;
 
-	/* Clear performance counters during contect switches */
-	if (!adreno_dev->perfcounter) {
-		*cmds++ = cp_type4_packet(A6XX_RBBM_PERFCTR_SRAM_INIT_CMD, 1);
-		*cmds++ = 0x1;
-	}
-
 	/*
 	 * Adding an indirect buffer ensures that the prefetch stalls until
 	 * the commands in indirect buffer have completed. We need to stall
@@ -249,17 +243,6 @@ static unsigned int _adreno_iommu_set_pt_v2_a6xx(struct kgsl_device *device,
 		*cmds++ = cp_type7_packet(CP_WAIT_FOR_CP_FLUSH, 0);
 		*cmds++ = cp_type4_packet(A6XX_CP_MISC_CNTL, 1);
 		*cmds++ = 0;
-	}
-
-	/* Wait for performance counter clear to finish */
-	if (!adreno_dev->perfcounter) {
-		*cmds++ = cp_type7_packet(CP_WAIT_REG_MEM, 6);
-		*cmds++ = 0x3;
-		*cmds++ = A6XX_RBBM_PERFCTR_SRAM_INIT_STATUS;
-		*cmds++ = 0x0;
-		*cmds++ = 0x1;
-		*cmds++ = 0x1;
-		*cmds++ = 0x0;
 	}
 
 	return cmds - cmds_orig;
