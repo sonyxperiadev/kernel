@@ -1,8 +1,8 @@
 /dts-v1/;
 
-#include "waipio-v2.dtsi"
-#include "waipio-qrd.dtsi"
-#include "waipio-pm8010-spmi.dtsi"
+#include "../waipio-v2.dtsi"
+#include "../waipio-qrd.dtsi"
+#include "../waipio-pm8010-spmi.dtsi"
 #include "waipio-nagara-pdx223_generic.dtsi"
 
 / {
