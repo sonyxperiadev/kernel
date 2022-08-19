@@ -153,10 +153,8 @@
 				"msm-pcm-afe", "msm-lsm-client",
 				"msm-pcm-routing", "msm-compr-dsp",
 				"msm-pcm-dsp-noirq";
-		asoc-cpu = <&dai_mi2s0_rx>, <&dai_mi2s0_tx>,
-				<&dai_mi2s1_rx>, <&dai_mi2s1_tx>,
-				<&dai_mi2s2_rx>, <&dai_mi2s2_tx>,
-				<&dai_mi2s3_rx>, <&dai_mi2s3_tx>,
+		asoc-cpu = <&dai_mi2s0>, <&dai_mi2s1>,
+				<&dai_mi2s2>, <&dai_mi2s3>,
 				<&dai_pri_auxpcm>,
 				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
 				<&dai_quat_auxpcm>,
@@ -183,8 +181,6 @@
 				<&rx_cdc_dma_7_rx>,<&afe_loopback_tx>;
 		asoc-cpu-names = "msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
 				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
-				"msm-dai-q6-mi2s.4", "msm-dai-q6-mi2s.5",
-				"msm-dai-q6-mi2s.6", "msm-dai-q6-mi2s.7",
 				"msm-dai-q6-auxpcm.1",
 				"msm-dai-q6-auxpcm.2", "msm-dai-q6-auxpcm.3",
 				"msm-dai-q6-auxpcm.4",
