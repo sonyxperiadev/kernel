@@ -23,9 +23,4 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += waipio-nagara-pdx223_generic-overlay.dtbo
 
 always-y	:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
-subdir-y	+= audio-devicetree
-subdir-y	+= camera-devicetree
-subdir-y	+= display-devicetree
-subdir-y	+= mmrm-devicetree
-subdir-y	+= video-devicetree
 clean-files	:= *.dtb *.dtbo
