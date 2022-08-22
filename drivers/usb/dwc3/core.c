@@ -1112,6 +1112,7 @@ err2:
 	dwc3_free_scratch_buffers(dwc);
 
 err1:
+        dwc3_debugfs_exit(dwc);
 	usb_phy_shutdown(dwc->usb2_phy);
 	usb_phy_shutdown(dwc->usb3_phy);
 	phy_exit(dwc->usb2_generic_phy);
@@ -1599,7 +1600,6 @@ skip_clk_reset:
 	count++;
 
 	pm_runtime_allow(dev);
-	dwc3_debugfs_init(dwc);
 	return 0;
 
 err3:
@@ -1627,7 +1627,6 @@ static int dwc3_remove(struct platform_device *pdev)
 	struct dwc3	*dwc = platform_get_drvdata(pdev);
 
 	dwc3_gadget_exit(dwc);
-        dwc3_debugfs_exit(dwc);
 	pm_runtime_allow(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
