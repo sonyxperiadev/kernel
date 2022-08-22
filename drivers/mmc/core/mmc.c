@@ -2550,6 +2550,12 @@ static int mmc_test_awake_ext_csd(struct mmc_host *host)
 	return err;
 }
 
+static bool _mmc_cache_enabled(struct mmc_host *host)
+{
+	return host->card->ext_csd.cache_size > 0 &&
+	       host->card->ext_csd.cache_ctrl & 1;
+}
+
 static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 {
 	int err = 0;
@@ -2970,6 +2976,7 @@ static const struct mmc_bus_ops mmc_ops = {
 	.alive = mmc_alive,
 	.shutdown = mmc_shutdown,
 	.hw_reset = _mmc_hw_reset,
+        .cache_enabled = _mmc_cache_enabled,
 	.change_bus_speed = mmc_change_bus_speed,
 	.change_bus_speed_deferred = mmc_change_bus_speed_deferred,
 };
