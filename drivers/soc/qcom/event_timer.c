@@ -43,10 +43,7 @@ struct hrtimer_info {
 
 static DEFINE_PER_CPU(struct hrtimer_info, per_cpu_hrtimer);
 
-static DEFINE_PER_CPU(struct timerqueue_head, timer_head) = {
-	.head = RB_ROOT,
-	.next = NULL,
-};
+static DEFINE_PER_CPU(struct timerqueue_head, timer_head);
 
 static DEFINE_SPINLOCK(event_timer_lock);
 static DEFINE_SPINLOCK(event_setup_lock);
