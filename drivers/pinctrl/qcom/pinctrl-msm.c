@@ -900,11 +900,8 @@ static void msm_gpio_irq_enable(struct irq_data *d)
 		irq_chip_enable_parent(d);
 	}
 
-	if (test_bit(d->hwirq, pctrl->skip_wake_irqs)) {
-		if (pctrl->mpm_wake_ctl)
-			msm_gpio_mpm_wake_set(d->hwirq, true);
+	if (test_bit(d->hwirq, pctrl->skip_wake_irqs))
 		return;
-	}
 
 	msm_gpio_irq_clear_unmask(d, true);
 }
