@@ -21,4 +21,5 @@ extern const struct mpm_pin mpm_blair_gic_chip_data[];
 extern const struct mpm_pin mpm_sdxnightjar_gic_chip_data[];
 extern const struct mpm_pin mpm_monaco_gic_chip_data[];
 extern const struct mpm_pin mpm_qcs405_gic_chip_data[];
+extern const struct mpm_pin mpm_blair_gic_chip_data[];
 #endif /* __QCOM_MPM_H__ */
