@@ -309,6 +309,23 @@ struct ipa_fmwk_contex {
 
 	int (*ipa_dereg_uc_rdyCB)(void);
 
+	int (*ipa_enable_wdi_pipe)(u32 clnt_hdl);
+
+	int (*ipa_disable_wdi_pipe)(u32 clnt_hdl);
+
+	int (*ipa_resume_wdi_pipe)(u32 clnt_hdl);
+
+	int (*ipa_suspend_wdi_pipe)(u32 clnt_hdl);
+
+	int (*ipa_connect_wdi_pipe)(struct ipa_wdi_in_params *in,
+			struct ipa_wdi_out_params *out);
+
+	int (*ipa_disconnect_wdi_pipe)(u32 clnt_hdl);
+
+	int (*ipa_reg_uc_rdyCB)(struct ipa_wdi_uc_ready_params *param);
+
+	int (*ipa_dereg_uc_rdyCB)(void);
+
 	/* ipa_gsb APIs*/
 	int (*ipa_bridge_init)(struct ipa_bridge_init_params *params, u32 *hdl);
 
@@ -544,6 +561,14 @@ int ipa_fmwk_register_ipa(const struct ipa_core_data *in)
 	ipa_fmwk_ctx->ipa_unregister_rmnet_ll_cb =
 		in->ipa_unregister_rmnet_ll_cb;
 	ipa_fmwk_ctx->ipa_get_default_aggr_time_limit = in->ipa_get_default_aggr_time_limit;
+	ipa_fmwk_ctx->ipa_enable_wdi_pipe = in->ipa_enable_wdi_pipe;
+	ipa_fmwk_ctx->ipa_disable_wdi_pipe = in->ipa_disable_wdi_pipe;
+	ipa_fmwk_ctx->ipa_resume_wdi_pipe = in->ipa_resume_wdi_pipe;
+	ipa_fmwk_ctx->ipa_suspend_wdi_pipe = in->ipa_suspend_wdi_pipe;
+	ipa_fmwk_ctx->ipa_connect_wdi_pipe = in->ipa_connect_wdi_pipe;
+	ipa_fmwk_ctx->ipa_disconnect_wdi_pipe = in->ipa_disconnect_wdi_pipe;
+	ipa_fmwk_ctx->ipa_reg_uc_rdyCB = in->ipa_uc_reg_rdyCB;
+	ipa_fmwk_ctx->ipa_dereg_uc_rdyCB = in->ipa_uc_dereg_rdyCB;
 
 	ipa_fmwk_ctx->ipa_ready = true;
 	ipa_trigger_ipa_ready_cbs();
@@ -1347,6 +1372,87 @@ int ipa_wdi_get_stats(struct IpaHwStatsWDIInfoData_t *stats)
 	return ret;
 }
 EXPORT_SYMBOL(ipa_wdi_get_stats);
+
+int ipa_enable_wdi_pipe(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_enable_wdi_pipe, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_enable_wdi_pipe);
+
+int ipa_disable_wdi_pipe(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_disable_wdi_pipe, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_disable_wdi_pipe);
+
+int ipa_resume_wdi_pipe(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_resume_wdi_pipe, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_resume_wdi_pipe);
+
+int ipa_suspend_wdi_pipe(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_suspend_wdi_pipe, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_suspend_wdi_pipe);
+
+int ipa_connect_wdi_pipe(struct ipa_wdi_in_params *in,
+		struct ipa_wdi_out_params *out)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_connect_wdi_pipe, in, out);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_connect_wdi_pipe);
+
+int ipa_disconnect_wdi_pipe(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_disconnect_wdi_pipe, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_disconnect_wdi_pipe);
+
+int ipa_reg_uc_rdyCB(struct ipa_wdi_uc_ready_params *param)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_reg_uc_rdyCB, param);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_reg_uc_rdyCB);
+
+int ipa_dereg_uc_rdyCB(void)
+{
+	int ret;
+
+	IPA_FMWK_DISPATCH_RETURN(ipa_dereg_uc_rdyCB);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_dereg_uc_rdyCB);
 
 int ipa_enable_wdi_pipe(u32 clnt_hdl)
 {

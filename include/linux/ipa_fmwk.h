@@ -134,6 +134,20 @@ struct ipa_core_data {
 	int (*ipa_unregister_rmnet_ll_cb)(void);
 	int (*ipa_get_default_aggr_time_limit)(enum ipa_client_type client,
 		u32 *default_aggr_time_limit);
+	int (*ipa_add_hdr)(struct ipa_ioc_add_hdr *hdrs);
+	int (*ipa_del_hdr)(struct ipa_ioc_del_hdr *hdls);
+	int (*ipa_get_hdr)(struct ipa_ioc_get_hdr *lookup);
+	int (*ipa_deregister_intf)(const char *name);
+
+	int (*ipa_enable_wdi_pipe)(u32 clnt_hdl);
+	int (*ipa_disable_wdi_pipe)(u32 clnt_hdl);
+	int (*ipa_resume_wdi_pipe)(u32 clnt_hdl);
+	int (*ipa_suspend_wdi_pipe)(u32 clnt_hdl);
+	int (*ipa_connect_wdi_pipe)(struct ipa_wdi_in_params *in,
+			struct ipa_wdi_out_params *out);
+	int (*ipa_disconnect_wdi_pipe)(u32 clnt_hdl);
+	int (*ipa_uc_reg_rdyCB)(struct ipa_wdi_uc_ready_params *param);
+	int (*ipa_uc_dereg_rdyCB)(void);
 };
 
 struct ipa_usb_data {
