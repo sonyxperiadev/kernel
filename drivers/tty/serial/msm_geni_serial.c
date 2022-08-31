@@ -632,9 +632,6 @@ static int msm_geni_serial_ioctl(struct uart_port *uport, unsigned int cmd,
 	if (port->pm_auto_suspend_disable)
 		return ret;
 
-	if (port->pm_auto_suspend_disable)
-		return ret;
-
 	switch (cmd) {
 	case TIOCPMGET:
 	case MSM_GENI_SERIAL_TIOCPMGET: {
