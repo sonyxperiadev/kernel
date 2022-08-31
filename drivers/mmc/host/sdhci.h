@@ -15,7 +15,7 @@
 #include <linux/io.h>
 #include <linux/leds.h>
 #include <linux/interrupt.h>
-
+#include <linux/ratelimit.h>
 #include <linux/mmc/host.h>
 
 /*
@@ -261,6 +261,7 @@
 
 /* 60-FB reserved */
 
+#define SDHCI_PRESET_FOR_HIGH_SPEED	0x64
 #define SDHCI_PRESET_FOR_SDR12 0x66
 #define SDHCI_PRESET_FOR_SDR25 0x68
 #define SDHCI_PRESET_FOR_SDR50 0x6A
@@ -615,6 +616,10 @@ struct sdhci_host {
 
 	u64			data_timeout;
 
+#if defined(CONFIG_SDC_QTI)
+	ktime_t data_start_time;
+	struct ratelimit_state dbg_dump_rs;
+#endif
 	unsigned long private[0] ____cacheline_aligned;
 };
 
