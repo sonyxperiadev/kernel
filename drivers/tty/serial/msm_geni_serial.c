@@ -3591,6 +3591,8 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 	 */
 	if (dev_port->is_console)
 		geni_se_remove_earlycon_icc_vote(dev_port->wrapper_dev);
+	else
+		spin_lock_init(&dev_port->rx_lock);
 
 	if (strcmp(id->compatible, "qcom,msm-geni-console") == 0)
 		snprintf(boot_marker, sizeof(boot_marker),

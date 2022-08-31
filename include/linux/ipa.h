@@ -1737,6 +1737,9 @@ typedef void (*ipa_rmnet_ll_stop_cb)(void *user_data);
 
 typedef void (*ipa_rmnet_ll_rx_notify_cb)(void *user_data, void *rx_data);
 
+int ipa_get_default_aggr_time_limit(enum ipa_client_type client,
+	u32 *default_aggr_time_limit);
+
 /**
  * ipa_register_ipa_ready_cb() - register a callback to be invoked
  * when IPA core driver initialization is complete.
@@ -2182,6 +2185,12 @@ static inline int ipa_register_rmnet_ll_cb(
 }
 
 static inline int ipa_unregister_rmnet_ll_cb(void)
+{
+	return -EPERM;
+}
+
+static inline int ipa_get_default_aggr_time_limit(enum ipa_client_type client,
+	u32 *default_aggr_time_limit)
 {
 	return -EPERM;
 }
