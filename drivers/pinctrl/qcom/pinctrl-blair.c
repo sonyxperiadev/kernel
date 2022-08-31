@@ -1715,4 +1715,3 @@ module_exit(blair_pinctrl_exit);
 MODULE_DESCRIPTION("QTI blair pinctrl driver");
 MODULE_LICENSE("GPL v2");
 MODULE_DEVICE_TABLE(of, blair_pinctrl_of_match);
-

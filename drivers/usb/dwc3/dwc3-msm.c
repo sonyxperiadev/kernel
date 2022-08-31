@@ -760,8 +760,8 @@ static inline bool dwc3_msm_is_dev_superspeed(struct dwc3_msm *mdwc)
 	u8 speed;
 
 	speed = dwc3_msm_read_reg(mdwc->base, DWC3_DSTS) & DWC3_DSTS_CONNECTSPD;
-	if ((speed & DWC3_DSTS_SUPERSPEED) ||
-			(speed & DWC3_DSTS_SUPERSPEED_PLUS)) {
+	if ((speed == DWC3_DSTS_SUPERSPEED) ||
+			(speed == DWC3_DSTS_SUPERSPEED_PLUS)) {
 		mdwc->ss_phy->flags |= DEVICE_IN_SS_MODE;
 		return true;
 	}
@@ -2716,7 +2716,7 @@ static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc, bool ignore_p3_state)
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 	unsigned long timeout;
 	u32 reg = 0;
-	bool ssphy0_sus, ssphy1_sus;
+	bool ssphy0_sus = false, ssphy1_sus = false;
 
 	/* Allow SSPHY(s) to go to P3 state if SSPHY autosuspend is disabled */
 	if (dwc->dis_u3_susphy_quirk) {
@@ -4423,7 +4423,7 @@ static void dwc3_start_stop_device(struct dwc3_msm *mdwc, bool start)
 		dbg_log_string("stop_device_mode completed");
 }
 
-int dwc3_msm_release_ss_lane(struct device *dev)
+int dwc3_msm_release_ss_lane(struct device *dev, bool usb_dp_concurrent_mode)
 {
 	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
 	struct dwc3 *dwc = NULL;
@@ -4437,6 +4437,16 @@ int dwc3_msm_release_ss_lane(struct device *dev)
 	if (dwc == NULL) {
 		dev_err(dev, "dwc3 controller is not initialized yet.\n");
 		return -EAGAIN;
+	}
+
+	/*
+	 * If the MPA connected is multi_func capable set the flag assuming
+	 * that USB and DP is operating in concurrent mode and bail out early.
+	 */
+	if (usb_dp_concurrent_mode) {
+		mdwc->ss_phy->flags |= PHY_USB_DP_CONCURRENT_MODE;
+		dbg_event(0xFF, "USB_DP_CONCURRENT_MODE", 1);
+		return 0;
 	}
 
 	dbg_event(0xFF, "ss_lane_release", 0);
@@ -5148,7 +5158,7 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 
 
 		mdwc->host_nb.notifier_call = dwc3_msm_host_notifier;
-#ifdef USB_CONFIG
+#ifdef CONFIG_USB
 		usb_register_notify(&mdwc->host_nb);
 #endif
 
@@ -5244,13 +5254,14 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 					USB_SPEED_SUPER);
 			usb_phy_notify_disconnect(mdwc->ss_phy,
 					USB_SPEED_SUPER);
+			mdwc->ss_phy->flags &= ~PHY_USB_DP_CONCURRENT_MODE;
 		}
 		redriver_notify_disconnect(mdwc->ss_redriver_node);
 
 		dwc3_msm_clear_ssphy_flags(mdwc, PHY_HOST_MODE);
 		dwc3_msm_clear_hsphy_flags(mdwc, PHY_HOST_MODE);
 		dwc3_host_exit(dwc);
-#ifdef USB_CONFIG
+#ifdef CONFIG_USB
 		usb_unregister_notify(&mdwc->host_nb);
 #endif
 
@@ -5365,6 +5376,7 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 		usb_phy_notify_disconnect(mdwc->hs_phy, USB_SPEED_HIGH);
 		usb_phy_notify_disconnect(mdwc->ss_phy, USB_SPEED_SUPER);
 		redriver_notify_disconnect(mdwc->ss_redriver_node);
+		mdwc->ss_phy->flags &= ~PHY_USB_DP_CONCURRENT_MODE;
 		dwc3_override_vbus_status(mdwc, false);
 		dwc3_msm_write_reg_field(mdwc->base, DWC3_GUSB3PIPECTL(0),
 				DWC3_GUSB3PIPECTL_SUSPHY, 0);

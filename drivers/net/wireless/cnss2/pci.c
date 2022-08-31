@@ -553,6 +553,23 @@ static int cnss_pci_set_link_down(struct cnss_pci_data *pci_priv)
 
 	return ret;
 }
+
+/**
+ * _cnss_pci_get_reg_dump() - Dump PCIe RC registers for debug
+ * @pci_priv: driver PCI bus context pointer
+ * @buf: destination buffer pointer
+ * @len: length of the buffer
+ *
+ * This function shall call corresponding PCIe root complex driver API
+ * to dump PCIe RC registers for debug purpose.
+ *
+ * Return: 0 for success, negative value for error
+ */
+static int _cnss_pci_get_reg_dump(struct cnss_pci_data *pci_priv,
+				  u8 *buf, u32 len)
+{
+	return msm_pcie_reg_dump(pci_priv->pci_dev, buf, len);
+}
 #else
 static int cnss_pci_enumerate(struct cnss_plat_data *plat_priv, int rc_num)
 {
@@ -594,6 +611,12 @@ static int cnss_pci_set_link_up(struct cnss_pci_data *pci_priv)
 }
 
 static int cnss_pci_set_link_down(struct cnss_pci_data *pci_priv)
+{
+	return 0;
+}
+
+static int _cnss_pci_get_reg_dump(struct cnss_pci_data *pci_priv,
+				  u8 *buf, u32 len)
 {
 	return 0;
 }
@@ -1261,15 +1284,21 @@ EXPORT_SYMBOL(cnss_pci_link_down);
 int cnss_pci_get_reg_dump(struct device *dev, uint8_t *buffer, uint32_t len)
 {
 	struct pci_dev *pci_dev = to_pci_dev(dev);
+	struct cnss_pci_data *pci_priv = cnss_get_pci_priv(pci_dev);
 
-	if (!pci_dev) {
-		cnss_pr_err("pci_dev is NULL\n");
-		return -EINVAL;
+	if (!pci_priv) {
+		cnss_pr_err("pci_priv is NULL\n");
+		return -ENODEV;
 	}
 
-	cnss_pr_dbg("Get pci reg dump for hang data\n");
+	if (pci_priv->pci_link_state == PCI_LINK_DOWN) {
+		cnss_pr_dbg("No PCIe reg dump since PCIe device is suspended(D3)\n");
+		return -EACCES;
+	}
 
-	return msm_pcie_reg_dump(pci_dev, buffer, len);
+	cnss_pr_dbg("Start to get PCIe reg dump\n");
+
+	return _cnss_pci_get_reg_dump(pci_priv, buffer, len);
 }
 EXPORT_SYMBOL(cnss_pci_get_reg_dump);
 
@@ -2404,7 +2433,7 @@ static int cnss_qca6290_powerup(struct cnss_pci_data *pci_priv)
 	int ret = 0;
 	struct cnss_plat_data *plat_priv = pci_priv->plat_priv;
 	unsigned int timeout;
-	int retry = 0;
+	int retry = 0, sw_ctrl_gpio = plat_priv->pinctrl_info.sw_ctrl_gpio;
 
 	if (plat_priv->ramdump_info_v2.dump_data_valid) {
 		cnss_pci_clear_dump_info(pci_priv);
@@ -2425,6 +2454,8 @@ retry:
 	ret = cnss_resume_pci_link(pci_priv);
 	if (ret) {
 		cnss_pr_err("Failed to resume PCI link, err = %d\n", ret);
+		cnss_pr_dbg("Value of SW_CTRL GPIO: %d\n",
+			    cnss_gpio_get_value(plat_priv, sw_ctrl_gpio));
 		if (test_bit(IGNORE_PCI_LINK_FAILURE,
 			     &plat_priv->ctrl_params.quirks)) {
 			cnss_pr_dbg("Ignore PCI link resume failure\n");
@@ -2434,6 +2465,9 @@ retry:
 		if (ret == -EAGAIN && retry++ < POWER_ON_RETRY_MAX_TIMES) {
 			cnss_power_off_device(plat_priv);
 			cnss_pr_dbg("Retry to resume PCI link #%d\n", retry);
+			cnss_pr_dbg("Value of SW_CTRL GPIO: %d\n",
+				    cnss_gpio_get_value(plat_priv,
+							sw_ctrl_gpio));
 			msleep(POWER_ON_RETRY_DELAY_MS * retry);
 			goto retry;
 		}
@@ -2828,11 +2862,12 @@ skip_wait_power_up:
 		goto skip_wait_recovery;
 
 	reinit_completion(&plat_priv->recovery_complete);
+	timeout = cnss_get_timeout(plat_priv, CNSS_TIMEOUT_RECOVERY);
 	ret = wait_for_completion_timeout(&plat_priv->recovery_complete,
-					  msecs_to_jiffies(RECOVERY_TIMEOUT));
+					  msecs_to_jiffies(timeout));
 	if (!ret) {
 		cnss_pr_err("Timeout (%ums) waiting for recovery to complete\n",
-			    RECOVERY_TIMEOUT);
+			    timeout);
 		CNSS_ASSERT(0);
 	}
 
@@ -3907,8 +3942,8 @@ int cnss_pci_load_m3(struct cnss_pci_data *pci_priv)
 		cnss_pci_add_fw_prefix_name(pci_priv, filename,
 					    DEFAULT_M3_FILE_NAME);
 
-		ret = request_firmware(&fw_entry, filename,
-				       &pci_priv->pci_dev->dev);
+		ret = firmware_request_nowarn(&fw_entry, filename,
+					      &pci_priv->pci_dev->dev);
 		if (ret) {
 			cnss_pr_err("Failed to load M3 image: %s\n", filename);
 			return ret;
@@ -4261,6 +4296,8 @@ int cnss_get_soc_info(struct device *dev, struct cnss_soc_info *info)
 		sizeof(info->fw_build_timestamp));
 	memcpy(&info->device_version, &plat_priv->device_version,
 	       sizeof(info->device_version));
+	memcpy(&info->dev_mem_info, &plat_priv->dev_mem_info,
+	       sizeof(info->dev_mem_info));
 
 	return 0;
 }
