@@ -632,6 +632,9 @@ static int msm_geni_serial_ioctl(struct uart_port *uport, unsigned int cmd,
 	if (port->pm_auto_suspend_disable)
 		return ret;
 
+	if (port->pm_auto_suspend_disable)
+		return ret;
+
 	switch (cmd) {
 	case TIOCPMGET:
 	case MSM_GENI_SERIAL_TIOCPMGET: {
@@ -3591,8 +3594,14 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 	 */
 	if (dev_port->is_console)
 		geni_se_remove_earlycon_icc_vote(dev_port->wrapper_dev);
+
+	if (strcmp(id->compatible, "qcom,msm-geni-console") == 0)
+		snprintf(boot_marker, sizeof(boot_marker),
+				"M - DRIVER GENI_UART_%d Ready", line);
 	else
-		spin_lock_init(&dev_port->rx_lock);
+		snprintf(boot_marker, sizeof(boot_marker),
+			"M - DRIVER GENI_HS_UART_%d Ready", line);
+	place_marker(boot_marker);
 
 	if (strcmp(id->compatible, "qcom,msm-geni-console") == 0)
 		snprintf(boot_marker, sizeof(boot_marker),

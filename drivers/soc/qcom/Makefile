@@ -54,6 +54,7 @@ obj-$(CONFIG_QCOM_KONA_LLCC) += llcc-kona.o
 obj-$(CONFIG_QCOM_LAGOON_LLCC) += llcc-lagoon.o
 obj-$(CONFIG_QCOM_SDMSHRIKE_LLCC) += llcc-sdmshrike.o
 obj-$(CONFIG_QCOM_SM6150_LLCC) += llcc-sm6150.o
+obj-$(CONFIG_QCOM_DIREWOLF_LLCC) += llcc-direwolf.o
 obj-$(CONFIG_QCOM_MINIDUMP) += msm_minidump.o minidump_log.o
 obj-$(CONFIG_QCOM_MEM_OFFLINE) += mem-offline.o
 obj-$(CONFIG_QCOM_MEM_BUF) += mem-buf.o mem_buf_dma_buf.o
@@ -121,3 +122,7 @@ obj-$(CONFIG_MSM_SLATECOM_INTERFACE) += slatecom_interface.o
 obj-$(CONFIG_QCOM_AOP_SET_DDR) += aop-set-ddr.o
 obj-$(CONFIG_CPU_V7) += idle-v7.o
 obj-$(CONFIG_DUMP_XBL_LOG) += dump_boot_log.o
+# GNSS driver
+obj-$(CONFIG_GNSS_SIRF)		+= gnsssirf/
+obj-$(CONFIG_MSM_SEB) += slate_events_bridge.o
+obj-$(CONFIG_MSM_SEB_RPMSG) += slate_events_bridge_rpmsg.o

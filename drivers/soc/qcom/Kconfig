@@ -265,6 +265,15 @@ config QCOM_LLCC_PERFMON
 	  interface. sysfs interface is used to configure and dump the LLCC
 	  performance events.
 
+config QCOM_DIREWOLF_LLCC
+	tristate "Qualcomm Technologies, Inc. Direwolf LLCC driver"
+	depends on QCOM_LLCC
+	help
+	  Say y or m here to enable the LLCC driver for Direwolf platform.
+	  This provides data required to configure LLCC so that clients
+	  can start using the LLCC slices.
+	  If unsure, say n.
+
 config QCOM_MDT_LOADER
 	tristate
 	select QCOM_SCM
@@ -412,9 +421,9 @@ config MSM_BOOT_STATS
 	  This figures are reported in mpm sleep clock cycles and have a
 	  resolution of 31 bits as 1 bit is used as an overflow check.
 
-config MSM_BOOT_TIME_MARKER
+config QGKI_MSM_BOOT_TIME_MARKER
 	bool "Use MSM boot time marker reporting"
-	depends on MSM_BOOT_STATS
+	depends on MSM_BOOT_STATS && QGKI
 	help
 	  Use this to mark msm boot kpi for measurement.
 	  An instrumentation for boot time measurement.
@@ -1318,5 +1327,24 @@ config DUMP_XBL_LOG
 	  reserved memory region:
 		cat /sys/module/xbl_log/xbl_log
 
+config MSM_SEB
+	tristate "Provide APIs to send and receive events from Slate chipset"
+	help
+	  SEB(Slate event bridge) communicates to Slate over rpmsg driver to
+	  send or receive events from Slate. The button events received from
+	  Slate are send to input framework. The driver provides functionality
+	  for a client to register a callback to receive events from a group.
+
+config MSM_SEB_RPMSG
+	tristate "Provide support for slate event GLINK channel"
+	depends on MSM_SEB
+	help
+	  SEB_RPMSG informs SEB driver if GLINK channel has been
+	  opened by remote processor. It doesn't maintain state machine
+	  and is probed when Slate opens channel and removed when the
+	  channel is closed by remote processor.
+
 source "drivers/soc/qcom/icnss2/Kconfig"
+
+source "drivers/soc/qcom/gnsssirf/Kconfig"
 endmenu

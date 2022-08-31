@@ -32,6 +32,7 @@
 
 #define PCIE_MHI_STATUS(n)			((n) + 0x148)
 #define TCSR_PERST_SEPARATION_ENABLE		0x270
+#define TCSR_PCIE_RST_SEPARATION		0x3F8
 #define PCIE_ISSUE_WAKE				1
 #define PCIE_MHI_FWD_STATUS_MIN			5000
 #define PCIE_MHI_FWD_STATUS_MAX			5100
@@ -528,16 +529,18 @@ static void ep_pcie_pipe_clk_deinit(struct ep_pcie_dev_t *dev)
 
 static void ep_pcie_bar_init(struct ep_pcie_dev_t *dev)
 {
+	struct resource *res = dev->res[EP_PCIE_RES_MMIO].resource;
+	u32 mask = res->end - res->start;
 	u32 properties = 0x4;
 
 	EP_PCIE_DBG(dev, "PCIe V%d: BAR mask to program is 0x%x\n",
-			dev->rev, dev->mmio_res_size);
+			dev->rev, mask);
 
 	/* Configure BAR mask via CS2 */
 	ep_pcie_write_mask(dev->elbi + PCIE20_ELBI_CS2_ENABLE, 0, BIT(0));
-	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0, dev->mmio_res_size);
+	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0, mask);
 	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0x4, 0);
-	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0x8, dev->mmio_res_size);
+	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0x8, mask);
 	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0xc, 0);
 	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0x10, 0);
 	ep_pcie_write_reg(dev->dm_core, PCIE20_BAR0 + 0x14, 0);
@@ -654,9 +657,10 @@ static void ep_pcie_core_init(struct ep_pcie_dev_t *dev, bool configured)
 				PCIE20_LINK_CONTROL2_LINK_STATUS2,
 				0xf, dev->link_speed);
 
-		EP_PCIE_DBG2(dev, "PCIe V%d: Allow L1 after D3_COLD->D0\n",
-				dev->rev);
-		ep_pcie_write_mask(dev->parf + PCIE20_PARF_PM_CTRL, BIT(5), 0);
+		EP_PCIE_DBG2(dev, "PCIe V%d: Clear disconn_req after D3_COLD\n",
+			     dev->rev);
+		ep_pcie_write_reg_field(dev->tcsr_perst_en,
+					TCSR_PCIE_RST_SEPARATION, BIT(5), 0);
 	}
 
 	if (dev->active_config) {
@@ -1294,7 +1298,6 @@ static int ep_pcie_get_resources(struct ep_pcie_dev_t *dev,
 					goto out;
 				}
 			}
-			dev->mmio_res_size = res->end = res->start;
 		} else {
 			EP_PCIE_DBG(dev, "start addr for %s is %pa\n",
 				res_info->name,	&res->start);
@@ -1969,6 +1972,11 @@ checkbme:
 			dev->rev, retries,
 			BME_TIMEOUT_US_MIN * retries / 1000);
 		ep_pcie_enumeration_complete(dev);
+
+		EP_PCIE_DBG2(dev, "PCIe V%d: Allow L1 after BME is set\n",
+				dev->rev);
+		ep_pcie_write_mask(dev->parf + PCIE20_PARF_PM_CTRL, BIT(5), 0);
+
 		/* expose BAR to user space to identify modem */
 		ep_pcie_bar0_address =
 			readl_relaxed(dev->dm_core + PCIE20_BAR0);
@@ -2035,6 +2043,12 @@ int ep_pcie_core_disable_endpoint(void)
 	val =  readl_relaxed(dev->elbi + PCIE20_ELBI_SYS_STTS);
 	EP_PCIE_DBG(dev, "PCIe V%d: LTSSM_STATE during disable:0x%x\n",
 		dev->rev, (val >> 0xC) & 0x3f);
+
+	EP_PCIE_DBG2(dev, "PCIe V%d: Set pcie_disconnect_req during D3_COLD\n",
+		     dev->rev);
+	ep_pcie_write_reg_field(dev->tcsr_perst_en,
+				TCSR_PCIE_RST_SEPARATION, BIT(5), 1);
+
 	ep_pcie_pipe_clk_deinit(dev);
 	ep_pcie_clk_deinit(dev);
 	ep_pcie_vreg_deinit(dev);
@@ -2136,6 +2150,10 @@ static irqreturn_t ep_pcie_handle_bme_irq(int irq, void *data)
 				dev->rev);
 			ep_pcie_notify_event(dev, EP_PCIE_EVENT_LINKUP);
 		}
+
+		EP_PCIE_DBG2(dev, "PCIe V%d: Allow L1 after BME is set\n",
+				dev->rev);
+		ep_pcie_write_mask(dev->parf + PCIE20_PARF_PM_CTRL, BIT(5), 0);
 	} else {
 		EP_PCIE_DBG(dev,
 				"PCIe V%d:BME is still disabled\n", dev->rev);
@@ -2440,8 +2458,8 @@ static irqreturn_t ep_pcie_handle_perst_irq(int irq, void *data)
 
 out:
 	/* Set trigger type based on the next expected value of perst gpio */
-	irq_set_irq_type(gpio_to_irq(dev->gpio[EP_PCIE_GPIO_PERST].num),
-		(perst ? IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH));
+	irq_set_irq_type(dev->perst_irq, (perst ? IRQF_TRIGGER_LOW :
+						  IRQF_TRIGGER_HIGH));
 
 	spin_unlock_irqrestore(&dev->isr_lock, irqsave_flags);
 
@@ -2559,7 +2577,6 @@ int32_t ep_pcie_irq_init(struct ep_pcie_dev_t *dev)
 {
 	int ret;
 	struct device *pdev = &dev->pdev->dev;
-	u32 perst_irq;
 
 	EP_PCIE_DBG(dev, "PCIe V%d\n", dev->rev);
 
@@ -2674,26 +2691,31 @@ perst_irq:
 	if (gpio_get_value(dev->gpio[EP_PCIE_GPIO_PERST].num) == 1)
 		atomic_set(&dev->perst_deast, 1);
 
+	dev->perst_irq = gpio_to_irq(dev->gpio[EP_PCIE_GPIO_PERST].num);
+	if (dev->perst_irq < 0) {
+		EP_PCIE_ERR(dev,
+			"PCIe V%d: Unable to get IRQ from GPIO_PERST %d\n",
+			dev->rev, dev->perst_irq);
+		return dev->perst_irq;
+	}
+
 	/* register handler for PERST interrupt */
-	perst_irq = gpio_to_irq(dev->gpio[EP_PCIE_GPIO_PERST].num);
-	ret = devm_request_irq(pdev, perst_irq,
-		ep_pcie_handle_perst_irq,
-		((atomic_read(&dev->perst_deast) ?
-			IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH)
-			| IRQF_EARLY_RESUME),
-		"ep_pcie_perst", dev);
+	ret = devm_request_irq(pdev, dev->perst_irq, ep_pcie_handle_perst_irq,
+			       ((atomic_read(&dev->perst_deast) ?
+				 IRQF_TRIGGER_LOW : IRQF_TRIGGER_HIGH) |
+			       IRQF_EARLY_RESUME), "ep_pcie_perst", dev);
 	if (ret) {
 		EP_PCIE_ERR(dev,
 			"PCIe V%d: Unable to request PERST interrupt %d\n",
-			dev->rev, perst_irq);
+			dev->rev, dev->perst_irq);
 		return ret;
 	}
 
-	ret = enable_irq_wake(perst_irq);
+	ret = enable_irq_wake(dev->perst_irq);
 	if (ret) {
 		EP_PCIE_ERR(dev,
 			"PCIe V%d: Unable to enable PERST interrupt %d\n",
-			dev->rev, perst_irq);
+			dev->rev, dev->perst_irq);
 		return ret;
 	}
 
@@ -2723,7 +2745,8 @@ void ep_pcie_irq_deinit(struct ep_pcie_dev_t *dev)
 {
 	EP_PCIE_DBG(dev, "PCIe V%d\n", dev->rev);
 
-	disable_irq(gpio_to_irq(dev->gpio[EP_PCIE_GPIO_PERST].num));
+	if (dev->perst_irq >= 0)
+		disable_irq(dev->perst_irq);
 }
 
 int ep_pcie_core_register_event(struct ep_pcie_register_event *reg)

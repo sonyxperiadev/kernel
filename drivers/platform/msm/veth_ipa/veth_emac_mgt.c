@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
  */
+
 #include <linux/debugfs.h>
 #include <linux/errno.h>
 #include <linux/etherdevice.h>
@@ -31,6 +23,8 @@
 #include "veth_ipa.h"
 
 #define NO_FLAGS 0x0
+
+MODULE_LICENSE("GPL v2");
 
 /** veth_alloc_emac_export_mem() - Called when allocating the
  *  exported memory to the BE driver.
@@ -889,3 +883,4 @@ int veth_emac_open_notify(struct veth_emac_export_mem *veth_emac_mem,
 	}
 	return 0;
 }
+
