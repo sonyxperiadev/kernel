@@ -1407,6 +1407,8 @@ static int adc5_probe(struct platform_device *pdev)
 		}
 	}
 
+	platform_set_drvdata(pdev, adc);
+
 	init_completion(&adc->complete);
 	mutex_init(&adc->lock);
 
