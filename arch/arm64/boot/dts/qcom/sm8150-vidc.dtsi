@@ -53,7 +53,7 @@
 			label = "cnoc";
 			qcom,bus-master = <MSM_BUS_MASTER_AMPSS_M0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_VENUS_CFG>;
-			qcom,bus-governor = "performance";
+			qcom,mode = "performance";
 			qcom,bus-range-kbps = <1000 1000>;
 		};
 
@@ -62,23 +62,25 @@
 			label = "venus-ddr";
 			qcom,bus-master = <MSM_BUS_MASTER_LLCC>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
-			qcom,bus-governor = "msm-vidc-ddr";
+			qcom,mode = "venus-ddr";
 			qcom,bus-range-kbps = <1000 6533000>;
 		};
+
 		arm9_bus_ddr {
 			compatible = "qcom,msm-vidc,bus";
 			label = "venus-arm9-ddr";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
-			qcom,bus-governor = "performance";
+			qcom,mode = "performance";
 			qcom,bus-range-kbps = <1000 1000>;
 		};
+
 		venus_bus_llcc {
 			compatible = "qcom,msm-vidc,bus";
 			label = "venus-llcc";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_LLCC>;
-			qcom,bus-governor = "msm-vidc-llcc";
+			qcom,mode = "venus-llcc";
 			qcom,bus-range-kbps = <1000 6533000>;
 		};
 
@@ -117,7 +119,7 @@
 			qcom,iommu-dma-addr-pool = <0x500000 0xdfb00000>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-pagetable = "LLC";
-			qcom,iommu-vmid = <0xB>; /* VMID_CP_BITSTREAM */
+			qcom,iommu-vmid = <0x9>; /* VMID_CP_BITSTREAM */
 			buffer-types = <0x241>;
 			virtual-addr-pool = <0x500000 0xdfb00000>;
 			qcom,secure-context-bank;
