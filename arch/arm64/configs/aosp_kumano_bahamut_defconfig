@@ -886,6 +886,10 @@ CONFIG_BT_HIDP=y
 CONFIG_ANDROID_BINDER_DEVICES="binder,vndbinder,hwbinder,puddlejumper,vndpuddlejumper,hwpuddlejumper"
 CONFIG_SCHED_TUNE=n
 
+# hybris: usb networking for recovery
+CONFIG_USB_CONFIGFS_RNDIS=y
+CONFIG_USB_CONFIGFS_RMNET_BAM=y
+
 CONFIG_USB_RTL8152=y
 
 CONFIG_PM_AUTOSLEEP=y
