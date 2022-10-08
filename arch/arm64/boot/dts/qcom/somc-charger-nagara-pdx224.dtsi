@@ -1,0 +1,17 @@
+&somc_battchg_ext {
+	somc,bcext-product-code = <7>;
+
+	somc,thermal-fcc-ma = <
+		5000 4050 3650 3250 2850 2500 2150
+		1800 1450 1100 750 400 50 0 0 0>;
+	somc,thermal-usb-icl-ma = <
+		3000 2750 2500 2250 2000 1750 1500
+		1250 1000 750 500 250 100 0 0 0>;
+	somc,thermal-usb-pd-icl-ma = <
+		3000 2750 2500 2250 2000 1750 1500
+		1250 1000 750 500 250 100 0 0 0>;
+	somc,thermal-charging-indication = <0 0 0 0 0 0 0 0 0 0 0 0 0 1 2 2>;
+	somc,thermal-usb-cc-open = <0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1>;
+
+	somc,wls-irq-gpio = <&tlmm 8 0>;
+};

@@ -1,0 +1,12 @@
+/dts-v1/;
+
+#include "waipio.dtsi"
+#include "waipio-qrd.dtsi"
+#include "waipio-pm8010-spmi.dtsi"
+#include "waipio-nagara-pdx224_generic.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-224(WAIPIO QRD with PM8010)";
+	compatible = "somc,pdx224-generic", "qcom,waipio", "qcom,qrd";
+	qcom,board-id = <0x1000b 0>;
+};
