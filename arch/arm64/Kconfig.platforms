@@ -250,6 +250,15 @@ config MACH_SONY_PDX223
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config MACH_SONY_PDX224
+	bool "Sony Mobile PDX-224"
+	depends on ARCH_SONY_NAGARA
+	help
+	  Support for the SONY Mobile PDX-224 board
+	  which is based on SONY Nagara platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_KAKA
 	bool "Enable Support for Qualcomm Technologies, Inc. KAKA"
 	depends on ARCH_QCOM
