@@ -7716,17 +7716,13 @@ static int cs40l2x_create_led(struct cs40l2x_private *cs40l2x)
 	int ret;
 	struct led_classdev *led_dev = &cs40l2x->led_dev;
 	struct device *dev = cs40l2x->dev;
-	struct led_init_data init_data = {
-		.fwnode = cs40l2x->dev->fwnode,
-		.devicename = "cs40l25",
-		.default_label = CS40L2X_DEVICE_NAME,
-	};
 
+	led_dev->name = CS40L2X_DEVICE_NAME;
 	led_dev->max_brightness = LED_FULL;
 	led_dev->brightness_set = cs40l2x_vibe_brightness_set;
 	led_dev->default_trigger = "transient";
 
-	ret = led_classdev_register_ext(dev, led_dev, &init_data);
+	ret = led_classdev_register(dev, led_dev);
 	if (ret) {
 		dev_err(dev, "Failed to register LED device: %d\n", ret);
 		return ret;
