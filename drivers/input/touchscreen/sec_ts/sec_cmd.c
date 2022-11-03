@@ -426,7 +426,7 @@ static struct attribute_group sec_fac_attr_group = {
 int sec_cmd_init(struct sec_cmd_data *data, struct sec_cmd *cmds,
 			int len, int devt)
 {
-	struct class *sec_class;
+	struct class *sec_class = NULL;
 	struct sec_ts_data *ts = container_of(data, struct sec_ts_data, sec);
 	const char *dev_name;
 	int ret, i;
