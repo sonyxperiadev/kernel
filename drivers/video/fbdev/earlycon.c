@@ -210,7 +210,7 @@ static int __init simplefb_earlycon_setup(struct earlycon_device *device,
 
 	si = &screen_info;
 
-	if (!port->mapbase || !device->options)
+	if (!port->mapbase || !*device->options)
 		return -ENODEV;
 
 	ret = sscanf(device->options, "%u,%u", &xres, &yres);
