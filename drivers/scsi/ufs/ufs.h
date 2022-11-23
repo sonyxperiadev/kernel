@@ -41,14 +41,6 @@
 #include <uapi/scsi/ufs/ufs.h>
 #include <uapi/scsi/scsi_bsg_ufs.h>
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
-    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO) || \
-    defined(CONFIG_ARCH_SONY_LENA)
- #ifndef UFS_TARGET_SONY_PLATFORM
-  #define UFS_TARGET_SONY_PLATFORM
- #endif
-#endif
-
 #ifdef CONFIG_SCSI_UFSHCD_QTI
 #define MAX_QUERY_IDN		0x12
 #define MAX_CDB_SIZE		16
@@ -514,10 +506,6 @@ enum {
 };
 #endif
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-#define MAX_REVISION_LEN 8
-#endif
-
 struct ufs_dev_info {
 	bool f_power_on_wp_en;
 	/* Keeps information if any of the LU is power on write protected */
@@ -535,10 +523,6 @@ struct ufs_dev_info {
 	/*UFS device Product Name */
 	u8 *model;
 	u16 wspecversion;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	u8 revision;
-	char fw_revision[MAX_REVISION_LEN+1];
-#endif
 	u32 clk_gating_wait_us;
 	u32 d_ext_ufs_feature_sup;
 	u8 b_wb_buffer_type;

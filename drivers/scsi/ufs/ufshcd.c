@@ -256,16 +256,6 @@ static struct ufs_dev_fix ufs_fixups[] = {
 		UFS_DEVICE_QUIRK_PA_HIBER8TIME),
 #endif
 
-	/* UFS_TARGET_SONY_PLATFORM -- Compile always */
-	UFS_FIX(UFS_VENDOR_SKHYNIX, UFS_ANY_MODEL,
-		UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH),
-	UFS_FIX_REVISION(UFS_VENDOR_SKHYNIX, UFS_MODEL_HYNIX_32GB,
-		UFS_REVISION_HYNIX, UFS_DEVICE_QUIRK_NO_PURGE),
-	UFS_FIX_REVISION(UFS_VENDOR_SKHYNIX, UFS_MODEL_HYNIX_64GB,
-		UFS_REVISION_HYNIX, UFS_DEVICE_QUIRK_NO_PURGE),
-	UFS_FIX_REVISION(UFS_VENDOR_SAMSUNG, UFS_MODEL_SAMSUNG_64GB,
-		UFS_REVISION_SAMSUNG, UFS_DEVICE_QUIRK_NO_PURGE),
-
 	END_FIX
 };
 
@@ -4394,14 +4384,6 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_LocalAFC0ReqTimeOutVal),
 			DL_AFC0ReqTimeOutVal_Default);
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-	if (hba->dev_quirks & UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH) {
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG1SyncLength), 0x48);
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG2SyncLength), 0x48);
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG3SyncLength), 0x48);
-	}
-#endif
-
 	ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
 			| pwr_mode->pwr_tx);
 
@@ -7366,7 +7348,6 @@ void ufshcd_fixup_dev_quirks(struct ufs_hba *hba, struct ufs_dev_fix *fixups)
 	if (!fixups)
 		return;
 
-#ifndef UFS_TARGET_SONY_PLATFORM
 	for (f = fixups; f->quirk; f++) {
 		if ((f->wmanufacturerid == dev_info->wmanufacturerid ||
 		     f->wmanufacturerid == UFS_ANY_VENDOR) &&
@@ -7375,26 +7356,6 @@ void ufshcd_fixup_dev_quirks(struct ufs_hba *hba, struct ufs_dev_fix *fixups)
 		      !strcmp(f->model, UFS_ANY_MODEL)))
 			hba->dev_quirks |= f->quirk;
 	}
-#else
-  #define UFS_PURGE_SPEC_VER 0x210
-	if (hba->dev_info.wspecversion < UFS_PURGE_SPEC_VER)
-		hba->dev_quirks |= UFS_DEVICE_QUIRK_NO_PURGE;
-
-	for (f = fixups; f->quirk; f++) {
-		if (((f->wmanufacturerid == dev_info->wmanufacturerid ||
-			f->wmanufacturerid == UFS_ANY_VENDOR)) &&
-			/* and same model*/
-			(STR_PRFX_EQUAL(f->model, dev_info->model) ||
-			!strncmp(f->model, UFS_ANY_MODEL, strlen(UFS_ANY_MODEL))) &&
-			/* and same fw revision*/
-			(STR_PRFX_EQUAL(f->revision, dev_info->fw_revision) ||
-			!strncmp(f->revision, UFS_ANY_VER, strlen(UFS_ANY_VER)))) {
-			/* update quirks */
-			hba->dev_quirks |= f->quirk;
-		}
-	}
-#endif
-
 }
 EXPORT_SYMBOL_GPL(ufshcd_fixup_dev_quirks);
 
@@ -7440,9 +7401,6 @@ static int ufs_get_device_desc(struct ufs_hba *hba)
 	/* getting Specification Version in big endian format */
 	dev_info->wspecversion = desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 |
 				      desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
-#ifdef UFS_TARGET_SONY_PLATFORM
-	hba->dev_info.revision = desc_buf[DEVICE_DESC_PARAM_PRDCT_REV];
-#endif
 
 	model_index = desc_buf[DEVICE_DESC_PARAM_PRDCT_NAME];
 
@@ -7455,21 +7413,6 @@ static int ufs_get_device_desc(struct ufs_hba *hba)
 	}
 
 	ufshcd_get_ref_clk_gating_wait(hba);
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-	memset(desc_buf, 0, QUERY_DESC_MAX_SIZE);
-	err = ufshcd_read_string_desc(hba, hba->dev_info.revision,
-				      &desc_buf, SD_ASCII_STD);
-	if (err)
-		goto out;
-
-	desc_buf[QUERY_DESC_MAX_SIZE] = '\0';
-	strlcpy(dev_info->fw_revision, (desc_buf + QUERY_DESC_HDR_SIZE),
-		min_t(u8, desc_buf[QUERY_DESC_LENGTH_OFFSET],
-		      MAX_REVISION_LEN));
-	/* Null terminate the fw_revision string */
-	dev_info->fw_revision[MAX_REVISION_LEN] = '\0';
-#endif
 
 	ufs_fixup_device_setup(hba);
 

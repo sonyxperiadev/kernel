@@ -2298,23 +2298,12 @@ ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		break;
 	case UPIU_QUERY_OPCODE_READ_ATTR:
 		switch (ioctl_data->idn) {
-#ifdef UFS_TARGET_SONY_PLATFORM
-		case QUERY_ATTR_IDN_PURGE_STATUS:
-			index = 0;
-			if (hba->dev_quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-			break;
-#endif
 		case QUERY_ATTR_IDN_BOOT_LU_EN:
 		case QUERY_ATTR_IDN_POWER_MODE:
 		case QUERY_ATTR_IDN_ACTIVE_ICC_LVL:
 		case QUERY_ATTR_IDN_OOO_DATA_EN:
 		case QUERY_ATTR_IDN_BKOPS_STATUS:
-#ifndef UFS_TARGET_SONY_PLATFORM
 		case QUERY_ATTR_IDN_PURGE_STATUS:
-#endif
 		case QUERY_ATTR_IDN_MAX_DATA_IN:
 		case QUERY_ATTR_IDN_MAX_DATA_OUT:
 		case QUERY_ATTR_IDN_REF_CLK_FREQ:
@@ -2369,21 +2358,11 @@ ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 
 	case UPIU_QUERY_OPCODE_READ_FLAG:
 		switch (ioctl_data->idn) {
-#ifdef UFS_TARGET_SONY_PLATFORM
-		case QUERY_FLAG_IDN_PURGE_ENABLE:
-			if (hba->dev_quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-			break;
-#endif
 		case QUERY_FLAG_IDN_FDEVICEINIT:
 		case QUERY_FLAG_IDN_PERMANENT_WPE:
 		case QUERY_FLAG_IDN_PWR_ON_WPE:
 		case QUERY_FLAG_IDN_BKOPS_EN:
-#ifndef UFS_TARGET_SONY_PLATFORM
 		case QUERY_FLAG_IDN_PURGE_ENABLE:
-#endif
 		case QUERY_FLAG_IDN_FPHYRESOURCEREMOVAL:
 		case QUERY_FLAG_IDN_BUSY_RTC:
 			break;
@@ -2397,12 +2376,6 @@ ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 	case UPIU_QUERY_OPCODE_SET_FLAG:
 		switch (ioctl_data->idn) {
 		case QUERY_FLAG_IDN_PURGE_ENABLE:
-#ifdef UFS_TARGET_SONY_PLATFORM
-			if (hba->dev_quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-#endif
 			pm_runtime_disable(&hba->sdev_ufs_device->sdev_gendev);
 			break;
 		default:
@@ -2441,9 +2414,7 @@ ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		data_ptr = &flag;
 		break;
 	case UPIU_QUERY_OPCODE_WRITE_ATTR:
-#ifdef UFS_TARGET_SONY_PLATFORM
 	case UPIU_QUERY_OPCODE_SET_FLAG:
-#endif
 		goto out_release_mem;
 	default:
 		goto out_einval;
