@@ -256,8 +256,7 @@ static struct ufs_dev_fix ufs_fixups[] = {
 		UFS_DEVICE_QUIRK_PA_HIBER8TIME),
 #endif
 
-	/* UFS_TARGET_SONY_PLATFORM -- Compile always, except for Sagami */
-#if !defined(CONFIG_ARCH_SONY_SAGAMI)
+	/* UFS_TARGET_SONY_PLATFORM -- Compile always */
 	UFS_FIX(UFS_VENDOR_SKHYNIX, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH),
 	UFS_FIX_REVISION(UFS_VENDOR_SKHYNIX, "hB8aL1", "D001",
@@ -266,7 +265,7 @@ static struct ufs_dev_fix ufs_fixups[] = {
 			 UFS_DEVICE_QUIRK_NO_PURGE),
 	UFS_FIX_REVISION(UFS_VENDOR_SAMSUNG, "KLUCG4J1", "0101",
 			 UFS_DEVICE_QUIRK_NO_PURGE),
-#endif
+
 	END_FIX
 };
 
