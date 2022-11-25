@@ -2805,5 +2805,4 @@ static void __exit qpnp_pon_exit(void)
 module_exit(qpnp_pon_exit);
 
 MODULE_DESCRIPTION("QPNP PMIC Power-on driver");
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 MODULE_LICENSE("GPL v2");
