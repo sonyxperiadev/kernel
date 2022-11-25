@@ -1452,7 +1452,6 @@ static void __exit HardwareInfo_mod_exit(void)
 
 module_init(HardwareInfo_mod_init);
 module_exit(HardwareInfo_mod_exit);
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 MODULE_AUTHOR("Oly Peng ");
 MODULE_DESCRIPTION("Huaqin Hareware Info driver");
 MODULE_LICENSE("GPL");
