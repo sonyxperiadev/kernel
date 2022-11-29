@@ -96,4 +96,4 @@ obj-$(CONFIG_QTI_BATTERY_CHARGER)	+= qti_battery_charger_main.o
 qti_battery_charger_main-y += qti_battery_charger.o qti_typec_class.o
 obj-$(CONFIG_QCOM_POWER_SUPPLY)		+= qcom/
 obj-$(CONFIG_IFPM_SM5038) += sm5038_drv.o
-sm5038_drv-y += sm5038_core.o sm5038_irq.o sm5038_muic.o sm5038_charger.o sm5038_charger_oper.o sm5038_step_chg_n_jeita.o sm5038_fled.o sm5038_fg.o sm5038_pmic-voter.o
+sm5038_drv-y += sm5038_core.o sm5038_irq.o sm5038_muic.o sm5038_charger.o sm5038_charger_oper.o sm5038_step_chg_n_jeita.o sm5038_fled.o sm5038_fg.o
