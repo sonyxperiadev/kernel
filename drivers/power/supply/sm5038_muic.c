@@ -1190,10 +1190,10 @@ static int sm5038_muic_init_usb_port_psy(struct sm5038_muic_data *muic_data)
 	return 0;
 }
 
-//static const struct of_device_id sm5038_muic_match_table[] = {
-//	{ .compatible = "sm5038-muic",},
-//	{},
-//};
+static const struct of_device_id sm5038_muic_match_table[] = {
+	{ .compatible = "sm5038-muic",},
+	{},
+};
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #if defined(CONFIG_DEBUG_FS)
@@ -1319,10 +1319,10 @@ static void somc_sm5038_create_debugfs(struct sm5038_muic_data *muic_data)
 
 #endif
 #endif
-int sm5038_muic_probe(struct sm5038_dev *sm5038)
+int sm5038_muic_probe(struct platform_device *pdev)
 {
-	//struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
-	//struct sm5038_platform_data *mfd_pdata = dev_get_platdata(sm5038->dev);
+	struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
+	struct sm5038_platform_data *mfd_pdata = dev_get_platdata(sm5038->dev);
 	struct sm5038_muic_data *muic_data;
 	int ret = 0;
 
@@ -1334,26 +1334,26 @@ int sm5038_muic_probe(struct sm5038_dev *sm5038)
 		goto err_return;
 	}
 
-	//if (!mfd_pdata) {
-	//	pr_err("[%s:%s] failed to get sm5038 mfd platform data\n",
-	//			MUIC_DEV_NAME, __func__);
-	//	ret = -ENOMEM;
-	//	goto err_kfree1;
-	//}
+	if (!mfd_pdata) {
+		pr_err("[%s:%s] failed to get sm5038 mfd platform data\n",
+				MUIC_DEV_NAME, __func__);
+		ret = -ENOMEM;
+		goto err_kfree1;
+	}
 
 	/* save platfom data for gpio control functions */
 	static_data = muic_data;
 
-	muic_data->dev = sm5038->dev;
+	muic_data->dev = &pdev->dev;
 	muic_data->i2c = sm5038->muic_i2c;
-	muic_data->mfd_pdata = sm5038->pdata;
+	muic_data->mfd_pdata = mfd_pdata;
 
 	muic_data->fled_torch_enable = 0;
 	muic_data->fled_flash_enable = 0;
 
 	muic_data->attached_dev = ATTACHED_DEV_NONE;
 	sm5038->check_muic_reset = sm5038_muic_register_reset;
-	//platform_set_drvdata(pdev, muic_data);
+	platform_set_drvdata(pdev, muic_data);
 
 	if (muic_data->i2c == NULL) {
 		pr_err("[%s:%s] i2c NULL\n", MUIC_DEV_NAME, __func__);
@@ -1426,9 +1426,9 @@ err_return:
 EXPORT_SYMBOL_GPL(sm5038_muic_probe);
 
 
-int sm5038_muic_remove(void)
+int sm5038_muic_remove(struct platform_device *pdev)
 {
-	struct sm5038_muic_data *muic_data = static_data;
+	struct sm5038_muic_data *muic_data = platform_get_drvdata(pdev);
 
 	if (muic_data) {
 		pr_info("[%s:%s]\n", MUIC_DEV_NAME, __func__);
@@ -1448,9 +1448,9 @@ int sm5038_muic_remove(void)
 }
 EXPORT_SYMBOL_GPL(sm5038_muic_remove);
 
-void sm5038_muic_shutdown(void)
+void sm5038_muic_shutdown(struct platform_device *pdev)
 {
-	struct sm5038_muic_data *muic_data = static_data;
+	struct sm5038_muic_data *muic_data = platform_get_drvdata(pdev);
 	int ret;
 
 	cancel_delayed_work_sync(&muic_data->muic_debug_work);
@@ -1483,30 +1483,28 @@ void sm5038_muic_shutdown(void)
 }
 EXPORT_SYMBOL_GPL(sm5038_muic_shutdown);
 
+static struct platform_driver sm5038_muic_driver = {
+	.driver = {
+		.name = "sm5038-muic",
+		.owner	= THIS_MODULE,
+		.of_match_table = sm5038_muic_match_table,
+	},
+	.probe = sm5038_muic_probe,
+	.remove = sm5038_muic_remove,
+	.shutdown = sm5038_muic_shutdown,
+};
 
+static int __init sm5038_muic_init(void)
+{
+	return platform_driver_register(&sm5038_muic_driver);
+}
+module_init(sm5038_muic_init);
 
-//static struct platform_driver sm5038_muic_driver = {
-//	.driver = {
-//		.name = "sm5038-muic",
-//		.owner	= THIS_MODULE,
-//		.of_match_table = sm5038_muic_match_table,
-//	},
-//	.probe = sm5038_muic_probe,
-//	.remove = sm5038_muic_remove,
-//	.shutdown = sm5038_muic_shutdown,
-//};
+static void __exit sm5038_muic_exit(void)
+{
+	platform_driver_unregister(&sm5038_muic_driver);
+}
+module_exit(sm5038_muic_exit);
 
-//static int __init sm5038_muic_init(void)
-//{
-//	return platform_driver_register(&sm5038_muic_driver);
-//}
-//module_init(sm5038_muic_init);
-
-//static void __exit sm5038_muic_exit(void)
-//{
-//	platform_driver_unregister(&sm5038_muic_driver);
-//}
-//module_exit(sm5038_muic_exit);
-
-//MODULE_DESCRIPTION("SM5038 MUIC driver");
+MODULE_DESCRIPTION("SM5038 MUIC driver");
 MODULE_LICENSE("GPL");
