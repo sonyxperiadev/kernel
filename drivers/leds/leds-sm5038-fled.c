@@ -538,9 +538,9 @@ static void sm5038_fled_init(struct sm5038_fled_data *fled)
 	pr_info("sm5038-fled: %s: flash init done\n", __func__);
 }
 
-int sm5038_fled_probe(struct sm5038_dev *sm5038)
+int sm5038_fled_probe(struct platform_device *pdev)
 {
-	//struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
+	struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
 	struct sm5038_fled_data *fled;
 	int ret = 0;
 
@@ -551,7 +551,7 @@ int sm5038_fled_probe(struct sm5038_dev *sm5038)
 		pr_err("sm5038-fled: %s: fail to alloc_devm\n", __func__);
 		return -ENOMEM;
 	}
-	fled->dev = sm5038->dev;
+	fled->dev = &pdev->dev;
 	fled->i2c = sm5038->charger_i2c;
 
 	fled->pdata = kzalloc(sizeof(struct sm5038_fled_platform_data), GFP_KERNEL);
@@ -600,66 +600,64 @@ int sm5038_fled_probe(struct sm5038_dev *sm5038)
 free_device:
 	device_remove_file(fled->rear_fled_dev, &dev_attr_rear_flash);
 free_pdata:
-	kfree(fled->pdata);
+	devm_kfree(&pdev->dev, fled->pdata);
 free_dev:
-	kfree(fled);
+	devm_kfree(&pdev->dev, fled);
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(sm5038_fled_probe);
 
-int sm5038_fled_remove(void)
+int sm5038_fled_remove(struct platform_device *pdev)
 {
-	struct sm5038_fled_data *fled = g_sm5038_fled;
+	struct sm5038_fled_data *fled = platform_get_drvdata(pdev);
 
 	device_remove_file(fled->rear_fled_dev, &dev_attr_rear_flash);
 
 	fled_set_mode(fled, FLEDEN_DISABLE);
 
-	//platform_set_drvdata(pdev, NULL);
+	platform_set_drvdata(pdev, NULL);
 
-	//devm_kfree(&pdev->dev, fled->pdata);
-	//devm_kfree(&pdev->dev, fled);
+	devm_kfree(&pdev->dev, fled->pdata);
+	devm_kfree(&pdev->dev, fled);
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sm5038_fled_remove);
 
-//static struct of_device_id sm5038_fled_match_table[] = {
-//	{ .compatible = "siliconmitus,sm5038-fled",},
-//	{},
-//};
+static struct of_device_id sm5038_fled_match_table[] = {
+	{ .compatible = "siliconmitus,sm5038-fled",},
+	{},
+};
 
-//static const struct platform_device_id sm5038_fled_id[] = {
-//	{"sm5038-fled", 0},
-//	{},
-//};
+static const struct platform_device_id sm5038_fled_id[] = {
+	{"sm5038-fled", 0},
+	{},
+};
 
-//static struct platform_driver sm5038_led_driver = {
-//	.driver = {
-//		.name  = "sm5038-fled",
-//		.owner = THIS_MODULE,
-//		.of_match_table = sm5038_fled_match_table,
-//		},
-//	.probe  = sm5038_fled_probe,
-//	.remove = sm5038_fled_remove,
-//	.id_table = sm5038_fled_id,
-//};
+static struct platform_driver sm5038_led_driver = {
+	.driver = {
+		.name  = "sm5038-fled",
+		.owner = THIS_MODULE,
+		.of_match_table = sm5038_fled_match_table,
+		},
+	.probe  = sm5038_fled_probe,
+	.remove = sm5038_fled_remove,
+	.id_table = sm5038_fled_id,
+};
 
-//static int __init sm5038_led_driver_init(void)
-//{
-//	return platform_driver_register(&sm5038_led_driver);
-//}
-//late_initcall(sm5038_led_driver_init);
-//
-//static void __exit sm5038_led_driver_exit(void)
-//{
-//	platform_driver_unregister(&sm5038_led_driver);
-//}
-//module_exit(sm5038_led_driver_exit);
+static int __init sm5038_led_driver_init(void)
+{
+	return platform_driver_register(&sm5038_led_driver);
+}
+late_initcall(sm5038_led_driver_init);
 
-//MODULE_LICENSE("GPL");
-//MODULE_DESCRIPTION("Flash-LED device driver for SM5038");
-//MODULE_VERSION(SM5038_FLED_VERSION);
+static void __exit sm5038_led_driver_exit(void)
+{
+	platform_driver_unregister(&sm5038_led_driver);
+}
+module_exit(sm5038_led_driver_exit);
 
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Flash-LED device driver for SM5038");
+MODULE_VERSION(SM5038_FLED_VERSION);
