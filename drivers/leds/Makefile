@@ -99,3 +99,5 @@ obj-$(CONFIG_LEDS_USER)			+= uleds.o
 
 # LED Triggers
 obj-$(CONFIG_LEDS_TRIGGERS)		+= trigger/
+
+obj-$(CONFIG_IFPM_SM5038)		+= leds-sm5038-fled.o
