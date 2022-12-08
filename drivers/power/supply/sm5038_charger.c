@@ -4769,10 +4769,10 @@ static void somc_sm5038_create_debugfs(struct sm5038_charger_data *charger)
 
 #endif
 /* if need to set sm5038 pdata */
-//static struct of_device_id sm5038_charger_match_table[] = {
-//	{ .compatible = "siliconmitus,sm5038-charger",},
-//	{},
-//};
+static struct of_device_id sm5038_charger_match_table[] = {
+	{ .compatible = "siliconmitus,sm5038-charger",},
+	{},
+};
 
 static int sm5038_battery_prop_is_writeable(struct power_supply *psy,
 		enum power_supply_property psp)
@@ -4817,10 +4817,10 @@ static const struct power_supply_desc otg_power_supply_desc = {
 	.num_properties	= ARRAY_SIZE(sm5038_otg_props),
 };
 
-int sm5038_charger_probe(struct sm5038_dev *sm5038)
+int sm5038_charger_probe(struct platform_device *pdev)
 {
-	//struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
-	//struct sm5038_platform_data *pdata = dev_get_platdata(sm5038->dev);
+	struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
+	struct sm5038_platform_data *pdata = dev_get_platdata(sm5038->dev);
 	struct sm5038_charger_data *charger;
 	struct power_supply_config psy_cfg = {};
 	int ret = 0;
@@ -4832,7 +4832,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 	if (!charger)
 		return -ENOMEM;
 
-	charger->pdata = kzalloc(sizeof(struct  sm5038_charger_platform_data),
+	charger->pdata = devm_kzalloc(&pdev->dev, sizeof(*(charger->pdata)),
 			GFP_KERNEL);
 	if (!charger->pdata) {
 		pr_err("sm5038-charger: %s: failed to allocate memory\n", __func__);
@@ -4840,7 +4840,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_parse_dt_nomem;
 	}
 
-	charger->dev = sm5038->dev;
+	charger->dev = &pdev->dev;
 	charger->i2c = sm5038->charger_i2c;
 	charger->otg_on = false;
 	charger->irq_aicl_enabled = -1;
@@ -4859,7 +4859,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		pr_err("sm5038-charger: %s: failed to find charger dt \n", __func__);
 		goto err_parse_dt;
 	}
-	//platform_set_drvdata(pdev, charger);
+	platform_set_drvdata(pdev, charger);
 
 	static_charger_data = charger;
 
@@ -4901,12 +4901,12 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-       //wakeup_source_init(charger->aicl_wake_lock, "charger-aicl");   // 4.19 R
-       if (!(charger->aicl_wake_lock)) {
-               charger->aicl_wake_lock = wakeup_source_create("charger-aicl"); // 4.19 Q
-               if (charger->aicl_wake_lock)
-                       wakeup_source_add(charger->aicl_wake_lock);
-       }
+	//wakeup_source_init(charger->aicl_wake_lock, "charger-aicl");   // 4.19 R
+	if (!(charger->aicl_wake_lock)) {
+		charger->aicl_wake_lock = wakeup_source_create("charger-aicl"); // 4.19 Q
+		if (charger->aicl_wake_lock)
+			wakeup_source_add(charger->aicl_wake_lock);
+	}
 #else
 	charger->aicl_wake_lock = wakeup_source_register(NULL, "charger-aicl"); // 5.4 R
 #endif
@@ -4939,13 +4939,13 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 	psy_cfg.supplied_to = sm5038_supplied_to;
 	psy_cfg.num_supplicants = ARRAY_SIZE(sm5038_supplied_to);
 
-	charger->psy_chg = devm_power_supply_register(sm5038->dev, &sm5038_charger_power_supply_desc, &psy_cfg);
+	charger->psy_chg = devm_power_supply_register(&pdev->dev, &sm5038_charger_power_supply_desc, &psy_cfg);
 	if (!charger->psy_chg) {
 		pr_err("sm5038-charger: %s: failed to power supply charger register", __func__);
 		goto err_power_supply_register;
 	}
 
-	charger->psy_otg = power_supply_register(sm5038->dev, &otg_power_supply_desc, &psy_cfg);
+	charger->psy_otg = power_supply_register(&pdev->dev, &otg_power_supply_desc, &psy_cfg);
 	if (!charger->psy_otg) {
 		pr_err("sm5038-charger: %s: failed to power supply otg register ", __func__);
 		goto err_power_supply_register_otg;
@@ -4960,7 +4960,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 	}
 
 	/* Request IRQs */
-	charger->irq_vbuspok = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSPOK;
+	charger->irq_vbuspok = pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSPOK;
 	ret = request_threaded_irq(charger->irq_vbuspok, NULL,
 			chg_vbuspok_isr, 0, "vbuspok-irq", charger);
 	if (ret < 0) {
@@ -4969,7 +4969,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_wpcinpok = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT1_WPCINPOK;
+	charger->irq_wpcinpok = pdata->irq_base + SM5038_CHG_IRQ_INT1_WPCINPOK;
 	ret = request_threaded_irq(charger->irq_wpcinpok, NULL,
 			chg_wpcinpok_isr, 0, "wpcinpok-irq", charger);
 	if (ret < 0) {
@@ -4978,9 +4978,9 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_aicl = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT2_AICL;
+	charger->irq_aicl = pdata->irq_base + SM5038_CHG_IRQ_INT2_AICL;
 
-	charger->irq_done = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT2_DONE;
+	charger->irq_done = pdata->irq_base + SM5038_CHG_IRQ_INT2_DONE;
 	ret = request_threaded_irq(charger->irq_done, NULL,
 			chg_done_isr, 0, "done-irq", charger);
 	if (ret < 0) {
@@ -4990,8 +4990,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 	}
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-	charger->irq_chgon = sm5038->pdata->irq_base +
-						SM5038_CHG_IRQ_INT2_CHGON;
+	charger->irq_chgon = pdata->irq_base + SM5038_CHG_IRQ_INT2_CHGON;
 	ret = request_threaded_irq(charger->irq_chgon, NULL,
 			chg_chgon_isr, 0, "chgon-irq", charger);
 	if (ret < 0) {
@@ -5001,7 +5000,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 	}
 
 #endif
-	charger->irq_vsysovp = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT3_VSYSOVP;
+	charger->irq_vsysovp = pdata->irq_base + SM5038_CHG_IRQ_INT3_VSYSOVP;
 	ret = request_threaded_irq(charger->irq_vsysovp, NULL,
 			chg_vsysovp_isr, 0, "vsysovp-irq", charger);
 	if (ret < 0) {
@@ -5010,7 +5009,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_vbusuvlo = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSUVLO;
+	charger->irq_vbusuvlo = pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSUVLO;
 	ret = request_threaded_irq(charger->irq_vbusuvlo, NULL,
 			chg_vbusuvlo_isr, 0, "vbusuvlo-irq", charger);
 	if (ret < 0) {
@@ -5019,7 +5018,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_fasttmroff = sm5038->irq_base + SM5038_CHG_IRQ_INT3_FASTTMROFF;
+	charger->irq_fasttmroff = pdata->irq_base + SM5038_CHG_IRQ_INT3_FASTTMROFF;
 	ret = request_threaded_irq(charger->irq_fasttmroff, NULL,
 			chg_fasttmroff_isr, 0, "fasttmroff-irq", charger);
 	if (ret < 0) {
@@ -5028,7 +5027,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_otgfail = sm5038->irq_base + SM5038_CHG_IRQ_INT3_OTGFAIL;
+	charger->irq_otgfail = pdata->irq_base + SM5038_CHG_IRQ_INT3_OTGFAIL;
 	ret = request_threaded_irq(charger->irq_otgfail, NULL,
 			chg_otgfail_isr, 0, "otgfail-irq", charger);
 	if (ret < 0) {
@@ -5037,7 +5036,7 @@ int sm5038_charger_probe(struct sm5038_dev *sm5038)
 		goto err_reg_irq;
 	}
 
-	charger->irq_topoff = sm5038->pdata->irq_base + SM5038_CHG_IRQ_INT2_TOPOFF;
+	charger->irq_topoff = pdata->irq_base + SM5038_CHG_IRQ_INT2_TOPOFF;
 	ret = request_threaded_irq(charger->irq_topoff, NULL,
 			chg_topoff_isr, 0, "topoff-irq", charger);
 	if (ret < 0) {
@@ -5113,7 +5112,7 @@ err_input_device_register:
 	}
 #endif
 err_reg_irq:
-//	power_supply_unregister(charger->psy_chg);
+	power_supply_unregister(charger->psy_chg);
 err_power_supply_register_otg:
 	power_supply_unregister(charger->psy_otg);
 err_power_supply_register:
@@ -5130,11 +5129,10 @@ err_parse_dt_nomem:
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(sm5038_charger_probe);
 
-int sm5038_charger_remove(void)
+int sm5038_charger_remove(struct platform_device *pdev)
 {
-	struct sm5038_charger_data *charger = static_charger_data;
+	struct sm5038_charger_data *charger = platform_get_drvdata(pdev);
 
 	pr_info("sm5038-charger: %s: ++\n", __func__);
 
@@ -5159,10 +5157,10 @@ int sm5038_charger_remove(void)
 		charger->unplug_key = NULL;
 	}
 #endif
-/*
+
 	if (charger->psy_chg)
 		power_supply_unregister(charger->psy_chg);
-*/
+
 	if (charger->psy_otg)
 		power_supply_unregister(charger->psy_otg);
 
@@ -5180,21 +5178,20 @@ int sm5038_charger_remove(void)
 	pr_info("sm5038-charger: %s: --\n", __func__);
 	return 0;
 }
-EXPORT_SYMBOL_GPL(sm5038_charger_remove);
 
-//static int sm5038_charger_suspend(struct device *dev)
-//{
-//	return 0;
-//}
-
-//static int sm5038_charger_resume(struct device *dev)
-//{
-//	return 0;
-//}
-
-void sm5038_charger_shutdown(void)
+static int sm5038_charger_suspend(struct device *dev)
 {
-	struct sm5038_charger_data *charger = static_charger_data;
+	return 0;
+}
+
+static int sm5038_charger_resume(struct device *dev)
+{
+	return 0;
+}
+
+void sm5038_charger_shutdown(struct platform_device *pdev)
+{
+	struct sm5038_charger_data *charger = platform_get_drvdata(pdev);
 
 	pr_info("sm5038-charger: %s: ++\n", __func__);
 
@@ -5240,36 +5237,34 @@ void sm5038_charger_shutdown(void)
 }
 EXPORT_SYMBOL_GPL(sm5038_charger_shutdown);
 
-//static SIMPLE_DEV_PM_OPS(sm5038_charger_pm_ops, sm5038_charger_suspend,
-//		sm5038_charger_resume);
+static SIMPLE_DEV_PM_OPS(sm5038_charger_pm_ops, sm5038_charger_suspend,
+		sm5038_charger_resume);
 
-//static struct platform_driver sm5038_charger_driver = {
-//	.driver = {
-//		.name	        = "sm5038-charger",
-//		.owner	        = THIS_MODULE,
-//		.of_match_table = sm5038_charger_match_table,
-//		.pm		        = &sm5038_charger_pm_ops,
-//	},
-//	.probe		= sm5038_charger_probe,
-//	.remove		= sm5038_charger_remove,
-//	.shutdown	= sm5038_charger_shutdown,
-//};
+static struct platform_driver sm5038_charger_driver = {
+	.driver = {
+		.name	        = "sm5038-charger",
+		.owner	        = THIS_MODULE,
+		.of_match_table = sm5038_charger_match_table,
+		.pm		        = &sm5038_charger_pm_ops,
+	},
+	.probe		= sm5038_charger_probe,
+	.remove		= sm5038_charger_remove,
+	.shutdown	= sm5038_charger_shutdown,
+};
 
-//static int __init sm5038_charger_init(void)
-//{
-//	pr_info("sm5038-charger: %s:\n", __func__);
-//
-//	return platform_driver_register(&sm5038_charger_driver);
-//}
-//module_init(sm5038_charger_init);
-//
-//static void __exit sm5038_charger_exit(void)
-//{
-//	platform_driver_unregister(&sm5038_charger_driver);
-//}
-//module_exit(sm5038_charger_exit);
+static int __init sm5038_charger_init(void)
+{
+	pr_info("sm5038-charger: %s:\n", __func__);
 
-//MODULE_LICENSE("GPL");
-//MODULE_DESCRIPTION("Charger driver for SM5038");
+	return platform_driver_register(&sm5038_charger_driver);
+}
+module_init(sm5038_charger_init);
+
+static void __exit sm5038_charger_exit(void)
+{
+	platform_driver_unregister(&sm5038_charger_driver);
+}
+module_exit(sm5038_charger_exit);
 
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Charger driver for SM5038");
