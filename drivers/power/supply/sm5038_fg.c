@@ -2456,10 +2456,10 @@ static void somc_sm5038_create_debugfs(struct sm5038_fg_data *fuelgauge)
 
 #endif
 #endif
-int sm5038_fuelgauge_probe(struct sm5038_dev *sm5038)
+int sm5038_fuelgauge_probe(struct platform_device *pdev)
 {
-	//struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
-	//struct sm5038_platform_data *pdata = dev_get_platdata(sm5038->dev);
+	struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
+	struct sm5038_platform_data *pdata = dev_get_platdata(sm5038->dev);
 	struct sm5038_fg_data *fuelgauge;
 	sm5038_fuelgauge_platform_data_t *fuelgauge_data;
 	int ret = 0;
@@ -2481,10 +2481,10 @@ int sm5038_fuelgauge_probe(struct sm5038_dev *sm5038)
 
 	mutex_init(&fuelgauge->fg_lock);
 
-	fuelgauge->dev = sm5038->dev;
+	fuelgauge->dev = &pdev->dev;
 	fuelgauge->pdata = fuelgauge_data;
 	fuelgauge->i2c = sm5038->fuelgauge_i2c;
-	fuelgauge->sm5038_pdata = sm5038->pdata;
+	fuelgauge->sm5038_pdata = pdata;
 
 #if defined(CONFIG_OF)
 	ret = sm5038_fuelgauge_parse_dt(fuelgauge);
@@ -2494,7 +2494,7 @@ int sm5038_fuelgauge_probe(struct sm5038_dev *sm5038)
 	}
 #endif
 
-	//platform_set_drvdata(pdev, fuelgauge);
+	platform_set_drvdata(pdev, fuelgauge);
 
 	if (fuelgauge->i2c == NULL) {
 		pr_err("%s : i2c NULL\n", __func__);
@@ -2564,7 +2564,7 @@ err_supply_unreg:
 err_data_free:
 #if defined(CONFIG_OF)
 #endif
-//err_pdata_free:
+err_pdata_free:
 	kfree(fuelgauge_data);
 	mutex_destroy(&fuelgauge->fg_lock);
 err_free:
@@ -2576,9 +2576,9 @@ EXPORT_SYMBOL_GPL(sm5038_fuelgauge_probe);
 
 
 
-int sm5038_fuelgauge_remove(void)
+int sm5038_fuelgauge_remove(struct platform_device *pdev)
 {
-	struct sm5038_fg_data *fuelgauge = static_fg_data;
+	struct sm5038_fg_data *fuelgauge = platform_get_drvdata(pdev);
 
 	mutex_destroy(&fuelgauge->fg_lock);
 
@@ -2588,58 +2588,58 @@ int sm5038_fuelgauge_remove(void)
 }
 EXPORT_SYMBOL_GPL(sm5038_fuelgauge_remove);
 
-//static int sm5038_fuelgauge_suspend(struct device *dev)
-//{
-//	return 0;
-//}
+static int sm5038_fuelgauge_suspend(struct device *dev)
+{
+	return 0;
+}
 
-//static int sm5038_fuelgauge_resume(struct device *dev)
-//{
-//	struct sm5038_fg_data *fuelgauge = dev_get_drvdata(dev);
-//
-//	return 0;
-//}
+static int sm5038_fuelgauge_resume(struct device *dev)
+{
+	struct sm5038_fg_data *fuelgauge = dev_get_drvdata(dev);
 
-//static void sm5038_fuelgauge_shutdown(struct platform_device *pdev)
-//{
-////	struct sm5038_fg_data *fuelgauge = platform_get_drvdata(pdev);
-//
-//	pr_info("%s: ++\n", __func__);
-//
-//	pr_info("%s: --\n", __func__);
-//}
+	return 0;
+}
 
-//static SIMPLE_DEV_PM_OPS(sm5038_fuelgauge_pm_ops, sm5038_fuelgauge_suspend,
-//			sm5038_fuelgauge_resume);
+static void sm5038_fuelgauge_shutdown(struct platform_device *pdev)
+{
+	struct sm5038_fg_data *fuelgauge = platform_get_drvdata(pdev);
 
-//static struct platform_driver sm5038_fuelgauge_driver = {
-//	.driver = {
-//			.name = "sm5038-fuelgauge",
-//			.owner = THIS_MODULE,
-//#ifdef CONFIG_PM
-//			.pm = &sm5038_fuelgauge_pm_ops,
-//#endif
-//	},
-//	.probe  = sm5038_fuelgauge_probe,
-//	.remove = sm5038_fuelgauge_remove,
-//	.shutdown = sm5038_fuelgauge_shutdown,
-//};
+	pr_info("%s: ++\n", __func__);
 
-//static int __init sm5038_fuelgauge_init(void)
-//{
-//	pr_info("%s: \n", __func__);
-//	return platform_driver_register(&sm5038_fuelgauge_driver);
-//}
+	pr_info("%s: --\n", __func__);
+}
 
-//static void __exit sm5038_fuelgauge_exit(void)
-//{
-//	platform_driver_unregister(&sm5038_fuelgauge_driver);
-//}
-//module_init(sm5038_fuelgauge_init);
-//module_exit(sm5038_fuelgauge_exit);
+static SIMPLE_DEV_PM_OPS(sm5038_fuelgauge_pm_ops, sm5038_fuelgauge_suspend,
+			sm5038_fuelgauge_resume);
+
+static struct platform_driver sm5038_fuelgauge_driver = {
+	.driver = {
+			.name = "sm5038-fuelgauge",
+			.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+			.pm = &sm5038_fuelgauge_pm_ops,
+#endif
+	},
+	.probe  = sm5038_fuelgauge_probe,
+	.remove = sm5038_fuelgauge_remove,
+	.shutdown = sm5038_fuelgauge_shutdown,
+};
+
+static int __init sm5038_fuelgauge_init(void)
+{
+	pr_info("%s: \n", __func__);
+	return platform_driver_register(&sm5038_fuelgauge_driver);
+}
+
+static void __exit sm5038_fuelgauge_exit(void)
+{
+	platform_driver_unregister(&sm5038_fuelgauge_driver);
+}
+module_init(sm5038_fuelgauge_init);
+module_exit(sm5038_fuelgauge_exit);
 
 
-//MODULE_AUTHOR("Jake JUNG");
-//MODULE_DESCRIPTION("SM5038 Fuel Gauge");
+MODULE_AUTHOR("Jake JUNG");
+MODULE_DESCRIPTION("SM5038 Fuel Gauge");
 
 MODULE_LICENSE("GPL");
