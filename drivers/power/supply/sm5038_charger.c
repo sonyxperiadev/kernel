@@ -3076,7 +3076,7 @@ static void somc_sm5038_full_work(struct work_struct *work)
 
 #endif
 
-extern int sm5038_muic_get_vbus_voltage(void);
+extern int sm5038_muic_get_vbus_voltage(struct sm5038_dev *sm5038);
 
 #define SW_VBUS_OVP_RECHECK_DELAY_5S		5000	/* 5s */
 #define WA_SW_VBUS_OVP_THRESH 		10000	/* 10V */
@@ -3088,7 +3088,7 @@ static void sm5038_sw_ovp_work(struct work_struct *work)
 	int read_vbus = 0;
 	bool en_sw_ovp_thresh = false;
 
-	read_vbus = sm5038_muic_get_vbus_voltage();
+	read_vbus = sm5038_muic_get_vbus_voltage(charger->pdata->sm5038);
 	if (read_vbus > WA_SW_VBUS_OVP_THRESH)
 		en_sw_ovp_thresh = true;
 
@@ -4849,6 +4849,8 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	charger->thermal_detach = false;
 	charger->sw_ovp_enable = false;
 	charger->fasttimer_expired = false;
+
+	charger->pdata->sm5038 = sm5038;
 
 	sm5038->check_chg_reset = sm5038_chg_register_reset;
 

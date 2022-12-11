@@ -448,8 +448,8 @@ extern int sm5038_write_word(struct i2c_client *i2c, u8 reg, u16 value);
 extern int sm5038_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 extern int sm5038_update_word(struct i2c_client *i2c, u8 reg, u16 val, u16 mask);
 
-extern void sm5038_irq_thread_lock(void);
-extern void sm5038_irq_thread_unlock(void);
+extern void sm5038_irq_thread_lock(struct sm5038_dev *sm5038);
+extern void sm5038_irq_thread_unlock(struct sm5038_dev *sm5038);
 	
 #endif /* __SM5038_H__ */
 
