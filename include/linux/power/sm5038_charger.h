@@ -276,6 +276,7 @@ struct sm5038_charger_platform_data {
 
 	/* wireless charger */
 	char *wireless_charger_name;
+	struct sm5038_dev *sm5038;
 };
 
 

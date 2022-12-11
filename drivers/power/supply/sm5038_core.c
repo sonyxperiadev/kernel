@@ -142,10 +142,8 @@ int sm5038_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 }
 EXPORT_SYMBOL_GPL(sm5038_update_reg);
 
-void sm5038_irq_thread_lock(struct i2c_client *i2c)
+void sm5038_irq_thread_lock(struct sm5038_dev *sm5038)
 {
-	struct sm5038_dev *sm5038 = i2c_get_clientdata(i2c);
-
 	pr_info("%s: %s\n", SM5038_DEV_NAME, __func__);
 	mutex_lock(&sm5038->irq_thread_lock);
 	
@@ -153,10 +151,8 @@ void sm5038_irq_thread_lock(struct i2c_client *i2c)
 }
 EXPORT_SYMBOL_GPL(sm5038_irq_thread_lock);
 
-void sm5038_irq_thread_unlock(struct i2c_client *i2c)
+void sm5038_irq_thread_unlock(struct sm5038_dev *sm5038)
 {
-	struct sm5038_dev *sm5038 = i2c_get_clientdata(i2c);
-
 	pr_info("%s: %s\n", SM5038_DEV_NAME, __func__);
 	mutex_unlock(&sm5038->irq_thread_lock);
 

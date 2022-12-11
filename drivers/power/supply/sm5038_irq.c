@@ -189,13 +189,13 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 	int rtn = -EINVAL;
 	pr_debug("%s: irq gpio pre-state(0x%02x)\n", __func__, gpio_get_value(sm5038->irq_gpio));
 
-	sm5038_irq_thread_lock();
+	sm5038_irq_thread_lock(sm5038);
 
 	ret = sm5038_read_reg(sm5038->charger_i2c, SM5038_CHG_REG_INT_SOURCE, &irq_src);
 	pr_info("%s\n irq_src = %x (ret=%d)", __func__, irq_src, ret);
 	if (ret) {
 		pr_info("%s:%s fail to read interrupt source: %d\n", SM5038_DEV_NAME, __func__, ret);
-		sm5038_irq_thread_unlock();
+		sm5038_irq_thread_unlock(sm5038);
 		return IRQ_NONE;
 	}
 	pr_debug("%s: INT_SOURCE=0x%02x)\n", __func__, irq_src);
@@ -207,7 +207,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 		pr_info("[%s:%s]retry irq_src = 0x%x (ret=%d)", SM5038_DEV_NAME, __func__, irq_src, ret);
 		if (ret) {
 			pr_info("%s:%s fail to read interrupt source: %d\n", SM5038_DEV_NAME, __func__, ret);
-			sm5038_irq_thread_unlock();
+			sm5038_irq_thread_unlock(sm5038);
 			return IRQ_NONE;
 		}
 		
@@ -215,7 +215,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 		pr_info ("[%s:%s] MUIC_INT1 = 0x%x, MUIC_INT2 = 0x%x\n", SM5038_DEV_NAME, __func__, irq_reg[MUIC_INT1], irq_reg[MUIC_INT2]);
 		if (ret) {
 			pr_err("[%s:%s] fail to read MUIC_INT1 %d\n", SM5038_DEV_NAME, __func__, ret);
-			sm5038_irq_thread_unlock();
+			sm5038_irq_thread_unlock(sm5038);
 			return IRQ_NONE;
 		}
 		if ( (irq_reg[MUIC_INT1] != 0x00) || (irq_reg[MUIC_INT2] != 0x00) ) {
@@ -235,7 +235,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 			if (ret) {
 				dev_err(sm5038->dev, "%s: failed requesting gpio %d\n",
 					__func__, sm5038->irq_gpio);
-				sm5038_irq_thread_unlock();
+				sm5038_irq_thread_unlock(sm5038);
 				return IRQ_NONE;
 			}				
 			rtn = gpio_direction_output(sm5038->irq_gpio, 1);
@@ -244,7 +244,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 			if (ret) {
 				dev_err(sm5038->dev, "%s: failed requesting gpio %d\n",
 					__func__, sm5038->irq_gpio);
-				sm5038_irq_thread_unlock();
+				sm5038_irq_thread_unlock(sm5038);
 				return IRQ_NONE;
 			}
 			rtn = gpio_direction_input(sm5038->irq_gpio);
@@ -258,7 +258,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 		ret = sm5038_bulk_read(sm5038->charger_i2c, SM5038_CHG_REG_INT1, SM5038_NUM_IRQ_CHG_REGS, &irq_reg[CHG_INT1]);
 		if (ret) {
 			pr_err("%s:%s fail to read CHG_INT source: %d\n", SM5038_DEV_NAME, __func__, ret);
-			sm5038_irq_thread_unlock();
+			sm5038_irq_thread_unlock(sm5038);
 			return IRQ_NONE;
 		}
 		for (i = CHG_INT1; i <= CHG_INT5; i++) {
@@ -272,7 +272,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 		pr_info ("%s:%s MUIC_INT1 = 0x%x, MUIC_INT2 = 0x%x\n", SM5038_DEV_NAME, __func__, irq_reg[MUIC_INT1], irq_reg[MUIC_INT2]);
 		if (ret) {
 			pr_err("%s:%s fail to read MUIC_INT source: %d\n", SM5038_DEV_NAME, __func__, ret);
-			sm5038_irq_thread_unlock();
+			sm5038_irq_thread_unlock(sm5038);
 			return IRQ_NONE;
 		}
 		for (i = MUIC_INT1; i <= MUIC_INT2; i++) {
@@ -307,7 +307,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 		}
 	}
 
-	sm5038_irq_thread_unlock();
+	sm5038_irq_thread_unlock(sm5038);
 
 	return IRQ_HANDLED;
 }

@@ -217,16 +217,16 @@ static int sm5038_muic_get_vbus(void)
 	return vbus_voltage;
 }
 
-int sm5038_muic_get_vbus_voltage(void)
+int sm5038_muic_get_vbus_voltage(struct sm5038_dev *sm5038)
 {
 	struct sm5038_muic_data *muic_data = static_data;
 	int vbus_voltage = 0;
 
-	sm5038_irq_thread_lock();
+	sm5038_irq_thread_lock(sm5038);
 	mutex_lock(&muic_data->muic_mutex);
 	vbus_voltage = sm5038_muic_get_vbus();
 	mutex_unlock(&muic_data->muic_mutex);
-	sm5038_irq_thread_unlock();
+	sm5038_irq_thread_unlock(sm5038);
 
 	pr_info("[%s:%s] VBUS voltage:%d mV\n", MUIC_DEV_NAME, __func__, vbus_voltage);
 
