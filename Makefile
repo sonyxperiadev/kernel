@@ -91,12 +91,12 @@ endif
 # make-4.0 (and later) keep single letter options in the 1st word of MAKEFLAGS.
 
 ifeq ($(filter 3.%,$(MAKE_VERSION)),)
-silence:=$(findstring s,$(firstword -$(MAKEFLAGS)))
+short-opts := $(firstword -$(MAKEFLAGS))
 else
-silence:=$(findstring s,$(filter-out --%,$(MAKEFLAGS)))
+short-opts := $(filter-out --%,$(MAKEFLAGS))
 endif
 
-ifeq ($(silence),s)
+ifneq ($(findstring s,$(short-opts)),)
 quiet=silent_
 tools_silent=s
 endif
