@@ -75,8 +75,7 @@ config GSI_REGISTER_VERSION_2
 
 config IPA3
 	tristate "IPA3 support"
-	select GSI
-	depends on NET
+	depends on GSI && NET
 	help
 	  This driver supports the Internet Packet Accelerator (IPA3) core.
 	  IPA is a programmable protocol processor HW block.
