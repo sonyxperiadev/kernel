@@ -37,7 +37,7 @@
 #include "sdhci-msm-scaling.h"
 #endif
 #include "sdhci-msm.h"
-#if IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER)
+#if (IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER) || IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER_V1))
 #include <linux/hwkm.h>
 #endif
 
@@ -2604,7 +2604,7 @@ static int sdhci_msm_ice_init(struct sdhci_msm_host *msm_host,
 	struct mmc_host *mmc = msm_host->mmc;
 	struct device *dev = mmc_dev(mmc);
 	struct resource *ice_base_res;
-#if IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER)
+#if (IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER) || IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER_V1))
 	struct resource *ice_hwkm_res;
 #endif
 	int err;
@@ -2632,7 +2632,7 @@ static int sdhci_msm_ice_init(struct sdhci_msm_host *msm_host,
 	}
 	cq_host->ice_mmio = msm_host->ice_mem;
 
-#if IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER)
+#if (IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER) || IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER_V1))
 	ice_hwkm_res = platform_get_resource_byname(msm_host->pdev,
 						    IORESOURCE_MEM,
 						    "cqhci_ice_hwkm");
@@ -3889,7 +3889,7 @@ static void sdhci_msm_hw_reset(struct sdhci_host *host)
 	if (host->mmc->card)
 		mmc_power_cycle(host->mmc, host->mmc->card->ocr);
 #endif
-#if IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER)
+#if (IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER) || IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER_V1))
 	sdhci_msm_hwkm_ice_init(msm_host);
 #endif
 	return;

@@ -252,7 +252,7 @@ struct sdhci_msm_host {
 #ifdef CONFIG_MMC_CRYPTO
 	void __iomem *ice_mem;	/* MSM ICE mapped address (if available) */
 #endif
-#if IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER)
+#if (IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER) || IS_ENABLED(CONFIG_QTI_HW_KEY_MANAGER_V1))
 	void __iomem *ice_hwkm_mem;
 #endif
 	int pwr_irq;		/* power irq */
