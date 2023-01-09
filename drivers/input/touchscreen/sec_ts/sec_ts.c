@@ -2177,7 +2177,7 @@ void sec_ts_unlocked_release_all_finger(struct sec_ts_data *ts)
 			(ts->coord[i].action == SEC_TS_COORDINATE_ACTION_MOVE)) {
 
 			ts->coord[i].action = SEC_TS_COORDINATE_ACTION_RELEASE;
-			input_info(true, &ts->client->dev,
+			input_dbg(true, &ts->client->dev,
 					"%s: [RA] tID:%d mc:%d tc:%d v:%02X%02X cal:%02X id(%d,%d) p:%d\n",
 					__func__, i, ts->coord[i].mcount, ts->touch_count,
 					ts->plat_data->img_version_of_ic[2],
@@ -2313,7 +2313,7 @@ void sec_ts_locked_release_all_finger(struct sec_ts_data *ts)
 			(ts->coord[i].action == SEC_TS_COORDINATE_ACTION_MOVE)) {
 
 			ts->coord[i].action = SEC_TS_COORDINATE_ACTION_RELEASE;
-			input_info(true, &ts->client->dev,
+			input_dbg(true, &ts->client->dev,
 					"%s: [RA] tID:%d mc: %d tc:%d, v:%02X%02X, cal:%X id(%d,%d), p:%d\n",
 					__func__, i, ts->coord[i].mcount, ts->touch_count,
 					ts->plat_data->img_version_of_ic[2],
