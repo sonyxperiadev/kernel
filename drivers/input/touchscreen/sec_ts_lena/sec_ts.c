@@ -843,7 +843,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 						}
 
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-						input_info(true, &ts->client->dev,
+						input_dbg(ts->debug_flag, &ts->client->dev,
 								"%s[R] tID:%d mc:%d tc:%d lx:%d ly:%d v:%02X%02X cal:%02X id(%d,%d) p:%d noise:%x lp:(%x)\n",
 								ts->dex_name,
 								t_id, ts->coord[t_id].mcount, ts->touch_count,
@@ -854,7 +854,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 								ts->tspicid_val, ts->coord[t_id].palm_count,
 								ts->touch_noise_status, ts->lowpower_mode);
 #else
-						input_info(true, &ts->client->dev,
+						input_dbg(ts->debug_flag, &ts->client->dev,
 								"%s[R] tID:%d mc:%d tc:%d v:%02X%02X cal:%02X id(%d,%d) p:%d noise:%x lp:(%x)\n",
 								ts->dex_name,
 								t_id, ts->coord[t_id].mcount, ts->touch_count,
@@ -929,7 +929,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 						}
 
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-						input_info(true, &ts->client->dev,
+						input_dbg(ts->debug_flag, &ts->client->dev,
 								"%s[P] tID:%d x:%d y:%d z:%d major:%d minor:%d tc:%d type:%X noise:%x\n",
 								ts->dex_name, t_id, ts->coord[t_id].x,
 								ts->coord[t_id].y, ts->coord[t_id].z,
@@ -937,7 +937,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 								ts->touch_count,
 								ts->coord[t_id].ttype, ts->touch_noise_status);
 #else
-						input_info(true, &ts->client->dev,
+						input_dbg(ts->debug_flag, &ts->client->dev,
 								"%s[P] tID:%d z:%d major:%d minor:%d tc:%d type:%X noise:%x\n",
 								ts->dex_name,
 								t_id, ts->coord[t_id].z, ts->coord[t_id].major,
@@ -1012,7 +1012,8 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 							|| (ts->coord[t_id].action == SEC_TS_COORDINATE_ACTION_MOVE)) {
 
 						if (ts->coord[t_id].ttype != pre_ttype) {
-							input_info(true, &ts->client->dev, "%s : tID:%d ttype(%x->%x)\n",
+							input_dbg(ts->debug_flag, &ts->client->dev,
+                                      "%s : tID:%d ttype(%x->%x)\n",
 									__func__, ts->coord[t_id].id,
 									pre_ttype, ts->coord[t_id].ttype);
 						}
@@ -2080,7 +2081,7 @@ void sec_ts_unlocked_release_all_finger(struct sec_ts_data *ts)
 			(ts->coord[i].action == SEC_TS_COORDINATE_ACTION_MOVE)) {
 
 			ts->coord[i].action = SEC_TS_COORDINATE_ACTION_RELEASE;
-			input_info(true, &ts->client->dev,
+			input_dbg(ts->debug_flag, &ts->client->dev,
 					"%s: [RA] tID:%d mc:%d tc:%d v:%02X%02X cal:%02X id(%d,%d) p:%d\n",
 					__func__, i, ts->coord[i].mcount, ts->touch_count,
 					ts->plat_data->img_version_of_ic[2],
@@ -2133,7 +2134,7 @@ void sec_ts_locked_release_all_finger(struct sec_ts_data *ts)
 			(ts->coord[i].action == SEC_TS_COORDINATE_ACTION_MOVE)) {
 
 			ts->coord[i].action = SEC_TS_COORDINATE_ACTION_RELEASE;
-			input_info(true, &ts->client->dev,
+			input_dbg(ts->debug_flag, &ts->client->dev,
 					"%s: [RA] tID:%d mc: %d tc:%d, v:%02X%02X, cal:%X id(%d,%d), p:%d\n",
 					__func__, i, ts->coord[i].mcount, ts->touch_count,
 					ts->plat_data->img_version_of_ic[2],
