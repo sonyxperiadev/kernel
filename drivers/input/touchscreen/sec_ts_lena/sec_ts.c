@@ -354,11 +354,11 @@ static void sec_ts_check_rawdata(struct work_struct *work)
 		return;
 	}
 
-	input_info(true, &ts->client->dev, "%s: start ##\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: start ##\n", __func__);
 	sec_ts_run_rawdata_all(ts, true);
 	msleep(100);
 
-	input_info(true, &ts->client->dev, "%s: done ##\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: done ##\n", __func__);
 }
 
 static void dump_tsp_log(void)
@@ -415,7 +415,7 @@ int sec_ts_wait_for_ready(struct sec_ts_data *ts, unsigned int ack)
 		sec_ts_delay(20);
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X [%d]\n",
 			__func__, tBuff[0], tBuff[1], tBuff[2], tBuff[3],
 			tBuff[4], tBuff[5], tBuff[6], tBuff[7], retry);
@@ -436,7 +436,7 @@ int sec_ts_read_calibration_report(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev, "%s: count:%d, pass count:%d, fail count:%d, status:0x%X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: count:%d, pass count:%d, fail count:%d, status:0x%X\n",
 			__func__, buf[1], buf[2], buf[3], buf[4]);
 
 	return buf[4];
@@ -447,7 +447,7 @@ void sec_ts_reinit(struct sec_ts_data *ts)
 	u8 w_data[2] = {0x00, 0x00};
 	int ret = 0;
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s : charger=0x%x, touch_functions=0x%x, Power mode=0x%x, noise_mode=%d\n",
 			__func__, ts->charger_mode, ts->touch_functions,
 			ts->power_status, ts->touch_noise_status);
@@ -520,7 +520,7 @@ void sec_ts_reinit(struct sec_ts_data *ts)
 		sec_ts_set_grip_type(ts, ONLY_EDGE_HANDLER);
 
 		if (ts->dex_mode) {
-			input_info(true, &ts->client->dev, "%s: set dex mode\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: set dex mode\n", __func__);
 			ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_DEX_MODE, &ts->dex_mode, 1);
 			if (ret < 0)
 				input_err(true, &ts->client->dev,
@@ -528,7 +528,7 @@ void sec_ts_reinit(struct sec_ts_data *ts)
 		}
 
 		if (ts->brush_mode) {
-			input_info(true, &ts->client->dev, "%s: set brush mode\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: set brush mode\n", __func__);
 			ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_BRUSH_MODE, &ts->brush_mode, 1);
 			if (ret < 0)
 				input_err(true, &ts->client->dev,
@@ -536,7 +536,7 @@ void sec_ts_reinit(struct sec_ts_data *ts)
 		}
 
 		if (ts->touchable_area) {
-			input_info(true, &ts->client->dev, "%s: set 16:9 mode\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: set 16:9 mode\n", __func__);
 			ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_TOUCHABLE_AREA, &ts->touchable_area, 1);
 			if (ret < 0)
 				input_err(true, &ts->client->dev,
@@ -666,7 +666,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 			return;
 		}
 
-		input_info(true, &ts->client->dev, "%s: run LPM interrupt handler, %d\n", __func__, ret);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: run LPM interrupt handler, %d\n", __func__, ret);
 		/* run lpm interrupt handler */
 	}
 
@@ -679,14 +679,14 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 	}
 
 	if (ts->debug_flag & SEC_TS_DEBUG_PRINT_ONEEVENT)
-		input_info(true, &ts->client->dev, "ONE: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "ONE: %02X %02X %02X %02X %02X %02X %02X %02X\n",
 				read_event_buff[0][0], read_event_buff[0][1],
 				read_event_buff[0][2], read_event_buff[0][3],
 				read_event_buff[0][4], read_event_buff[0][5],
 				read_event_buff[0][6], read_event_buff[0][7]);
 
 	if (read_event_buff[0][0] == 0) {
-		input_info(true, &ts->client->dev, "%s: event buffer is empty\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: event buffer is empty\n", __func__);
 		return;
 	}
 
@@ -720,7 +720,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 		event_id = event_buff[0] & 0x3;
 
 		if (ts->debug_flag & SEC_TS_DEBUG_PRINT_ALLEVENT)
-			input_info(true, &ts->client->dev, "ALL: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+			input_dbg(ts->debug_flag, &ts->client->dev, "ALL: %02X %02X %02X %02X %02X %02X %02X %02X\n",
 					event_buff[0], event_buff[1], event_buff[2], event_buff[3],
 					event_buff[4], event_buff[5], event_buff[6], event_buff[7]);
 
@@ -730,7 +730,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 
 			/* tchsta == 0 && ttype == 0 && eid == 0 : buffer empty */
 			if (p_event_status->stype > 0)
-				input_info(true, &ts->client->dev, "%s: STATUS %x %x %x %x %x %x %x %x\n", __func__,
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: STATUS %x %x %x %x %x %x %x %x\n", __func__,
 						event_buff[0], event_buff[1], event_buff[2],
 						event_buff[3], event_buff[4], event_buff[5],
 						event_buff[6], event_buff[7]);
@@ -767,7 +767,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 			if ((p_event_status->stype == TYPE_STATUS_EVENT_INFO) &&
 				(p_event_status->status_id == SEC_TS_ACK_WET_MODE)) {
 				ts->wet_mode = p_event_status->status_data_1;
-				input_info(true, &ts->client->dev, "%s: water wet mode %d\n",
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: water wet mode %d\n",
 						__func__, ts->wet_mode);
 				if (ts->wet_mode)
 					ts->wet_count++;
@@ -777,7 +777,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					(p_event_status->status_id == SEC_TS_VENDOR_ACK_NOISE_STATUS_NOTI)) {
 
 				ts->touch_noise_status = !!p_event_status->status_data_1;
-				input_info(true, &ts->client->dev, "%s: TSP NOISE MODE %s[%d]\n",
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: TSP NOISE MODE %s[%d]\n",
 						__func__, ts->touch_noise_status == 0 ? "OFF" : "ON",
 						p_event_status->status_data_1);
 
@@ -1089,12 +1089,12 @@ void sec_ts_set_charger(bool enable)
 	u8 noise_mode_off[] = {0x00};
 
 	if (enable) {
-		input_info(true, &ts->client->dev, "sec_ts_set_charger : charger CONNECTED!!\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "sec_ts_set_charger : charger CONNECTED!!\n");
 		ret = sec_ts_i2c_write(ts, SEC_TS_CMD_NOISE_MODE, noise_mode_on, sizeof(noise_mode_on));
 		if (ret < 0)
 			input_err(true, &ts->client->dev, "sec_ts_set_charger: fail to write NOISE_ON\n");
 	} else {
-		input_info(true, &ts->client->dev, "sec_ts_set_charger : charger DISCONNECTED!!\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "sec_ts_set_charger : charger DISCONNECTED!!\n");
 		ret = sec_ts_i2c_write(ts, SEC_TS_CMD_NOISE_MODE, noise_mode_off, sizeof(noise_mode_off));
 		if (ret < 0)
 			input_err(true, &ts->client->dev, "sec_ts_set_charger: fail to write NOISE_OFF\n");
@@ -1124,7 +1124,7 @@ int sec_ts_glove_mode_enables(struct sec_ts_data *ts, int mode)
 		goto glove_enable_err;
 	}
 
-	input_info(true, &ts->client->dev, "%s: glove:%d, status:%x\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: glove:%d, status:%x\n", __func__,
 			mode, ts->touch_functions);
 
 	return 0;
@@ -1138,7 +1138,7 @@ int sec_ts_set_cover_type(struct sec_ts_data *ts, bool enable)
 {
 	int ret;
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__, ts->cover_type);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__, ts->cover_type);
 
 
 	switch (ts->cover_type) {
@@ -1188,7 +1188,7 @@ int sec_ts_set_cover_type(struct sec_ts_data *ts, bool enable)
 		goto cover_enable_err;
 	}
 
-	input_info(true, &ts->client->dev, "%s: close:%d, status:%x\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: close:%d, status:%x\n", __func__,
 			enable, ts->touch_functions);
 
 	return 0;
@@ -1204,7 +1204,7 @@ void sec_ts_set_grip_type(struct sec_ts_data *ts, u8 set_type)
 {
 	u8 mode = G_NONE;
 
-	input_info(true, &ts->client->dev, "%s: re-init grip(%d), edh:%d, edg:%d, lan:%d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: re-init grip(%d), edh:%d, edg:%d, lan:%d\n", __func__,
 			set_type, ts->grip_edgehandler_direction, ts->grip_edge_range, ts->grip_landscape_mode);
 
 	/* edge handler */
@@ -1234,7 +1234,7 @@ static int sec_ts_pinctrl_configure(struct sec_ts_data *ts, bool enable)
 {
 	struct pinctrl_state *state;
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, enable ? "ACTIVE" : "SUSPEND");
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, enable ? "ACTIVE" : "SUSPEND");
 
 	if (enable) {
 		state = pinctrl_lookup_state(ts->plat_data->pinctrl, "on_state");
@@ -1360,7 +1360,7 @@ static int sec_ts_get_active_panel(struct device_node *np)
 
 		pdata->tsp_icid = of_get_named_gpio(np, "sec,tsp-icid_gpio", 0);
 		if (gpio_is_valid(pdata->tsp_icid)) {
-			input_info(true, dev, "%s: TSP_ICID : %d\n", __func__, gpio_get_value(pdata->tsp_icid));
+			input_dbg(ts->debug_flag, dev, "%s: TSP_ICID : %d\n", __func__, gpio_get_value(pdata->tsp_icid));
 			if (of_property_read_u32(np, "sec,icid_match_value", &ic_match_value)) {
 				input_err( true, dev, "%s: Failed to get icid match value\n", __func__);
 				return -EINVAL;
@@ -1377,7 +1377,7 @@ static int sec_ts_get_active_panel(struct device_node *np)
 		pdata->tsp_vsync =
 			of_get_named_gpio(np, "sec,tsp_vsync_gpio", 0);
 		if (gpio_is_valid(pdata->tsp_vsync))
-			input_info(true, &client->dev, "%s: vsync %s\n", __func__, gpio_get_value(pdata->tsp_vsync) ? "disable" :  "enable");
+			input_dbg(ts->debug_flag, &client->dev, "%s: vsync %s\n", __func__, gpio_get_value(pdata->tsp_vsync) ? "disable" :  "enable");
 
 		pdata->irq_gpio = of_get_named_gpio(np, "sec,irq-gpio", 0);
 		if (gpio_is_valid(pdata->irq_gpio)) {
@@ -1397,7 +1397,7 @@ static int sec_ts_get_active_panel(struct device_node *np)
 			input_err(true, dev, "%s: Failed to get irq_type property\n", __func__);
 			pdata->irq_type = IRQF_TRIGGER_LOW | IRQF_ONESHOT;
 		} else {
-			input_info(true, dev, "%s: irq_type property:%X, %d\n",  __func__, pdata->irq_type, pdata->irq_type);
+			input_dbg(ts->debug_flag, dev, "%s: irq_type property:%X, %d\n",  __func__, pdata->irq_type, pdata->irq_type);
 		}
 
 		pdata->reset_gpio = of_get_named_gpio(np, "sec,reset-gpio", 0);
@@ -1440,7 +1440,7 @@ static int sec_ts_get_active_panel(struct device_node *np)
 
 	pdata->tsp_id = of_get_named_gpio(np, "sec,tsp-id_gpio", 0);
 	if (gpio_is_valid(pdata->tsp_id))
-		input_info(true, dev, "%s: TSP_ID : %d\n", __func__, gpio_get_value(pdata->tsp_id));
+		input_dbg(ts->debug_flag, dev, "%s: TSP_ID : %d\n", __func__, gpio_get_value(pdata->tsp_id));
 	else
 		input_err(true, dev, "%s: Failed to get tsp-id gpio\n", __func__);
 
@@ -1531,7 +1531,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: %X, %X, %X\n",
 			__func__, data[0], data[1], data[2]);
 	memset(data, 0x0, 11);
@@ -1543,7 +1543,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: nTX:%X, nRX:%X, rY:%d, rX:%d\n",
 			__func__, data[8], data[9],
 			(data[2] << 8) | data[3], (data[0] << 8) | data[1]);
@@ -1567,7 +1567,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: STATUS : %X\n",
 			__func__, data[0]);
 
@@ -1580,7 +1580,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: TOUCH STATUS : %02X, %02X, %02X, %02X\n",
 			__func__, data[0], data[1], data[2], data[3]);
 
@@ -1593,7 +1593,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: TOUCH STATUS : %02X, %02X, %02X, %02X\n",
 			__func__, data[0], data[1], data[2], data[3]);
 
@@ -1610,7 +1610,7 @@ int sec_ts_read_information(struct sec_ts_data *ts)
 		return ret;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: Functions : %02X\n",
 			__func__, ts->touch_functions);
 
@@ -1646,7 +1646,7 @@ int sec_ts_check_custom_library(struct sec_ts_data *ts)
 
 	ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_CUSTOMLIB_GET_INFO, &data[0], 10);
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: (%d) %c%c%c%c, || %02X, %02X, %02X, %02X, || %02X, %02X\n",
 				__func__, ret, data[0], data[1], data[2], data[3], data[4],
 				data[5], data[6], data[7], data[8], data[9]);
@@ -1733,7 +1733,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	unsigned char result = 0;
 	int i = 0;
 
-	input_info(true, &client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &client->dev, "%s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		input_err(true, &client->dev, "%s: EIO err!\n", __func__);
@@ -1849,7 +1849,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	else
 		ts->lowpower_mode &= ~SEC_TS_MODE_CUSTOMLIB_FORCE_KEY;
 
-	input_info(true, &client->dev, "%s: init resource\n", __func__);
+	input_dbg(ts->debug_flag, &client->dev, "%s: init resource\n", __func__);
 
 	sec_ts_pinctrl_configure(ts, true);
 
@@ -1862,13 +1862,13 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	sec_ts_wait_for_ready(ts, SEC_TS_ACK_BOOT_COMPLETE);
 
-	input_info(true, &client->dev, "%s: power enable\n", __func__);
+	input_dbg(ts->debug_flag, &client->dev, "%s: power enable\n", __func__);
 
 	ret = sec_ts_i2c_read(ts, SEC_TS_READ_DEVICE_ID, deviceID, 5);
 	if (ret < 0)
 		input_err(true, &ts->client->dev, "%s: failed to read device ID(%d)\n", __func__, ret);
 	else
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: TOUCH DEVICE ID : %02X, %02X, %02X, %02X, %02X\n", __func__,
 				deviceID[0], deviceID[1], deviceID[2], deviceID[3], deviceID[4]);
 
@@ -1900,7 +1900,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 					__func__, ret);
 		}
 	}
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: TOUCH STATUS : %02X || %02X, %02X, %02X, %02X\n",
 			__func__, data[0], data[1], data[2], data[3], data[4]);
 
@@ -1922,7 +1922,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 #ifdef SEC_TS_FW_UPDATE_ON_PROBE
 	schedule_delayed_work(&ts->fw_update_work, msecs_to_jiffies(TOUCH_FW_UPDATE_TIME));
 #else
-	input_info(true, &ts->client->dev, "%s: fw update on probe disabled!\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: fw update on probe disabled!\n", __func__);
 #endif
 
 	ts->fb_notifier.notifier_call = sec_ts_dsi_panel_notifier_cb;
@@ -1978,7 +1978,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		}
 	}
 
-	input_info(true, &ts->client->dev, "%s: request_irq = %d\n", __func__, client->irq);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: request_irq = %d\n", __func__, client->irq);
 
 	ret = request_threaded_irq(client->irq, NULL, sec_ts_irq_thread,
 			ts->plat_data->irq_type, SEC_TS_I2C_NAME, ts);
@@ -2192,7 +2192,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 	__pm_stay_awake(ts->wakelock);
 
 	ts->reset_is_on_going = true;
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	sec_ts_stop_device(ts);
 
@@ -2263,14 +2263,14 @@ static void sec_ts_read_info_work(struct work_struct *work)
 	char para = TO_TOUCH_MODE;
 	int ret;
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	/* run self-test */
 	disable_irq(ts->client->irq);
 	execute_selftest(ts, false);
 	enable_irq(ts->client->irq);
 
-	input_info(true, &ts->client->dev, "%s: %02X %02X %02X %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %02X %02X %02X %02X\n",
 		__func__, ts->ito_test[0], ts->ito_test[1]
 		, ts->ito_test[2], ts->ito_test[3]);
 
@@ -2328,7 +2328,7 @@ retry_pmode:
 		input_err(true, &ts->client->dev, "%s: read power mode failed!\n", __func__);
 		goto i2c_error;
 	} else {
-		input_info(true, &ts->client->dev, "%s: power mode - write(%d) read(%d)\n", __func__, mode, para);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: power mode - write(%d) read(%d)\n", __func__, mode, para);
 	}
 
 	if (mode != para) {
@@ -2360,7 +2360,7 @@ retry_pmode:
 		ts->power_status = SEC_TS_STATE_POWER_ON;
 
 i2c_error:
-	input_info(true, &ts->client->dev, "%s: end %d\n", __func__, ret);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: end %d\n", __func__, ret);
 
 	return ret;
 }
@@ -2380,7 +2380,7 @@ static int sec_ts_input_open(struct input_dev *dev)
 
 	ts->input_closed = false;
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	if (ts->power_status == SEC_TS_STATE_LPM) {
 #ifdef USE_RESET_EXIT_LPM
@@ -2415,7 +2415,7 @@ static void sec_ts_input_close(struct input_dev *dev)
 
 	ts->input_closed = true;
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 #ifdef USE_POWER_RESET_WORK
 	cancel_delayed_work(&ts->reset_work);
@@ -2438,20 +2438,20 @@ static int sec_ts_remove(struct i2c_client *client)
 {
 	struct sec_ts_data *ts = i2c_get_clientdata(client);
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	cancel_delayed_work_sync(&ts->work_read_info);
 	flush_delayed_work(&ts->work_read_info);
 
 	disable_irq_nosync(ts->client->irq);
 	free_irq(ts->client->irq, ts);
-	input_info(true, &ts->client->dev, "%s: irq disabled\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: irq disabled\n", __func__);
 
 #ifdef USE_POWER_RESET_WORK
 	cancel_delayed_work_sync(&ts->reset_work);
 	flush_delayed_work(&ts->reset_work);
 
-	input_info(true, &ts->client->dev, "%s: flush queue\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: flush queue\n", __func__);
 
 #endif
 
@@ -2566,12 +2566,12 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 			goto err;
 
 		ts->touch_functions = ts->touch_functions | SEC_TS_BIT_SETFUNC_COVER;
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: cover cmd write type:%d, mode:%x, ret:%d\n",
 				__func__, ts->touch_functions, ts->cover_cmd, ret);
 	} else {
 		ts->touch_functions = (ts->touch_functions & (~SEC_TS_BIT_SETFUNC_COVER));
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: cover open, not send cmd\n", __func__);
 	}
 
@@ -2594,7 +2594,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	sec_ts_set_grip_type(ts, ONLY_EDGE_HANDLER);
 
 	if (ts->dex_mode) {
-		input_info(true, &ts->client->dev, "%s: set dex mode\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: set dex mode\n", __func__);
 		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_DEX_MODE, &ts->dex_mode, 1);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,
@@ -2604,7 +2604,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 	if (ts->brush_mode) {
-		input_info(true, &ts->client->dev, "%s: set brush mode\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: set brush mode\n", __func__);
 		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_BRUSH_MODE, &ts->brush_mode, 1);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,
@@ -2614,7 +2614,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 	if (ts->touchable_area) {
-		input_info(true, &ts->client->dev, "%s: set 16:9 mode\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: set 16:9 mode\n", __func__);
 		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_TOUCHABLE_AREA, &ts->touchable_area, 1);
 		if (ret < 0) {
 			input_err(true, &ts->client->dev,

@@ -80,14 +80,14 @@ static ssize_t sec_ts_reg_store(struct device *dev, struct device_attribute *att
 	struct sec_ts_data *ts = dev_get_drvdata(dev);
 
 	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
-		input_info(true, &ts->client->dev, "%s: Power off state\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Power off state\n", __func__);
 		return -EIO;
 	}
 
 	if (size > 0)
 		ts->sec_ts_i2c_write_burst(ts, (u8 *)buf, size);
 
-	input_info(true, &ts->client->dev, "%s: 0x%x, 0x%x, size %d\n", __func__, buf[0], buf[1], (int)size);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%x, 0x%x, size %d\n", __func__, buf[0], buf[1], (int)size);
 	return size;
 }
 
@@ -134,7 +134,7 @@ static ssize_t sec_ts_regread_show(struct device *dev, struct device_attribute *
 		offset += length;
 	} while (remain > 0);
 
-	input_info(true, &ts->client->dev, "%s: lv1_readsize = %d\n", __func__, lv1_readsize);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: lv1_readsize = %d\n", __func__, lv1_readsize);
 	memcpy(buf, read_lv1_buff + lv1_readoffset, lv1_readsize);
 
 i2c_err:
@@ -153,7 +153,7 @@ static ssize_t sec_ts_gesture_status_show(struct device *dev, struct device_attr
 
 	mutex_lock(&ts->device_mutex);
 	memcpy(buf, ts->gesture_status, sizeof(ts->gesture_status));
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: GESTURE STATUS %x %x %x %x %x %x\n", __func__,
 				ts->gesture_status[0], ts->gesture_status[1], ts->gesture_status[2],
 				ts->gesture_status[3], ts->gesture_status[4], ts->gesture_status[5]);
@@ -197,10 +197,10 @@ static ssize_t sec_ts_enter_recovery_store(struct device *dev, struct device_att
 		sec_ts_set_irq(ts, false);
 		gpio_free(pdata->irq_gpio);
 
-		input_info(true, &ts->client->dev, "%s: gpio free\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: gpio free\n", __func__);
 		if (gpio_is_valid(pdata->irq_gpio)) {
 			ret = gpio_request_one(pdata->irq_gpio, GPIOF_OUT_INIT_LOW, "sec,tsp_int");
-			input_info(true, &ts->client->dev, "%s: gpio request one\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: gpio request one\n", __func__);
 			if (ret < 0)
 				input_err(true, &ts->client->dev, "%s: Unable to request tsp_int [%d]: %d\n", __func__, pdata->irq_gpio, ret);
 		} else {
