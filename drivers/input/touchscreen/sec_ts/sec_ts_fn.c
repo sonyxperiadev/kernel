@@ -181,10 +181,10 @@ static ssize_t scrub_position_show(struct device *dev,
 	char buff[256] = { 0 };
 
 #ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: scrub_id: %d\n", __func__, ts->scrub_id);
 #else
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: scrub_id: %d, X:%d, Y:%d\n", __func__,
 			ts->scrub_id, ts->scrub_x, ts->scrub_y);
 #endif
@@ -205,7 +205,7 @@ static ssize_t read_ito_check_show(struct device *dev,
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[256] = { 0 };
 
-	input_info(true, &ts->client->dev, "%s: %02X%02X%02X%02X\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %02X%02X%02X%02X\n", __func__,
 			ts->ito_test[0], ts->ito_test[1],
 			ts->ito_test[2], ts->ito_test[3]);
 
@@ -253,7 +253,7 @@ static ssize_t read_multi_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__,
 			ts->multi_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->multi_count);
@@ -268,7 +268,7 @@ static ssize_t clear_multi_count_store(struct device *dev,
 
 	ts->multi_count = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -279,7 +279,7 @@ static ssize_t read_wet_mode_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %d, %d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d, %d\n", __func__,
 			ts->wet_count, ts->dive_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->wet_count);
@@ -295,7 +295,7 @@ static ssize_t clear_wet_mode_store(struct device *dev,
 	ts->wet_count = 0;
 	ts->dive_count= 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -306,7 +306,7 @@ static ssize_t read_noise_mode_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__, ts->noise_count);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__, ts->noise_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->noise_count);
 }
@@ -320,7 +320,7 @@ static ssize_t clear_noise_mode_store(struct device *dev,
 
 	ts->noise_count = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -331,7 +331,7 @@ static ssize_t read_comm_err_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__,
 			ts->multi_count);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->comm_err_count);
@@ -346,7 +346,7 @@ static ssize_t clear_comm_err_count_store(struct device *dev,
 
 	ts->comm_err_count = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -362,7 +362,7 @@ static ssize_t read_module_id_show(struct device *dev,
 		ts->plat_data->panel_revision, ts->plat_data->img_version_of_ic[2],
 		ts->plat_data->img_version_of_ic[3]);
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%s", buff);
 }
@@ -388,7 +388,7 @@ static ssize_t clear_checksum_store(struct device *dev,
 
 	ts->checksum_result = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -399,7 +399,7 @@ static ssize_t read_checksum_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__,
 			ts->checksum_result);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%d", ts->checksum_result);
@@ -414,7 +414,7 @@ static ssize_t clear_holding_time_store(struct device *dev,
 
 	ts->time_longest = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -425,7 +425,7 @@ static ssize_t read_holding_time_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: %ld\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %ld\n", __func__,
 			ts->time_longest);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%ld", ts->time_longest);
@@ -437,7 +437,7 @@ static ssize_t read_all_touch_count_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: touch:%d, force:%d, aod:%d, spay:%d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: touch:%d, force:%d, aod:%d, spay:%d\n", __func__,
 			ts->all_finger_count, ts->all_force_count,
 			ts->all_aod_tap_count, ts->all_spay_count);
 
@@ -458,7 +458,7 @@ static ssize_t clear_all_touch_count_store(struct device *dev,
 	ts->all_aod_tap_count = 0;
 	ts->all_spay_count = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -469,7 +469,7 @@ static ssize_t read_z_value_show(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: max:%d, min:%d, avg:%d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: max:%d, min:%d, avg:%d\n", __func__,
 			ts->max_z_value, ts->min_z_value,
 			ts->sum_z_value);
 
@@ -497,7 +497,7 @@ static ssize_t clear_z_value_store(struct device *dev,
 	ts->sum_z_value= 0;
 	ts->all_finger_count = 0;
 
-	input_info(true, &ts->client->dev, "%s: clear\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear\n", __func__);
 
 	return count;
 }
@@ -543,12 +543,12 @@ static ssize_t after_init_work_start_store(struct device *dev,
 	struct sec_cmd_data *sec = dev_get_drvdata(dev);
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 
-	input_info(true, &ts->client->dev, "%s: - start\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: - start\n", __func__);
 
 	if (ts->after_work.done) {
-		input_info(true, &ts->client->dev, "already post probed, need reboot\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "already post probed, need reboot\n");
 	} else {
-		input_info(true, &ts->client->dev, "start after_init_work\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "start after_init_work\n", __func__);
 		schedule_delayed_work(&ts->after_work.start, 0);
 	}
 
@@ -646,7 +646,7 @@ static ssize_t ic_status_show(struct device *dev,
 	snprintf(temp, sizeof(temp), "artcanvas,%d,", data[0]);
 	strncat(buff, temp, sizeof(temp) - strlen(temp) - 1 );
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 	return snprintf(buf, SEC_CMD_BUF_SIZE, "%s\n", buff);
 }
@@ -703,13 +703,13 @@ static int sec_ts_check_index(struct sec_ts_data *ts)
 		snprintf(buff, sizeof(buff), "%s", "NG");
 		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
-		input_info(true, &ts->client->dev, "%s: parameter error: %u, %u\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: parameter error: %u, %u\n",
 				__func__, sec->cmd_param[0], sec->cmd_param[0]);
 		node = -1;
 		return node;
 	}
 	node = sec->cmd_param[1] * ts->tx_count + sec->cmd_param[0];
-	input_info(true, &ts->client->dev, "%s: node = %d\n", __func__, node);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: node = %d\n", __func__, node);
 	return node;
 }
 static void fw_update(void *device_data)
@@ -720,7 +720,7 @@ static void fw_update(void *device_data)
 	int retval = 0;
 
 	if (sec_ts_get_pw_status()) {
-		input_info(true, &ts->client->dev, "cannot fw_update, panel power off\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "cannot fw_update, panel power off\n");
 		return;
 	}
 	sec_cmd_set_default_result(sec);
@@ -743,7 +743,7 @@ static void fw_update(void *device_data)
 		snprintf(buff, sizeof(buff), "%s", "OK");
 		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 		sec->cmd_state = SEC_CMD_STATUS_OK;
-		input_info(true, &ts->client->dev, "%s: success [%d]\n", __func__, retval);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: success [%d]\n", __func__, retval);
 	}
 }
 
@@ -753,7 +753,7 @@ int sec_ts_fix_tmode(struct sec_ts_data *ts, u8 mode, u8 state)
 	u8 onoff[1] = {STATE_MANAGE_OFF};
 	u8 tBuff[2] = { mode, state };
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_STATEMANAGE_ON, onoff, 1);
 	sec_ts_delay(20);
@@ -769,7 +769,7 @@ int sec_ts_p2p_tmode(struct sec_ts_data *ts)
 	int ret;
 	u8 mode[1] = {0x0C};
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_CLEAR_EVENT_STACK, NULL, 0);
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_P2P_MODE, mode, sizeof(mode));
@@ -800,7 +800,7 @@ static int execute_p2ptest(struct sec_ts_data *ts)
 		}
 
 		if ((tBuff[7] & 0x3F) == 0x00) {
-			input_info(true, &ts->client->dev, "%s: left event is 0\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: left event is 0\n", __func__);
 			ret = 0;
 			break;
 		}
@@ -819,7 +819,7 @@ int sec_ts_release_tmode(struct sec_ts_data *ts)
 	int ret;
 	u8 onoff[1] = {STATE_MANAGE_ON};
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_STATEMANAGE_ON, onoff, 1);
 	sec_ts_delay(20);
@@ -835,7 +835,7 @@ static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 	unsigned char pTmp[16] = { 0 };
 	int lsize = 7 * (ts->tx_count + 1);
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	pStr = kzalloc(lsize, GFP_KERNEL);
 	if (pStr == NULL)
@@ -850,7 +850,7 @@ static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 		strncat(pStr, pTmp, lsize);
 	}
 
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 	memset(pStr, 0x0, lsize);
 	snprintf(pTmp, sizeof(pTmp), " +");
 	strncat(pStr, pTmp, lsize);
@@ -860,7 +860,7 @@ static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 		strncat(pStr, pTmp, lsize);
 	}
 
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 	for (i = 0; i < ts->rx_count; i++) {
 		memset(pStr, 0x0, lsize);
@@ -878,7 +878,7 @@ static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max)
 
 			strncat(pStr, pTmp, lsize);
 		}
-		input_info(true, &ts->client->dev, "%s\n", pStr);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 	}
 	kfree(pStr);
 }
@@ -894,7 +894,7 @@ static int sec_ts_read_frame(struct sec_ts_data *ts, u8 type, short *min,
 	int j = 0;
 	short *temp = NULL;
 
-	input_info(true, &ts->client->dev, "%s: type %d\n", __func__, type);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: type %d\n", __func__, type);
 
 	/* set data length, allocation buffer memory */
 	readbytes = ts->rx_count * ts->tx_count * 2;
@@ -950,7 +950,7 @@ static int sec_ts_read_frame(struct sec_ts_data *ts, u8 type, short *min,
 	*min = *max = ts->pFrame[0];
 
 #ifdef DEBUG_MSG
-	input_info(true, &ts->client->dev, "%s: 02X%02X%02X readbytes=%d\n", __func__,
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: 02X%02X%02X readbytes=%d\n", __func__,
 			pRead[0], pRead[1], pRead[2], readbytes);
 #endif
 	sec_ts_print_frame(ts, min, max);
@@ -1002,7 +1002,7 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 		snprintf(pTmp, sizeof(pTmp), "    %02d", k);
 		strncat(pStr, pTmp, 7 * ts->tx_count);
 	}
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 	memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 	snprintf(pTmp, sizeof(pTmp), " +");
@@ -1012,7 +1012,7 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 		snprintf(pTmp, sizeof(pTmp), "------");
 		strncat(pStr, pTmp, 7 * ts->tx_count);
 	}
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 	memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 	snprintf(pTmp, sizeof(pTmp), " | ");
@@ -1020,8 +1020,8 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 
 	for (i = 0; i < (ts->tx_count + ts->rx_count) * 2; i += 2) {
 		if (j == ts->tx_count) {
-			input_info(true, &ts->client->dev, "%s\n", pStr);
-			input_info(true, &ts->client->dev, "\n");
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "\n");
 			memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 			snprintf(pTmp, sizeof(pTmp), " RX");
 			strncat(pStr, pTmp, 7 * ts->tx_count);
@@ -1031,7 +1031,7 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 				strncat(pStr, pTmp, 7 * ts->tx_count);
 			}
 
-			input_info(true, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 			memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 			snprintf(pTmp, sizeof(pTmp), " +");
@@ -1041,13 +1041,13 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 				snprintf(pTmp, sizeof(pTmp), "------");
 				strncat(pStr, pTmp, 7 * ts->tx_count);
 			}
-			input_info(true, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 			memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 			snprintf(pTmp, sizeof(pTmp), " | ");
 			strncat(pStr, pTmp, 7 * ts->tx_count);
 		} else if (j && !(j % ts->tx_count)) {
-			input_info(true, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 			memset(pStr, 0x0, 7 * (ts->tx_count + 1));
 			snprintf(pTmp, sizeof(pTmp), " | ");
 			strncat(pStr, pTmp, 7 * ts->tx_count);
@@ -1058,7 +1058,7 @@ static void sec_ts_print_channel(struct sec_ts_data *ts)
 
 		j++;
 	}
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 	vfree(pStr);
 }
 
@@ -1073,7 +1073,7 @@ static int sec_ts_read_channel(struct sec_ts_data *ts, u8 type,
 	unsigned int data_length = (ts->tx_count + ts->rx_count) * 2;
 	u8 w_data;
 
-	input_info(true, &ts->client->dev, "%s: type %d\n", __func__, type);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: type %d\n", __func__, type);
 
 	pRead = kzalloc(data_length, GFP_KERNEL);
 	if (!pRead)
@@ -1154,11 +1154,11 @@ static void sec_ts_get_cm_gap(struct sec_ts_data *ts, short *gap, bool gap_dir)
 	int gapx, gapy, pos1, pos2;
 	short dpos1, dpos2;
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	/* Get x-direction cm gap */
 	if (gap_dir == X_DIR) {
-		input_info(true, &ts->client->dev, "gapX\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "gapX\n");
 
 		for (i = 0; i < ts->rx_count; i++) {
 			for (j = 0; j < ts->tx_count - 1; j++) {
@@ -1183,7 +1183,7 @@ static void sec_ts_get_cm_gap(struct sec_ts_data *ts, short *gap, bool gap_dir)
 
 	/* get y-direction cm gap */
 	else {
-		input_info(true, &ts->client->dev, "gapY\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "gapY\n");
 
 		for (i = 0; i < ts->rx_count - 1; i++) {
 			for (j = 0; j < ts->tx_count; j++) {
@@ -1348,7 +1348,7 @@ static int sec_ts_read_raw_data(struct sec_ts_data *ts,
 		goto error_power_state;
 	}
 
-	input_info(true, &ts->client->dev, "%s: %d, %s\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d, %s\n",
 			__func__, mode->type, mode->allnode ? "ALL" : "");
 
 	ret = sec_ts_fix_tmode(ts, TOUCH_SYSTEM_MODE_TOUCH, TOUCH_MODE_STATE_TOUCH);
@@ -1447,7 +1447,7 @@ static int sec_ts_read_rawp2p_data(struct sec_ts_data *ts,
 	if (!buff)
 		goto error_alloc_mem;
 
-	input_info(true, &ts->client->dev, "%s: %d, %s\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d, %s\n",
 			__func__, mode->type, mode->allnode ? "ALL" : "");
 
 	sec_ts_set_irq(ts, false);
@@ -1587,7 +1587,7 @@ static void get_fw_ver_bin(void *device_data)
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_fw_ver_ic(void *device_data)
@@ -1623,7 +1623,7 @@ static void get_fw_ver_ic(void *device_data)
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_config_ver(void *device_data)
@@ -1640,7 +1640,7 @@ static void get_config_ver(void *device_data)
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_threshold(void *device_data)
@@ -1673,14 +1673,14 @@ static void get_threshold(void *device_data)
 		goto err;
 	}
 
-	input_info(true, &ts->client->dev, "0x%02X, 0x%02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "0x%02X, 0x%02X\n",
 			threshold[0], threshold[1]);
 
 	snprintf(buff, sizeof(buff), "%d", (threshold[0] << 8) | threshold[1]);
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 	return;
 err:
@@ -1709,7 +1709,7 @@ static void module_off_master(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_OK;
 	else
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void module_on_master(void *device_data)
@@ -1733,7 +1733,7 @@ static void module_on_master(void *device_data)
 	else
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_chip_vendor(void *device_data)
@@ -1746,7 +1746,7 @@ static void get_chip_vendor(void *device_data)
 	sec_cmd_set_default_result(sec);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_chip_name(void *device_data)
@@ -1771,7 +1771,7 @@ static void get_chip_name(void *device_data)
 	sec_cmd_set_default_result(sec);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void set_mis_cal_spec(void *device_data)
@@ -1806,7 +1806,7 @@ static void set_mis_cal_spec(void *device_data)
 				input_err(true, &ts->client->dev, "%s: Misscal spec write failed. ret: %d\n", __func__, ret);
 				goto NG;
 			} else {
-				input_info(true, &ts->client->dev, "%s: tx gap=%d, rx gap=%d, peak=%d\n",
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: tx gap=%d, rx gap=%d, peak=%d\n",
 								__func__, wreg[0], wreg[1], wreg[2]);
 				sec_ts_delay(20);
 			}
@@ -1869,7 +1869,7 @@ static void get_mis_cal_info(void *device_data)
 			mis_cal_data = 0xF3;
 			goto NG;
 		} else {
-			input_info(true, &ts->client->dev, "%s: miss cal data : %d\n", __func__, mis_cal_data);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: miss cal data : %d\n", __func__, mis_cal_data);
 		}
 
 		ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_MIS_CAL_SPEC, wreg, 4);
@@ -1878,7 +1878,7 @@ static void get_mis_cal_info(void *device_data)
 			mis_cal_data = 0xF4;
 			goto NG;
 		} else {
-			input_info(true, &ts->client->dev, "%s: miss cal spec : %d,%d,%d,%d\n",
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: miss cal spec : %d,%d,%d,%d\n",
 						__func__, wreg[0], wreg[1], wreg[2], wreg[3]);
 		}
 	}
@@ -1888,7 +1888,7 @@ static void get_mis_cal_info(void *device_data)
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff_all);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff_all);
 	return;
 
 NG:
@@ -1896,7 +1896,7 @@ NG:
 	snprintf(buff_all, sizeof(buff_all), "%d,%d,%d,%d", mis_cal_data, 0, 0, 0);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff_all);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff_all);
 }
 
 static void get_wet_mode(void *device_data)
@@ -1918,14 +1918,14 @@ static void get_wet_mode(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", wet_mode_info);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 	return;
 
 NG:
 	snprintf(buff, sizeof(buff), "NG");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 }
 
@@ -1939,7 +1939,7 @@ static void get_x_num(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", ts->tx_count);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void get_y_num(void *device_data)
@@ -1952,7 +1952,7 @@ static void get_y_num(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", ts->rx_count);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static u32 checksum_sum(struct sec_ts_data *ts, u8 *chunk_data, u32 size)
@@ -1970,7 +1970,7 @@ static u32 checksum_sum(struct sec_ts_data *ts, u8 *chunk_data, u32 size)
 
 	checksum &= 0xFFFFFFFF;
 
-	input_info(true, &ts->client->dev, "%s: checksum = [%x]\n", __func__, checksum);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: checksum = [%x]\n", __func__, checksum);
 
 	return checksum;
 }
@@ -2001,7 +2001,7 @@ static u32 get_bin_checksum(struct sec_ts_data *ts, const u8 *data, size_t size)
 		checksum += data_32;
 	}
 
-	input_info(true, &ts->client->dev, "%s: fw_hd->totalsize = [%d] checksum = [%x]\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: fw_hd->totalsize = [%d] checksum = [%x]\n",
 				__func__, fw_hd->totalsize, checksum);
 
 	checksum &= 0xFFFFFFFF;
@@ -2013,7 +2013,7 @@ static u32 get_bin_checksum(struct sec_ts_data *ts, const u8 *data, size_t size)
 	for (i = 0; i < fw_hd->num_chunk; i++) {
 		fw_ch = (fw_chunk *)fd;
 
-		input_info(true, &ts->client->dev, "%s: [%d] 0x%08X, 0x%08X, 0x%08X, 0x%08X\n", __func__, i,
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: [%d] 0x%08X, 0x%08X, 0x%08X, 0x%08X\n", __func__, i,
 				fw_ch->signature, fw_ch->addr, fw_ch->size, fw_ch->reserved);
 
 		if (fw_ch->signature != SEC_TS_FW_CHUNK_SIGN) {
@@ -2167,7 +2167,7 @@ static void get_checksum_data(void *device_data)
 
 		release_firmware(fw_entry);
 
-		input_info(true, &ts->client->dev, "%s: img_checksum=[0x%X], ic_checksum=[0x%X]\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: img_checksum=[0x%X], ic_checksum=[0x%X]\n",
 						__func__, img_checksum, ic_checksum);
 
 		if (img_checksum != ic_checksum) {
@@ -2179,7 +2179,7 @@ static void get_checksum_data(void *device_data)
 	}
 out:
 
-	input_info(true, &ts->client->dev, "%s: checksum = %02X\n", __func__, csum);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: checksum = %02X\n", __func__, csum);
 	snprintf(buff, sizeof(buff), "%02X", csum);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -2198,13 +2198,13 @@ static void check_io_sync(void *device_data)
 	char buff[16] = { 0 };
 	int ret;
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	sec_cmd_set_default_result(sec);
 
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SYNC_STATUS, &para, 1);
 	if (ret < 0) {
-		input_info(true, &ts->client->dev, "%s: Sync check cmd write fail\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Sync check cmd write fail\n", __func__);
 		goto err_out;
 	}
 
@@ -2212,14 +2212,14 @@ static void check_io_sync(void *device_data)
 
 	ts->sec_ts_i2c_read(ts, SEC_TS_CMD_SYNC_STATUS, &para, 1);
 	if (ret < 0) {
-		input_info(true, &ts->client->dev, "%s: Sync check result read fail\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Sync check result read fail\n", __func__);
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: sync check result is %02X\n", __func__, para);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: sync check result is %02X\n", __func__, para);
 
 	if ((para & BIT_VSYNC) && (para & BIT_HSYNC)) {
-		input_info(true, &ts->client->dev, "%s: Vsync & Hsync detected!\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Vsync & Hsync detected!\n", __func__);
 
 		snprintf(buff, sizeof(buff), "%d", 1);
 		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -2228,13 +2228,13 @@ static void check_io_sync(void *device_data)
 		return;
 
 	} else if ((para & BIT_VSYNC) && !(para & BIT_HSYNC)) {
-		input_info(true, &ts->client->dev, "%s: Hsync Not detected!\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Hsync Not detected!\n", __func__);
 		goto err_out;
 	} else if (!(para & BIT_VSYNC) && (para & BIT_HSYNC)) {
-		input_info(true, &ts->client->dev, "%s: Vsync not detected!\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Vsync not detected!\n", __func__);
 		goto err_out;
 	} else {
-		input_info(true, &ts->client->dev, "%s: Both Vsync & Hsync not detected!\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: Both Vsync & Hsync not detected!\n", __func__);
 		goto err_out;
 	}
 
@@ -2253,7 +2253,7 @@ static void check_io_intx(void *device_data)
 	u8 para[4] = {0x12, 0x34, 0x56, 0x78};
 	u8 tBuff[8];
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	sec_cmd_set_default_result(sec);
 
@@ -2281,7 +2281,7 @@ static void check_io_intx(void *device_data)
 			}
 			if ((tBuff[2] == para[0]) && (tBuff[3] == para[1]) &&
 				(tBuff[4] == para[2]) && (tBuff[5] == para[3])) {
-				input_info(true, &ts->client->dev, "%s: INT pin low checked!\n", __func__);
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: INT pin low checked!\n", __func__);
 				break;
 			}
 		}
@@ -2316,7 +2316,7 @@ static void check_io_resetb(void *device_data)
 
 	sec_cmd_set_default_result(sec);
 
-	input_info(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	mutex_lock(&ts->device_mutex);
 
@@ -2334,12 +2334,12 @@ static void check_io_resetb(void *device_data)
 	/* make resetb signal toggle (high->low->high) */
 	if (gpio_is_valid(ts->plat_data->resetb_gpio)) {
 
-		input_info(true, &ts->client->dev, "%s: drive RESETB signal to low\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: drive RESETB signal to low\n", __func__);
 		gpio_set_value(ts->plat_data->resetb_gpio, 0);
 
 		sec_ts_delay(1);
 
-		input_info(true, &ts->client->dev, "%s: drive RESETB signal to high\n", __func__);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: drive RESETB signal to high\n", __func__);
 		gpio_set_value(ts->plat_data->resetb_gpio, 1);
 	}
 #endif
@@ -2359,12 +2359,12 @@ static void check_io_resetb(void *device_data)
 			goto err_out;
 
 		ts->touch_functions = ts->touch_functions | SEC_TS_BIT_SETFUNC_COVER;
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: cover cmd write type:%d, mode:%x, ret:%d\n",
 				__func__, ts->touch_functions, ts->cover_type, ret);
 	} else {
 		ts->touch_functions = (ts->touch_functions & (~SEC_TS_BIT_SETFUNC_COVER));
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 				"%s: cover open, not send cmd\n", __func__);
 	}
 
@@ -2452,7 +2452,7 @@ static void get_reference(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", val);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void run_rawcap_read(void *device_data)
@@ -2510,7 +2510,7 @@ static void get_rawcap(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", val);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void run_delta_read(void *device_data)
@@ -2569,7 +2569,7 @@ static void get_delta(void *device_data)
 	snprintf(buff, sizeof(buff), "%d", val);
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec->cmd_state = SEC_CMD_STATUS_OK;
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void run_raw_p2p_read(void *device_data)
@@ -2757,7 +2757,7 @@ void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read)
 	u8 test_type[5] = {TYPE_AMBIENT_DATA, TYPE_DECODED_DATA,
 		TYPE_SIGNAL_DATA, TYPE_OFFSET_DATA_SET, TYPE_OFFSET_DATA_SDC};
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: start (noise:%d, wet:%d)##\n",
 			__func__, ts->touch_noise_status, ts->wet_mode);
 
@@ -2778,12 +2778,12 @@ void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read)
 	for (i = 0; i < read_num; i++) {
 		ret = sec_ts_read_frame(ts, test_type[i], &min, &max, false);
 		if (ret < 0) {
-			input_info(true, &ts->client->dev,
+			input_dbg(ts->debug_flag, &ts->client->dev,
 					"%s: mutual %d : error ## ret:%d\n",
 					__func__, test_type[i], ret);
 			goto out;
 		} else {
-			input_info(true, &ts->client->dev,
+			input_dbg(ts->debug_flag, &ts->client->dev,
 					"%s: mutual %d : Max/Min %d,%d ##\n",
 					__func__, test_type[i], max, min);
 		}
@@ -2792,12 +2792,12 @@ void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read)
 		if (full_read) {
 			ret = sec_ts_read_channel(ts, test_type[i], &min, &max, false);
 			if (ret < 0) {
-				input_info(true, &ts->client->dev,
+				input_dbg(ts->debug_flag, &ts->client->dev,
 						"%s: self %d : error ## ret:%d\n",
 						__func__, test_type[i], ret);
 				goto out;
 			} else {
-				input_info(true, &ts->client->dev,
+				input_dbg(ts->debug_flag, &ts->client->dev,
 						"%s: self %d : Max/Min %d,%d ##\n",
 						__func__, test_type[i], max, min);
 			}
@@ -2808,11 +2808,11 @@ void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read)
 	sec_ts_release_tmode(ts);
 
 out:
-	input_info(true, &ts->client->dev, "%s: ito : %02X %02X %02X %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: ito : %02X %02X %02X %02X\n",
 			__func__, ts->ito_test[0], ts->ito_test[1]
 			, ts->ito_test[2], ts->ito_test[3]);
 
-	input_info(true, &ts->client->dev, "%s: done (noise:%d, wet:%d)##\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: done (noise:%d, wet:%d)##\n",
 			__func__, ts->touch_noise_status, ts->wet_mode);
 
 	sec_ts_locked_release_all_finger(ts);
@@ -2839,7 +2839,7 @@ static void run_rawdata_read_all(void *device_data)
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 /* Use TSP NV area
@@ -2916,7 +2916,7 @@ int get_tsp_nvm_data(struct sec_ts_data *ts, u8 offset)
 		goto out_nvm;
 	}
 
-	input_info(true, &ts->client->dev, "%s: offset:%u  data:%02X\n", __func__, offset, buff[0]);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: offset:%u  data:%02X\n", __func__, offset, buff[0]);
 
 out_nvm:
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SENSE_ON, NULL, 0);
@@ -2939,7 +2939,7 @@ int get_tsp_nvm_data_by_size(struct sec_ts_data *ts, u8 offset, int length, u8 *
 	if (!buff)
 		return -ENOMEM;
 
-	input_info(true, &ts->client->dev, "%s: offset:%u, length:%d, size:%d\n", __func__, offset, length, sizeof(data));
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: offset:%u, length:%d, size:%d\n", __func__, offset, length, sizeof(data));
 
 	/* SENSE OFF -> CELAR EVENT STACK -> READ NV -> SENSE ON */
 	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SENSE_OFF, NULL, 0);
@@ -3036,7 +3036,7 @@ static void glove_mode(void *device_data)
 
 		ts->plat_data->glove_mode.status = glove_mode_enables;
 		if (sec_ts_get_pw_status() || !ts->after_work.done) {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: update skip\n", __func__);
 			goto update_skip;
 		}
 
@@ -3064,10 +3064,10 @@ static void cover_mode_enable(void *device_data)
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	if (!ts->plat_data->cover_mode.supported) {
-		input_info(true, &ts->client->dev, "cover_mode is not supported.\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "cover_mode is not supported.\n");
 		return;
 	}
-	input_info(true, &ts->client->dev, "%s: start cover_set %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: start cover_set %s\n", __func__, buff);
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
@@ -3086,7 +3086,7 @@ static void cover_mode_enable(void *device_data)
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 	return;
 }
 
@@ -3097,10 +3097,10 @@ static void cover_set(void *device_data)
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	if (!ts->plat_data->cover_mode.supported) {
-		input_info(true, &ts->client->dev, "cover_mode is not supported.\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "cover_mode is not supported.\n");
 		return;
 	}
-	input_info(true, &ts->client->dev, "%s: start cover_mode %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: start cover_mode %s\n", __func__, buff);
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
@@ -3122,7 +3122,7 @@ static void cover_set(void *device_data)
 					sec_ts_set_cover_type(ts, false);
 			}
 		} else {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: update skip\n", __func__);
 			goto update_skip;
 		}
 		snprintf(buff, sizeof(buff), "%s", "OK");
@@ -3168,7 +3168,7 @@ err_set_dead_zone:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 };
 
 static void drawing_test_enable(void *device_data)
@@ -3190,7 +3190,7 @@ static void drawing_test_enable(void *device_data)
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 };
 
 static void sec_ts_swap(u8 *a, u8 *b)
@@ -3233,7 +3233,7 @@ int execute_selftest(struct sec_ts_data *ts, bool save_result)
 	if (!rBuff)
 		return -ENOMEM;
 
-	input_info(true, &ts->client->dev, "%s: Self test start!\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Self test start!\n", __func__);
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SELFTEST, tpara, 2);
 	if (rc < 0) {
 		input_err(true, &ts->client->dev, "%s: Send selftest cmd failed!\n", __func__);
@@ -3248,7 +3248,7 @@ int execute_selftest(struct sec_ts_data *ts, bool save_result)
 		goto err_exit;
 	}
 
-	input_info(true, &ts->client->dev, "%s: Self test done!\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Self test done!\n", __func__);
 
 	rc = ts->sec_ts_i2c_read(ts, SEC_TS_READ_SELFTEST_RESULT, rBuff, result_size);
 	if (rc < 0) {
@@ -3316,7 +3316,7 @@ int execute_selftest(struct sec_ts_data *ts, bool save_result)
 			ts->ito_test[3] = rBuff[i + 3];
 		}
 		if (i % 8 == 4) {
-			input_info(true, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 			memset(pStr, 0x00, sizeof(pStr));
 		} else {
 			strncat(pStr, "  ", 3);
@@ -3364,7 +3364,7 @@ static void run_trx_short_test(void *device_data)
 
 	sec_ts_set_irq(ts, false);
 
-	input_info(true, &ts->client->dev, "%s: set power mode to test mode\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: set power mode to test mode\n", __func__);
 
 	data[0] = 0x02;
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_POWER_MODE, data, 1);
@@ -3373,14 +3373,14 @@ static void run_trx_short_test(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: clear event stack\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear event stack\n", __func__);
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_CLEAR_EVENT_STACK, NULL, 0);
 	if (rc < 0) {
 		input_err(true, &ts->client->dev, "%s: clear event stack failed\n", __func__);
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: self test start\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: self test start\n", __func__);
 	
 	data[0] = 0x04;
 	
@@ -3398,7 +3398,7 @@ static void run_trx_short_test(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: self test done\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: self test done\n", __func__);
 
 	rc = ts->sec_ts_i2c_read(ts, SEC_TS_READ_SELFTEST_RESULT, rBuff, size);
 	if (rc < 0) {
@@ -3416,7 +3416,7 @@ static void run_trx_short_test(void *device_data)
 
 	sec_ts_reinit(ts);
 
-	input_info(true, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
 			__func__, rBuff[16], rBuff[17], rBuff[18], rBuff[19]);
 
 	sec_ts_set_irq(ts, true);
@@ -3453,7 +3453,7 @@ static void run_trx_short_test(void *device_data)
 			data[ii], data[ii + 1], data[ii + 2], data[ii + 3]);
 		strncat(pStr, pTmp, strnlen(pTmp, sizeof(pTmp)));
 		if (ii % 8 == 4) {
-			input_info(true, &ts->client->dev, "%s\n", pStr);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 			memset(pStr, 0x00, sizeof(pStr));
 		} else {
 			strncat(pStr, "  ", 3);
@@ -3525,7 +3525,7 @@ static void run_trx_short_test_all(void *device_data)
 	memset(rBuff, 0x00, size);
 	memset(data, 0x00, 24);
 
-	input_info(true, &ts->client->dev, "%s: Read self test result\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Read self test result\n", __func__);
 
 	rc = ts->sec_ts_i2c_read(ts, SEC_TS_READ_SELFTEST_RESULT, rBuff, size);
 	if (rc < 0) {
@@ -3535,7 +3535,7 @@ static void run_trx_short_test_all(void *device_data)
 
 	rearrange_sft_result(rBuff, SEC_TS_SELFTEST_REPORT_SIZE);
 
-	input_info(true, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
 			__func__, rBuff[16], rBuff[17], rBuff[18], rBuff[19]);
 
 	memcpy(data, &rBuff[56], 24);
@@ -3560,7 +3560,7 @@ static void run_trx_short_test_all(void *device_data)
 			memset(pTmp, 0x00, sizeof(pTmp));
 		}
 		strncat(pStr, "\n", 1);
-		input_info(true, &ts->client->dev, "%s", pStr);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s", pStr);
 		strncat(buff, pStr, sizeof(pStr) - strlen(pStr) - 1);
 		memset(pStr, 0x00, sizeof(pStr));
 	}
@@ -3615,7 +3615,7 @@ static void run_trx_open_test(void *device_data)
 
 	sec_ts_set_irq(ts, false);
 
-	input_info(true, &ts->client->dev, "%s: set power mode to test mode\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: set power mode to test mode\n", __func__);
 
 	data[0] = 0x02;
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SET_POWER_MODE, data, 1);
@@ -3624,14 +3624,14 @@ static void run_trx_open_test(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: clear event stack\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: clear event stack\n", __func__);
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_CLEAR_EVENT_STACK, NULL, 0);
 	if (rc < 0) {
 		input_err(true, &ts->client->dev, "%s: clear event stack failed\n", __func__);
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: self test start\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: self test start\n", __func__);
 
 	data[0] = 0x03;
 
@@ -3649,7 +3649,7 @@ static void run_trx_open_test(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: self test done\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: self test done\n", __func__);
 
 	rc = ts->sec_ts_i2c_read(ts, SEC_TS_READ_SELFTEST_RESULT, rBuff, size);
 	if (rc < 0) {
@@ -3667,7 +3667,7 @@ static void run_trx_open_test(void *device_data)
 
 	sec_ts_reinit(ts);
 
-	input_info(true, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
 			__func__, rBuff[16], rBuff[17], rBuff[18], rBuff[19]);
 
 	sec_ts_set_irq(ts, true);
@@ -3689,7 +3689,7 @@ static void run_trx_open_test(void *device_data)
 		if (ii < 4)
 			strncat(pStr, "  ", 3);
 	}
-	input_info(true, &ts->client->dev, "%s\n", pStr);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", pStr);
 
 	if (!sum) {
 		sec_cmd_set_cmd_result(sec, "1", 1);
@@ -3744,7 +3744,7 @@ static void run_trx_open_test_all(void *device_data)
 	memset(rBuff, 0x00, size);
 	memset(data, 0x00, 8);
 
-	input_info(true, &ts->client->dev, "%s: Read self test result\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Read self test result\n", __func__);
 
 	rc = ts->sec_ts_i2c_read(ts, SEC_TS_READ_SELFTEST_RESULT, rBuff, size);
 	if (rc < 0) {
@@ -3754,7 +3754,7 @@ static void run_trx_open_test_all(void *device_data)
 
 	rearrange_sft_result(rBuff, SEC_TS_SELFTEST_REPORT_SIZE);
 
-	input_info(true, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Test Result %02X, %02X, %02X, %02X\n",
 			__func__, rBuff[16], rBuff[17], rBuff[18], rBuff[19]);
 
 	memcpy(data, &rBuff[48], 8);
@@ -3771,7 +3771,7 @@ static void run_trx_open_test_all(void *device_data)
 			memset(pTmp, 0x00, sizeof(pTmp));
 		}
 		strncat(pStr, "\n", 1);
-		input_info(true, &ts->client->dev, "%s", pStr);
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s", pStr);
 		strncat(buff, pStr, sizeof(pStr)- strlen(pStr) - 1);
 		memset(pStr, 0x00, sizeof(pStr));
 	}
@@ -3795,7 +3795,7 @@ int sec_ts_execute_force_calibration(struct sec_ts_data *ts, int cal_mode)
 	int rc = -1;
 	u8 cmd;
 
-	input_info(true, &ts->client->dev, "%s: %d\n", __func__, cal_mode);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %d\n", __func__, cal_mode);
 
 	if (cal_mode == OFFSET_CAL_SET)
 		cmd = SEC_TS_CMD_FACTORY_PANELCALIBRATION;
@@ -3884,7 +3884,7 @@ static void run_force_calibration(void *device_data)
 			input_err(true, &ts->client->dev, "%s: i2c fail!, %d\n", __func__, rc);
 			mis_cal_data = 0xF3;
 		} else {
-			input_info(true, &ts->client->dev, "%s: miss cal data : %d\n", __func__, mis_cal_data);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: miss cal data : %d\n", __func__, mis_cal_data);
 		}
 
 		buff[0] = 1;
@@ -3916,7 +3916,7 @@ out_force_cal:
 out_force_cal_before_irq_ctrl:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 }
 
@@ -3951,7 +3951,7 @@ static void get_force_calibration(void *device_data)
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 
 }
 
@@ -3981,7 +3981,7 @@ static void set_lowpower_mode(void *device_data)
 	if (sec_ts_get_pw_status() || !ts->after_work.done || (ts->power_status == SEC_TS_STATE_POWER_OFF)) {
 		ts->aod_pending = true;
 		ts->aod_pending_lowpower_mode = sec->cmd_param[0];
-		input_info(true, &ts->client->dev,
+		input_dbg(ts->debug_flag, &ts->client->dev,
 			"Postponing lowpower_mode: %d\n",
 			ts->aod_pending_lowpower_mode);
 	} else {
@@ -4071,7 +4071,7 @@ static void spay_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
-	input_info(true, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -4101,7 +4101,7 @@ static void aod_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
-	input_info(true, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -4123,7 +4123,7 @@ static void sod_enable(void *device_data)
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
 	if (!ts->plat_data->sod_mode.supported) {
-		input_info(true, &ts->client->dev, "sod_mode is not supported.\n");
+		input_dbg(ts->debug_flag, &ts->client->dev, "sod_mode is not supported.\n");
 		return;
 	}
 	sec_cmd_set_default_result(sec);
@@ -4133,9 +4133,9 @@ static void sod_enable(void *device_data)
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
 		if (sec->cmd_param[0])
-			input_info(true, &ts->client->dev, "sod_mode ON\n");
+			input_dbg(ts->debug_flag, &ts->client->dev, "sod_mode ON\n");
 		else
-			input_info(true, &ts->client->dev, "sod_mode OFF\n");
+			input_dbg(ts->debug_flag, &ts->client->dev, "sod_mode OFF\n");
 
 		ts->plat_data->sod_mode.status = sec->cmd_param[0];
 
@@ -4144,7 +4144,7 @@ static void sod_enable(void *device_data)
 	}
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 	return;
 }
 
@@ -4158,14 +4158,14 @@ static void touch_enable_irq(void *device_data)
 	sec_cmd_set_default_result(sec);
 
 	irq_judge = sec->cmd_param[0];
-	input_info(true, &ts->client->dev, "%s: change irq status to %d through sysfs\n", __func__, irq_judge);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: change irq status to %d through sysfs\n", __func__, irq_judge);
 
 	if (!irq_judge) {
 		sec_ts_set_irq(ts, false);
 		input_dbg(ts->debug_flag, &ts->client->dev, "irq disabled\n");
 	} else {
 		if (sec_ts_get_pw_status() || ts->power_status == SEC_TS_STATE_POWER_OFF || !ts->after_work.done) {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: update skip\n", __func__);
 			goto NG;
 		}
 		sec_ts_set_irq(ts, true);
@@ -4207,7 +4207,7 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 {
 	u8 data[8] = { 0 };
 
-	input_info(true, &ts->client->dev, "%s: flag: %02X (clr,lan,nor,edg,han)\n", __func__, flag);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: flag: %02X (clr,lan,nor,edg,han)\n", __func__, flag);
 
 	if (flag & G_SET_EDGE_HANDLER) {
 		if (ts->grip_edgehandler_direction == 0) {
@@ -4222,7 +4222,7 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 			data[3] = ts->grip_edgehandler_direction & 0x3;
 		}
 		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_EDGE_HANDLER, data, 4);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
 				__func__, SEC_TS_CMD_EDGE_HANDLER, data[0], data[1], data[2], data[3]);
 	}
 
@@ -4230,7 +4230,7 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 		data[0] = (ts->grip_edge_range >> 8) & 0xFF;
 		data[1] = ts->grip_edge_range  & 0xFF;
 		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_EDGE_AREA, data, 2);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%02X %02X,%02X\n",
 				__func__, SEC_TS_CMD_EDGE_AREA, data[0], data[1]);
 	}
 
@@ -4240,7 +4240,7 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 		data[2] = (ts->grip_deadzone_y >> 8) & 0xFF;
 		data[3] = ts->grip_deadzone_y & 0xFF;
 		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_DEAD_ZONE, data, 4);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
 				__func__, SEC_TS_CMD_DEAD_ZONE, data[0], data[1], data[2], data[3]);
 	}
 
@@ -4250,14 +4250,14 @@ void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag)
 		data[2] = (ts->grip_landscape_edge << 4 & 0xF0) | ((ts->grip_landscape_deadzone >> 8) & 0xF);
 		data[3] = ts->grip_landscape_deadzone & 0xFF;
 		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_LANDSCAPE_MODE, data, 4);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%02X %02X,%02X,%02X,%02X\n",
 				__func__, SEC_TS_CMD_LANDSCAPE_MODE, data[0], data[1], data[2], data[3]);
 	}
 
 	if (flag & G_CLR_LANDSCAPE_MODE) {
 		data[0] = ts->grip_landscape_mode;
 		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_LANDSCAPE_MODE, data, 1);
-		input_info(true, &ts->client->dev, "%s: 0x%02X %02X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: 0x%02X %02X\n",
 				__func__, SEC_TS_CMD_LANDSCAPE_MODE, data[0]);
 	}
 }
@@ -4459,7 +4459,7 @@ static void brush_enable(void *device_data)
 		goto out;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: set brush mode %s\n", __func__, ts->brush_mode ? "enable" : "disable");
 
 	/*	- 0: Disable Artcanvas min phi mode
@@ -4480,7 +4480,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void set_touchable_area(void *device_data)
@@ -4507,7 +4507,7 @@ static void set_touchable_area(void *device_data)
 		goto out;
 	}
 
-	input_info(true, &ts->client->dev,
+	input_dbg(ts->debug_flag, &ts->client->dev,
 			"%s: set 16:9 mode %s\n", __func__, ts->touchable_area ? "enable" : "disable");
 
 	/*  - 0: Disable 16:9 mode
@@ -4528,7 +4528,7 @@ out:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 	sec_cmd_set_cmd_exit(sec);
 
-	input_info(true, &ts->client->dev, "%s: %s\n", __func__, buff);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: %s\n", __func__, buff);
 }
 
 static void set_log_level(void *device_data)
@@ -4572,7 +4572,7 @@ static void set_log_level(void *device_data)
 		goto err;
 	}
 
-	input_info(true, &ts->client->dev, "%s: STATUS_EVENT enable = 0x%02X, 0x%02X\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: STATUS_EVENT enable = 0x%02X, 0x%02X\n",
 			__func__, tBuff[0], tBuff[1]);
 
 	tBuff[0] = BIT_STATUS_EVENT_VENDOR_INFO(sec->cmd_param[6]);
@@ -4608,7 +4608,7 @@ static void set_log_level(void *device_data)
 		}
 	}
 
-	input_info(true, &ts->client->dev, "%s: ERROR : %d, INFO : %d, USER_INPUT : %d, INFO_CUSTOMLIB : %d, VENDOR_INFO : %d, VENDOR_EVENT_LEVEL : %d\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: ERROR : %d, INFO : %d, USER_INPUT : %d, INFO_CUSTOMLIB : %d, VENDOR_INFO : %d, VENDOR_EVENT_LEVEL : %d\n",
 			__func__, sec->cmd_param[0], sec->cmd_param[1], sec->cmd_param[2], sec->cmd_param[5], sec->cmd_param[6], w_data[0]);
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
@@ -4657,7 +4657,7 @@ static void get_touch_mode(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: read status = %d, %d\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: read status = %d, %d\n",
 			__func__, para[1], para[3]);
 
 	switch (para[1]) {
@@ -4712,22 +4712,22 @@ static void set_touch_mode(void *device_data)
 
 	switch(sec->cmd_param[0]) {
 	case 0:
-		input_info(true, &ts->client->dev, "%s: param = %d, set ACTIVE mode\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: param = %d, set ACTIVE mode\n",
 				__func__, sec->cmd_param[0]);
 		sec_ts_fix_tmode(ts, TOUCH_SYSTEM_MODE_TOUCH, TOUCH_MODE_STATE_TOUCH);
 		break;
 	case 1:
-		input_info(true, &ts->client->dev, "%s: param = %d, set DOZE mode\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: param = %d, set DOZE mode\n",
 				__func__, sec->cmd_param[0]);
 		sec_ts_fix_tmode(ts, TOUCH_SYSTEM_MODE_TOUCH, TOUCH_MODE_STATE_IDLE);
 		break;
 	case 2:
-		input_info(true, &ts->client->dev, "%s: param = %d, set SLEEP mode\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: param = %d, set SLEEP mode\n",
 				__func__, sec->cmd_param[0]);
 		sec_ts_fix_tmode(ts, 0x6, 0x1);
 		break;
 	default:
-		input_info(true, &ts->client->dev, "%s: param error! param = %d\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: param error! param = %d\n",
 				__func__, sec->cmd_param[0]);
 		goto err_out;
 	}
@@ -4790,7 +4790,7 @@ static void set_doze_timeout(void *device_data)
 		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
 		goto err_out;
 	} else {
-		input_info(true, &ts->client->dev, "%s: doze timeout change from %d to %d ms\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: doze timeout change from %d to %d ms\n",
 				__func__, ts->doze_timeout, sec->cmd_param[0]);
 
 		ts->doze_timeout = sec->cmd_param[0];
@@ -4798,11 +4798,11 @@ static void set_doze_timeout(void *device_data)
 		tBuff[0] = 0x01;
 		tBuff[1] = (ts->doze_timeout & 0xFF00) >> 8;
 		tBuff[2] = (ts->doze_timeout & 0x00FF) >> 0;
-		input_info(true, &ts->client->dev, "%s: doze_timeout = %d, writing 0x%X 0x%X\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: doze_timeout = %d, writing 0x%X 0x%X\n",
 				__func__, ts->doze_timeout, tBuff[1], tBuff[2]);
 
 		if (sec_ts_get_pw_status() || !ts->after_work.done) {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: update skip\n", __func__);
 			goto update_skip;
 		}
 
@@ -4821,7 +4821,7 @@ static void set_doze_timeout(void *device_data)
 		}
 
 		delay_digit = ((tBuff[0] << 8) & 0xFF00) + (tBuff[1] & 0x00FF);
-		input_info(true, &ts->client->dev, "%s: read result = %d frame(120Hz)\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: read result = %d frame(120Hz)\n",
 				__func__, delay_digit);
 	}
 	snprintf(buff, sizeof(buff), "%s", "OK");
@@ -4891,7 +4891,7 @@ static int set_sidetouch(void *device_data, int status)
 			goto err_out;
 		}
 		side_current = CONVERT_SIDE_ENABLE_MODE_FOR_READ(side_current);
-		input_info(true, &ts->client->dev, "%s: sidetouch is now %s\n", __func__,
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: sidetouch is now %s\n", __func__,
 				side_current == 0 ? "BOTH_ON" : (side_current == 1 ? "RIGHT_ON" :
 				(side_current == 2 ? "LEFT_ON" : "OFF")));
 	}
@@ -4928,7 +4928,7 @@ static void sidetouch_enable(void *device_data)
 		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
 		goto err_out;
 	} else {
-		input_info(true, &ts->client->dev, "%s: sidetouch %d -> %d\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: sidetouch %d -> %d\n",
 				__func__, ts->side_enable, sec->cmd_param[0]);
 
 		ts->side_enable = sec->cmd_param[0];
@@ -4972,7 +4972,7 @@ static void stamina_enable(void *device_data)
 		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
 		goto err_out;
 	} else {
-		input_info(true, &ts->client->dev, "%s: stamina %d -> %d\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: stamina %d -> %d\n",
 				__func__, ts->stamina_enable, sec->cmd_param[0]);
 
 		if (ts->stamina_enable == sec->cmd_param[0])
@@ -4981,7 +4981,7 @@ static void stamina_enable(void *device_data)
 		ts->stamina_enable = sec->cmd_param[0];
 
 		if (sec_ts_get_pw_status() || !ts->after_work.done) {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
+			input_dbg(ts->debug_flag, &ts->client->dev, "%s: update skip\n", __func__);
 			goto update_skip;
 		}
 
@@ -4999,7 +4999,7 @@ static void stamina_enable(void *device_data)
 			goto err_out;
 		}
 
-		input_info(true, &ts->client->dev, "%s: stamina is now %d\n",
+		input_dbg(ts->debug_flag, &ts->client->dev, "%s: stamina is now %d\n",
 				__func__, tRead);
 	}
 	snprintf(buff, sizeof(buff), "%s", "OK");
@@ -5111,7 +5111,7 @@ static void orientation_change(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: Grip Rejection is now %d\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Grip Rejection is now %d\n",
 			__func__, tRead);
 
 	sec_cmd_set_default_result(sec);
@@ -5166,7 +5166,7 @@ static void doze_mode_change(void *device_data)
 		goto err_out;
 	}
 
-	input_info(true, &ts->client->dev, "%s: Doze mode is now %d\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: Doze mode is now %d\n",
 			__func__, tRead);
 
 	if (sec->cmd_param[0] == 1) {
@@ -5213,7 +5213,7 @@ static void wireless_charging(void *device_data)
 		goto err_out;
 	}
 	ts->plat_data->wireless_charging.status = sec->cmd_param[0];
-	input_info(true, &ts->client->dev, "%s: wireless charging status: %d\n",
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: wireless charging status: %d\n",
 			__func__, ts->plat_data->wireless_charging.status);
 
 	if (ts->plat_data->wireless_charging.status)
