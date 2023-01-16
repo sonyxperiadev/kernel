@@ -1311,7 +1311,7 @@ int sec_ts_power(void *data, bool on)
 	enabled = on;
 
 out:
-	input_err(true, &ts->client->dev, "%s: %s: avdd:%s, dvdd:%s\n", __func__, on ? "on" : "off",
+	input_dbg(ts->dbg_flag, &ts->client->dev, "%s: %s: avdd:%s, dvdd:%s\n", __func__, on ? "on" : "off",
 			regulator_is_enabled(regulator_avdd) ? "on" : "off",
 			regulator_is_enabled(regulator_dvdd) ? "on" : "off");
 
@@ -2181,7 +2181,7 @@ static void sec_ts_reset_work(struct work_struct *work)
 			reset_work.work);
 	int ret;
 
-	input_err(true, &ts->client->dev, "%s: reset work\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s: reset work\n", __func__);
 
 	if (ts->reset_is_on_going) {
 		input_err(true, &ts->client->dev, "%s: reset is ongoing\n", __func__);
@@ -2532,7 +2532,7 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 {
 	int ret = -1;
 
-	input_err(true, &ts->client->dev, "%s\n", __func__);
+	input_dbg(ts->debug_flag, &ts->client->dev, "%s\n", __func__);
 
 	sec_ts_pinctrl_configure(ts, true);
 
@@ -2650,7 +2650,7 @@ static int sec_ts_dsi_panel_notifier_cb(struct notifier_block *self, unsigned lo
 		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
 			transition = *(int *)evdata->data;
 			if (transition == DRM_PANEL_BLANK_POWERDOWN) {
-				input_err(true, &ts->client->dev, "%s: power down\n",  __func__);
+				input_dbg(ts->debug_flag, &ts->client->dev, "%s: power down\n",  __func__);
 				sec_ts_stop_device(ts);
 			}
 		}
@@ -2660,7 +2660,7 @@ static int sec_ts_dsi_panel_notifier_cb(struct notifier_block *self, unsigned lo
 		if (event == DRM_PANEL_EVENT_BLANK) {
 			transition = *(int *)evdata->data;
 			if (transition == DRM_PANEL_BLANK_UNBLANK) {
-				input_err(true, &ts->client->dev,  "%s: power up\n", __func__);
+				input_dbg(ts->debug_flag, &ts->client->dev,  "%s: power up\n", __func__);
 				sec_ts_start_device(ts);
 			}
 		}
