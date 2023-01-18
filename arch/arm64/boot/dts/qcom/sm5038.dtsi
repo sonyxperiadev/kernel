@@ -119,5 +119,6 @@
 	};
 };
 &usb0 {
-	extcon = <&sm5038_usbpd>;
+	/* HACK: bypass SM5038 to get usb.. until the driver is ready.. */
+//	extcon = <&sm5038_usbpd>;
 };
