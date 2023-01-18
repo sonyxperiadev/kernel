@@ -1277,7 +1277,7 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 		input_err(true, dev, "%s: Failed to get irq_type property\n", __func__);
 		pdata->irq_type = IRQF_TRIGGER_LOW | IRQF_ONESHOT;
 	} else {
-		input_dbg(ts->debug_flag, dev, "%s: irq_type property:%X, %d\n", __func__,
+		input_dbg(true, dev, "%s: irq_type property:%X, %d\n", __func__,
 				pdata->irq_type, pdata->irq_type);
 	}
 
@@ -1365,7 +1365,7 @@ ts_rst_found:
 		pdata->expected_device_id[2] = 0x71;
 	}
 
-	input_dbg(ts->debug_flag, &client->dev, "%s: i2c buffer limit: %d, lcd_id:%06X, bringup:%d, FW:%s(%d), id:%d,%d, mis_cal:%d dex:%d, gesture:%d\n",
+	input_dbg(true, &client->dev, "%s: i2c buffer limit: %d, lcd_id:%06X, bringup:%d, FW:%s(%d), id:%d,%d, mis_cal:%d dex:%d, gesture:%d\n",
 		__func__, pdata->i2c_burstmax, lcdtype, pdata->bringup, pdata->firmware_name,
 			count, pdata->tsp_id, pdata->tsp_icid, pdata->mis_cal_check,
 			pdata->support_dex);
@@ -1400,7 +1400,7 @@ static int sec_ts_parse_dt_feature(struct i2c_client *client)
 			pdata->watchdog.supported = false;
 		} else {
 			pdata->watchdog.delay_ms = tmp_value;
-			input_dbg(ts->debug_flag, &client->dev, "watchdog_delay_ms: %d\n",
+			input_dbg(true, &client->dev, "watchdog_delay_ms: %d\n",
 				pdata->watchdog.delay_ms);
 		}
 	}
