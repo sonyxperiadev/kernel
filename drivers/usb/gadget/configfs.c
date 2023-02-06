@@ -1500,6 +1500,8 @@ static void configfs_composite_unbind(struct usb_gadget *gadget)
 	composite_dev_cleanup(cdev);
 	usb_ep_autoconfig_reset(cdev->gadget);
 	cdev->gadget = NULL;
+	cdev->deactivations = 0;
+	gadget->deactivated = false;
 	set_gadget_data(gadget, NULL);
 }
 
