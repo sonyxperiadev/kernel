@@ -95,6 +95,7 @@ struct mbox_controller {
 	void (*debug)(struct mbox_chan *chan);
 	/* Internal to API */
 	struct hrtimer poll_hrt;
+	spinlock_t poll_hrt_lock;
 	struct list_head node;
 };
 
