@@ -116,7 +116,7 @@ static void icnss_set_plat_priv(struct icnss_priv *priv)
 	penv = priv;
 }
 
-static struct icnss_priv *icnss_get_plat_priv()
+static struct icnss_priv *icnss_get_plat_priv(void)
 {
 	return penv;
 }
