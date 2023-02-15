@@ -94,7 +94,7 @@ static size_t md_ftrace_buf_current;
 
 static bool md_in_oops_handler;
 static struct seq_buf *md_runq_seq_buf;
-static md_align_offset;
+static int md_align_offset;
 
 /* CPU context information */
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_CPU_CONTEXT
