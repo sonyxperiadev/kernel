@@ -1733,7 +1733,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	unsigned char result = 0;
 	int i = 0;
 
-	input_dbg(ts->debug_flag, &client->dev, "%s\n", __func__);
+	input_dbg(true, &client->dev, "%s\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		input_err(true, &client->dev, "%s: EIO err!\n", __func__);
