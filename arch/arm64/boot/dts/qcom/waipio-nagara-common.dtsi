@@ -82,25 +82,36 @@
 		};
 	};
 
-	egistec_fp {
-		status = "ok";
-		compatible = "fp-egistec";
-		egistec,gpio_reset = <&tlmm 42 0x00>; 		// reset gpio pin num
-		egistec,gpio_irq = <&tlmm 40 0x00>; 		// irq gpio pin num
-		egistec,gpio_vcc_en= <&pm8450_gpios 1 0x00>; 		// vcc enable gpio pin num
-		fp-gpio-vcc-enable; 						// use gpio enable power or not
-		fp-gpio-ext-ldo;
-		pinctrl-names = "egis_rst_active", "egis_rst_sleep", "egis_vcc_high", "egis_vcc_low", "egis_irq_active", "egis_irq_low";
-		pinctrl-0 = <&EGIS_RST_active>;
-		pinctrl-1 = <&EGIS_RST_sleep>;
-		pinctrl-2 = <&EGIS_VCC_active>;
-		pinctrl-3 = <&EGIS_VCC_sleep>;
-		pinctrl-4 = <&sm_gpio_40_input_no_pull>;
-		pinctrl-5 = <&sm_gpio_40>;
-		egis-vcc-supply = <&pm8350c_bob>;
-		egis-fp,vcc-voltage = <3350000 3800000>;
-		egis-fp,vcc-current = <1000000>;
-		egis-fp,vcc-max-voltage = <3960000>;
+	egistec_vcc_pm8450_gpio_1: egistec-vcc-pm8450-gpio-1 {
+		compatible = "regulator-fixed";
+		regulator-name = "egistec-vcc-pm8450-gpio-1";
+		regulator-min-microvolt = <3800000>;
+		regulator-max-microvolt = <3800000>;
+		startup-delay-us = <2000>;
+		enable-active-high;
+		gpio = <&pm8450_gpios 1 0>;
+
+		/*
+		 * Use a "parent" supply just to be able to turn on this VCC gpio and
+		 * the pm8350c BoB (switched on by GPIO 1) regulator
+		 */
+		vin-supply = <&pm8350c_bob>;
+	};
+
+	et6xx {
+		compatible = "egistec,et580";
+
+		et51x,gpio_irq = <&tlmm 40 0x0>;
+		et51x,no-low-voltage-probe;
+		et51x,vana-voltage = <3800000>;
+		vdd_ana-supply = <&egistec_vcc_pm8450_gpio_1>;
+
+		pinctrl-names = "et51x_reset_reset",
+				"et51x_reset_active",
+				"et51x_irq_active";
+		pinctrl-0 = <&EGIS_RST_sleep>;
+		pinctrl-1 = <&EGIS_RST_active>;
+		pinctrl-2 = <&sm_gpio_40_input_no_pull>;
 	};
 
 	last_logs@ffcc0000 {
