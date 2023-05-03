@@ -104,6 +104,7 @@ obj-$(CONFIG_SXR_DISPCC_ANORAK) += dispcc0-anorak.o dispcc1-anorak.o
 obj-$(CONFIG_SM_GCC_8150) += gcc-sm8150.o
 obj-$(CONFIG_SM_GCC_DIWALI) += gcc-diwali.o
 obj-$(CONFIG_SM_GCC_HOLI) += gcc-holi.o
+obj-$(CONFIG_SM_GCC_BLAIR) += gcc-blair.o
 obj-$(CONFIG_SM_GCC_PARROT) += gcc-parrot.o
 obj-$(CONFIG_SM_GCC_RAVELIN) += gcc-ravelin.o
 obj-$(CONFIG_SM_GCC_SHIMA) += gcc-shima.o
