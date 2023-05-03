@@ -684,6 +684,15 @@ config SM_GPUCC_HOLI
 	  Say Y if you want to support graphics controller devices and
 	  functionality such as 3D graphics.
 
+config SM_GPUCC_BLAIR
+	tristate "BLAIR Graphics Clock Controller"
+	select SM_GCC_BLAIR
+	help
+	  Support for the graphics clock controller on Qualcomm Technologies,
+	  Inc. BLAIR devices.
+	  Say Y if you want to support graphics controller devices and
+	  functionality such as 3D graphics.
+
 config SM_DISPCC_SHIMA
 	tristate "SHIMA Display Clock Controller"
 	depends on SM_GCC_SHIMA
