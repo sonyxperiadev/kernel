@@ -711,6 +711,15 @@ config SM_DISPCC_HOLI
 	  Say Y if you want to support display devices and functionality such as
 	  splash screen.
 
+config SM_DISPCC_BLAIR
+	tristate "BLAIR Display Clock Controller"
+	select SM_GCC_BLAIR
+	help
+	  Support for the display clock controller on Qualcomm Technologies,
+	  Inc. BLAIR devices.
+	  Say Y if you want to support display devices and functionality such as
+	  splash screen.
+
 config SM_DEBUGCC_HOLI
 	tristate "HOLI Debug Clock Controller"
 	depends on SM_GCC_HOLI
