@@ -96,6 +96,7 @@ obj-$(CONFIG_SXR_DEBUGCC_ANORAK) += debugcc-anorak.o
 obj-$(CONFIG_SXR_DEBUGCC_NEO) += debugcc-neo.o
 obj-$(CONFIG_SM_DISPCC_DIWALI) += dispcc-diwali.o
 obj-$(CONFIG_SM_DISPCC_HOLI) += dispcc-holi.o
+obj-$(CONFIG_SM_DISPCC_BLAIR) += dispcc-blair.o
 obj-$(CONFIG_SM_DISPCC_PARROT) += dispcc-parrot.o
 obj-$(CONFIG_SM_DISPCC_RAVELIN) += dispcc-ravelin.o
 obj-$(CONFIG_SM_DISPCC_SHIMA) += dispcc-shima.o
