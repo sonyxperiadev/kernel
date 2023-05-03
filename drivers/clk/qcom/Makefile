@@ -89,6 +89,7 @@ obj-$(CONFIG_SXR_CAMCC_ANORAK) += camcc-anorak.o
 obj-$(CONFIG_SXR_CAMCC_NEO) += camcc-neo.o
 obj-$(CONFIG_SM_DEBUGCC_DIWALI) += debugcc-diwali.o
 obj-$(CONFIG_SM_DEBUGCC_HOLI) += debugcc-holi.o
+obj-$(CONFIG_SM_DEBUGCC_BLAIR) += debugcc-blair.o
 obj-$(CONFIG_SM_DEBUGCC_PARROT) += debugcc-parrot.o
 obj-$(CONFIG_SM_DEBUGCC_RAVELIN) += debugcc-ravelin.o
 obj-$(CONFIG_SM_DEBUGCC_SHIMA) += debugcc-shima.o
