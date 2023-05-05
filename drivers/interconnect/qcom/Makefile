@@ -24,6 +24,7 @@ qnoc-shima-objs				:= shima.o
 icc-smd-rpm-objs			:= smd-rpm.o
 icc-rpm-obj			:= icc-rpm.o
 qnoc-qos-obj			:= qnoc-qos.o
+qnoc-qos-rpm-obj			:= qnoc-qos-rpm.o
 
 obj-$(CONFIG_INTERCONNECT_QCOM_BCM_VOTER) += icc-bcm-voter.o
 obj-$(CONFIG_INTERCONNECT_QCOM_MSM8916) += qnoc-msm8916.o
@@ -50,6 +51,7 @@ obj-$(CONFIG_INTERCONNECT_QCOM_RPM) += icc-rpm.o
 obj-$(CONFIG_INTERCONNECT_QCOM_SMD_RPM) += icc-smd-rpm.o
 obj-$(CONFIG_INTERCONNECT_QCOM_RPMH) += icc-rpmh.o
 obj-$(CONFIG_INTERCONNECT_QCOM_QOS) += qnoc-qos.o
+obj-$(CONFIG_INTERCONNECT_QCOM_QOS_RPM) += qnoc-qos-rpm.o
 obj-$(CONFIG_INTERCONNECT_QCOM_EPSS_L3) += epss-l3.o
 obj-$(CONFIG_INTERCONNECT_QCOM_CPUCP_L3) += cpucp-l3.o
 obj-$(CONFIG_INTERCONNECT_QCOM_DEBUG) += icc-debug.o
