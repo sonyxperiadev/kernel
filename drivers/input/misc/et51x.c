@@ -95,7 +95,6 @@ struct et51x_data {
 	struct mutex intrpoll_lock;
 	struct mutex lock;
 	bool prepared;
-	bool check_sensor_type;
 	bool low_voltage_probe;
 };
 
@@ -103,14 +102,6 @@ struct et51x_awake_args {
 	int awake;
 	unsigned int timeout;
 };
-
-
-#ifndef CONFIG_ARCH_SONY_NILE
-#define FP_HW_TYPE_EGISTEC	0
-static inline int fp_module_detect(void) { return FP_HW_TYPE_EGISTEC; }
-#else
-static inline int fp_module_detect(void) { return cei_fp_module_detect(); };
-#endif /* CONFIG_ARCH_SONY_NILE */
 
 struct et51x_data *to_et51x_data(struct file *fp)
 {
@@ -365,10 +356,7 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 		rc = put_user(val, (int *)usr);
 		break;
 	case ET51X_IOCRHWTYPE:
-		if (et51x->check_sensor_type)
-			rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
-		else
-			rc = -ENOSYS;
+		rc = -ENOSYS;
 		break;
 	default:
 		rc = -ENOIOCTLCMD;
@@ -488,7 +476,6 @@ static int et51x_probe(struct platform_device *pdev)
 	size_t i;
 	int irqf;
 	struct device_node *np = dev->of_node;
-	int hw_type = 0;
 
 	struct et51x_data *et51x =
 		devm_kzalloc(dev, sizeof(*et51x), GFP_KERNEL);
@@ -525,8 +512,6 @@ static int et51x_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	et51x->check_sensor_type = of_property_read_bool(dev->of_node,
-			"et51x,check-sensor-type");
 	/* Use low-voltage probe by default to prevent HW damage */
 	et51x->low_voltage_probe = !of_property_read_bool(dev->of_node,
 			"et51x,no-low-voltage-probe");
@@ -536,8 +521,7 @@ static int et51x_probe(struct platform_device *pdev)
 	if (rc)
 		et51x->vana_voltage = 3300000;
 
-	dev_dbg(dev, "check_sensor_type: %d, low_voltage_probe: %d\n",
-			et51x->check_sensor_type, et51x->low_voltage_probe);
+	dev_dbg(dev, "low_voltage_probe: %d\n", et51x->low_voltage_probe);
 
 	if (et51x->low_voltage_probe)
 		/* Start at 1.8v which is the voltage used for FPC,
@@ -550,24 +534,6 @@ static int et51x_probe(struct platform_device *pdev)
 
 	if (rc)
 		goto exit_powerdown;
-
-	if (et51x->check_sensor_type) {
-		hw_type = fp_module_detect();
-
-		if (hw_type != FP_HW_TYPE_EGISTEC) {
-			dev_info(dev,
-				"Egistec sensor not found, bailing out\n");
-			rc = -ENODEV;
-			goto exit_powerdown;
-		}
-
-		dev_info(dev, "Detected Egistec sensor\n");
-
-		/* Scale up to 3.3v */
-		rc = vreg_setup(et51x, true);
-		if (rc)
-			goto exit_powerdown;
-	}
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
