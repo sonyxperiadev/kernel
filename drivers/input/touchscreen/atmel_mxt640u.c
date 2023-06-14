@@ -9478,8 +9478,8 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 
 				if (mxt_drm_suspend(ts))
 					LOGE("Failed mxt_drm_suspend\n");
-				break;
 			}
+			break;
 		case DRM_PANEL_BLANK_UNBLANK:
 			if (event == DRM_PANEL_EVENT_BLANK) {
 				if (!ts->after_work) {
