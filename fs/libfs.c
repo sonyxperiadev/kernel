@@ -1503,7 +1503,7 @@ static const struct dentry_operations generic_encrypted_ci_dentry_ops = {
  * performance hit, we use custom dentry_operations for each possible
  * combination rather than always installing all operations.
  */
-void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
+static void generic_set_encrypted_ci_d_ops_unicode(struct dentry *dentry, int use_unicode)
 {
 #ifdef CONFIG_FS_ENCRYPTION
 	bool needs_encrypt_ops = dentry->d_flags & DCACHE_NOKEY_NAME;
@@ -1512,7 +1512,7 @@ void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
 	bool needs_ci_ops = dentry->d_sb->s_encoding;
 #endif
 #if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_UNICODE)
-	if (needs_encrypt_ops && needs_ci_ops) {
+	if (use_unicode && needs_encrypt_ops && needs_ci_ops) {
 		d_set_d_op(dentry, &generic_encrypted_ci_dentry_ops);
 		return;
 	}
@@ -1524,10 +1524,21 @@ void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
 	}
 #endif
 #ifdef CONFIG_UNICODE
-	if (needs_ci_ops) {
+	if (use_unicode && needs_ci_ops) {
 		d_set_d_op(dentry, &generic_ci_dentry_ops);
 		return;
 	}
 #endif
+}
+
+void generic_set_encrypted_ci_d_ops_not_unicode(struct dentry *dentry)
+{
+    generic_set_encrypted_ci_d_ops_unicode(dentry, 0);
+}
+EXPORT_SYMBOL(generic_set_encrypted_ci_d_ops_not_unicode);
+
+void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
+{
+    generic_set_encrypted_ci_d_ops_unicode(dentry, 1);
 }
 EXPORT_SYMBOL(generic_set_encrypted_ci_d_ops);

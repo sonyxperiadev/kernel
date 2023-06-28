@@ -511,7 +511,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 	}
 
 	err = f2fs_prepare_lookup(dir, dentry, &fname);
-	generic_set_encrypted_ci_d_ops(dentry);
+	generic_set_encrypted_ci_d_ops_not_unicode(dentry);
 	if (err == -ENOENT)
 		goto out_splice;
 	if (err)
