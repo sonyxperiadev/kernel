@@ -452,6 +452,18 @@
 	somc,qusb-phy-init-bias_ctrl2_sp = <0x25>;
 };
 
+&labibb {
+	status = "disabled";
+};
+
+&lab_regulator {
+	status = "disabled";
+};
+
+&ibb_regulator {
+	status = "disabled";
+};
+
 #include "dsi-panel-akatsuki.dtsi"
 #include "somc-tama-display.dtsi"
 #include "somc-tama-display_akatsuki.dtsi"
