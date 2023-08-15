@@ -18,6 +18,7 @@
 #include <linux/pm.h>
 #include <linux/of_address.h>
 #include <linux/nvmem-consumer.h>
+#include <linux/panic_notifier.h>
 
 struct qcom_reboot_reason {
 	struct device *dev;
