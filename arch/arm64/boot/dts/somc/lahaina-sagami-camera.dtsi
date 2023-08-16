@@ -63,6 +63,9 @@
 };
 
 &qupv3_se13_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	cam4_pmic: slg51000@75 {
 		compatible = "dlg,slg51000";
 		reg = <0x75>;
@@ -118,6 +121,9 @@
 };
 
 &qupv3_se1_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	pinctrl-0 = <&sm_gpio_8 &sm_gpio_9>;
 	pinctrl-1 = <&sm_gpio_8_suspend &sm_gpio_9_suspend>;
 	qcom,clk-freq-out = <1000000>;
@@ -139,6 +145,9 @@
 };
 
 &cam_cci0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	// wide camera
 	actuator0: qcom,actuator@0 {
 		cell-index = <0>;
@@ -310,6 +319,9 @@
 };
 
 &cam_cci1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	// front camera
 	eeprom2: qcom,eeprom@2 {
 		cell-index = <2>;
