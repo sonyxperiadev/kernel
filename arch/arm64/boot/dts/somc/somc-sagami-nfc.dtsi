@@ -11,6 +11,8 @@
  */
 
 &qupv3_se15_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	/* I2C */
 	nfc@28 {
 		compatible = "nxp,sn1x0-i2c";
@@ -25,6 +27,8 @@
 };
 
 &qupv3_se14_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	/* sm_gpio_56: SPI MISO */
 	/* sm_gpio_57: SPI MOSI */
 	/* sm_gpio_58: SPI CLK */
