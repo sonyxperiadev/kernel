@@ -27,7 +27,12 @@
 };
 
 &spmi_bus {
+	interrupt-controller;
+	#interrupt-cells = <4>;
+
 	qcom,pmr735a@4 {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		/* Example configuration to enable PMR735A VADC in standalone mode */
 		pmr735a_vadc: vadc@3600 {
 			compatible = "qcom,spmi-adc7-sw-calib";
@@ -203,6 +208,8 @@
 
 &spmi_bus {
 	qcom,pm6125@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		pm6125_adc_tm_iio: adc_tm@3400 {
 			compatible = "qcom,adc-tm5-iio";
 			reg = <0x3400>;

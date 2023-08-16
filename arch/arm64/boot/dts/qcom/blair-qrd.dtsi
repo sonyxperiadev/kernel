@@ -269,6 +269,8 @@
 	};
 };*/
 &qupv3_se8_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "okay";
 	qcom,i2c-touch-active="sec,sec_ts";
 
@@ -318,6 +320,8 @@
 };
 
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	awinic@64 {
 		compatible = "awinic,aw2016_led";
 		reg = <0x64>;

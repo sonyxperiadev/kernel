@@ -14,6 +14,9 @@
 };
 
 &cam_cci0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	actuator_rear: qcom,actuator0 {
 		cell-index = <0>;
 		compatible = "qcom,actuator";
@@ -129,29 +132,29 @@
 		status = "ok";
 	};
 
-        ois_rear: qcom,ois@0 {
-            cell-index = <0>;
-            reg = <0xe0>;
-            compatible = "qcom,ois";
-            cci-master = <0>;
-            //cam_vaf-supply = <&actuator_rear>;
-            regulator-names = "cam_wl2868c_vio","cam_wl2868c_vaf";
-            rgltr-cntrl-support;
-            pwm-switch;
-            rgltr-min-voltage = <1800000 2800000>;
-            rgltr-max-voltage = <1800000 2800000>;
-            rgltr-load-current = <0 0>;
-            gpio-no-mux = <0>;
-            gpio-ois = <0>;
-            pinctrl-names = "cam_default", "cam_suspend";
-            pinctrl-0 = <&cam_ois_vdd_active>;
-            pinctrl-1 = <&cam_ois_vdd_suspend>;
-            gpios = <&tlmm 33 0>;
-            gpio-req-tbl-num = <0>;
-            gpio-req-tbl-flags = <0>;
-            gpio-req-tbl-label = "OIS_VDD";
-            status = "ok";
-        };
+	ois_rear: qcom,ois@0 {
+		cell-index = <0>;
+		reg = <0xe0>;
+		compatible = "qcom,ois";
+		cci-master = <0>;
+		//cam_vaf-supply = <&actuator_rear>;
+		regulator-names = "cam_wl2868c_vio","cam_wl2868c_vaf";
+		rgltr-cntrl-support;
+		pwm-switch;
+		rgltr-min-voltage = <1800000 2800000>;
+		rgltr-max-voltage = <1800000 2800000>;
+		rgltr-load-current = <0 0>;
+		gpio-no-mux = <0>;
+		gpio-ois = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_ois_vdd_active>;
+		pinctrl-1 = <&cam_ois_vdd_suspend>;
+		gpios = <&tlmm 33 0>;
+		gpio-req-tbl-num = <0>;
+		gpio-req-tbl-flags = <0>;
+		gpio-req-tbl-label = "OIS_VDD";
+		status = "ok";
+	};
 
 	/* Rear*/
 	qcom,cam-sensor0 {
