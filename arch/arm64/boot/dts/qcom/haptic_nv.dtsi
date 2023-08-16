@@ -1,5 +1,7 @@
 /* AWINIC AW862XX Haptic */
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
 	awinic_haptic@58{
 		compatible = "awinic,haptic_nv";

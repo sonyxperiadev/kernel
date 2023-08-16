@@ -1,4 +1,6 @@
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
 	ti_haptic@5A{
 		compatible = "ti,haptic";
