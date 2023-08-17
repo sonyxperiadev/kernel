@@ -2562,9 +2562,6 @@ int sm5038_fuelgauge_probe(struct platform_device *pdev)
 
 err_supply_unreg:
 err_data_free:
-#if defined(CONFIG_OF)
-#endif
-err_pdata_free:
 	kfree(fuelgauge_data);
 	mutex_destroy(&fuelgauge->fg_lock);
 err_free:
@@ -2595,18 +2592,11 @@ static int sm5038_fuelgauge_suspend(struct device *dev)
 
 static int sm5038_fuelgauge_resume(struct device *dev)
 {
-	struct sm5038_fg_data *fuelgauge = dev_get_drvdata(dev);
-
 	return 0;
 }
 
 static void sm5038_fuelgauge_shutdown(struct platform_device *pdev)
 {
-	struct sm5038_fg_data *fuelgauge = platform_get_drvdata(pdev);
-
-	pr_info("%s: ++\n", __func__);
-
-	pr_info("%s: --\n", __func__);
 }
 
 static SIMPLE_DEV_PM_OPS(sm5038_fuelgauge_pm_ops, sm5038_fuelgauge_suspend,
