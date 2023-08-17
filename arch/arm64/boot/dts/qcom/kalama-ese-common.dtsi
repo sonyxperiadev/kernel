@@ -1,0 +1,9 @@
+&soc {
+	st54spi_gpio {
+		status = "ok";
+		compatible = "st,st54spi_gpio";
+		/* gpio used as SE_nRESET */
+		gpio-power_nreset = <&tlmm 12 0x00>;
+	};
+};
+

@@ -1,0 +1,81 @@
+#include <dt-bindings/thermal/thermal_qti.h>
+
+&thermal_zones {
+	cpu-1-0 {
+		cooling-maps {
+        		/delete-node/ cpu10_cdev1;
+        	};
+	};
+
+	cpu-1-1 {
+		cooling-maps {
+        		/delete-node/ cpu11_cdev1;
+        	};
+	};
+
+	cpu-1-2 {
+		cooling-maps {
+        		/delete-node/ cpu12_cdev1;
+        	};
+	};
+
+	cpu-1-3 {
+		cooling-maps {
+        		/delete-node/ cpu13_cdev1;
+        	};
+	};
+
+	cpu-1-4 {
+		cooling-maps {
+        		/delete-node/ cpu14_cdev1;
+        	};
+	};
+
+	cpu-1-5 {
+		cooling-maps {
+        		/delete-node/ cpu15_cdev1;
+        	};
+	};
+
+	cpu-1-6 {
+		cooling-maps {
+        		/delete-node/ cpu16_cdev1;
+        	};
+	};
+
+	cpu-1-7 {
+		cooling-maps {
+        		/delete-node/ cpu17_cdev1;
+        	};
+	};
+
+	cpu-1-8 {
+		cooling-maps {
+        		/delete-node/ cpu18_cdev1;
+        	};
+	};
+
+	cpu-1-9 {
+		cooling-maps {
+        		/delete-node/ cpu19_cdev1;
+        	};
+	};
+
+	cpu-1-10 {
+		cooling-maps {
+        		/delete-node/ cpu110_cdev1;
+        	};
+	};
+
+	cpu-0-1 {
+		cooling-maps {
+        		/delete-node/ cpu01_cdev1;
+        	};
+	};
+
+	cpu-0-2 {
+		cooling-maps {
+        		/delete-node/ cpu02_cdev1;
+        	};
+	};
+};

@@ -1,0 +1,29 @@
+#include <dt-bindings/clock/qcom,rpmh.h>
+
+&qupv3_se0_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <1000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	nq@28 {
+		compatible = "qcom,sn-nci";
+		reg = <0x28>;
+		qcom,sn-irq = <&tlmm 55 0x00>;
+		qcom,sn-ven = <&tlmm 30 0x00>;
+		qcom,sn-firm = <&tlmm 12 0x00>;
+		qcom,clk-src = "BBCLK2";
+		qcom,sn-szone = "enable";
+		qcom,sn-vdd-1p8-supply = <&L15B>;
+		qcom,sn-vdd-1p8-voltage = <1760000 1800000>;
+		qcom,sn-vdd-1p8-current = <157000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <55 0>;
+		interrupt-names = "nfc_irq";
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+		clocks = <&rpmhcc RPMH_LN_BB_CLK2>;
+		clock-names = "nfc_ref_clk";
+	};
+};
+

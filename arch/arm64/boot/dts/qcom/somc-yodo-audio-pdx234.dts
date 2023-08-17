@@ -1,0 +1,14 @@
+/dts-v1/;
+/plugin/;
+
+#include "kalama-audio.dtsi"
+#include "kalama-audio-qrd.dtsi"
+#include "somc-yodo-audio-common.dtsi"
+#include "somc-yodo-audio-pdx234.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-234(Kalama QRD)";
+	compatible = "somc,pdx234-generic", "qcom,kalama", "qcom,qrd";
+	qcom,msm-id = <519 0x10000>, <536 0x10000>, <519 0x20000>, <536 0x20000>;
+	qcom,board-id = <0x1000B 0>;
+};

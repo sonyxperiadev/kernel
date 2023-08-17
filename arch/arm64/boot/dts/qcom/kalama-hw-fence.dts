@@ -1,0 +1,10 @@
+/dts-v1/;
+/plugin/;
+
+#include "kalama-hw-fence.dtsi"
+
+/ {
+	qcom,msm-id = <519 0x10000>;
+	qcom,board-id = <0 0>;
+};
+

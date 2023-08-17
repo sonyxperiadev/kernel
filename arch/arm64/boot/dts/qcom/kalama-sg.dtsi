@@ -1,0 +1,7 @@
+#include "kalama-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kalama SG";
+	compatible = "qcom,kalama";
+	qcom,msm-id = <600 0x20000>;
+};

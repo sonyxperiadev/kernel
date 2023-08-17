@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-kalama.h>
+#include <dt-bindings/clock/qcom,camcc-kalama.h>
+#include <dt-bindings/interconnect/qcom,kalama.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "kalama-camera-sensor-pdx234.dtsi"
+/ {
+	model = "Sony Corporation. PDX-234(Kalama QRD)";
+	compatible = "somc,pdx234-generic", "qcom,kalama", "qcom,qrd";
+	qcom,msm-id = <519 0x10000>, <536 0x10000>, <519 0x20000>, <536 0x20000>;
+	qcom,board-id = <0x1000B 0>;
+};

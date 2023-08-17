@@ -1,0 +1,7 @@
+#include "kalama-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KalamaP v2 SoC";
+	compatible = "qcom,kalamap";
+	qcom,msm-id = <536 0x20000>;
+};

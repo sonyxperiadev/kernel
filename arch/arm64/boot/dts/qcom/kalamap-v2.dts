@@ -1,0 +1,9 @@
+/dts-v1/;
+
+#include "kalamap-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KalamaP v2 SoC";
+	compatible = "qcom,kalamap";
+	qcom,board-id = <0 0>;
+};

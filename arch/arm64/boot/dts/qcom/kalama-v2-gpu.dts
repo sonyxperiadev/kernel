@@ -1,0 +1,22 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,aop-qmp.h>
+#include <dt-bindings/clock/qcom,gcc-kalama.h>
+#include <dt-bindings/clock/qcom,gpucc-kalama.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interconnect/qcom,kalama.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#include "kalama-v2-gpu.dtsi"
+#include "kalama-v2-gpu-pwrlevels.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kalama v2";
+	compatible = "qcom,kalama";
+	qcom,msm-id = <519 0x20000>, <536 0x20000>;
+	qcom,board-id = <0 0>;
+};
+

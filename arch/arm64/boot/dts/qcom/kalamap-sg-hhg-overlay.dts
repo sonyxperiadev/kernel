@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "kalamap-sg-hhg.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KalamaP SG HHG";
+	compatible = "qcom,kalamap", "qcom,hhg";
+	qcom,msm-id = <601 0x20000>;
+	qcom,board-id = <0x1001f 0x1>;
+};

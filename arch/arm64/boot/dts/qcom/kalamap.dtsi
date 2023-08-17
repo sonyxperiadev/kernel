@@ -1,0 +1,7 @@
+#include "kalama.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KalamaP";
+	compatible = "qcom,kalamap";
+	qcom,msm-id = <536 0x10000>;
+};

@@ -1,0 +1,9 @@
+#include "kalama-gpu.dtsi"
+
+&msm_gpu {
+	compatible = "qcom,adreno-gpu-gen7-2-1", "qcom,kgsl-3d0";
+
+	qcom,gpu-model = "Adreno740v2";
+
+	qcom,chipid = <0x43050a01>;
+};
