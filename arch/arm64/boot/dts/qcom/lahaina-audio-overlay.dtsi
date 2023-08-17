@@ -35,7 +35,7 @@
 		qcom,va-clk-mux-select = <1>;
 		qcom,va-island-mode-muxsel = <0x033A0000>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
-		qcom,is-used-swr-gpio = <0>;
+		qcom,swr-gpio-is-used = <0>;
 	};
 
 	tx_macro: tx-macro@3220000 {
