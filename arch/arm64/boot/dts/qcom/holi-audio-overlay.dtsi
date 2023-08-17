@@ -29,7 +29,7 @@
 		clocks = <&lpass_audio_hw_vote 0>;
 		qcom,va-dmic-sample-rate = <600000>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
-		qcom,is-used-swr-gpio = <1>;
+		qcom,swr-gpio-is-used = <1>;
 		qcom,va-swr-gpios = <&va_swr_gpios>;
 		swr0: va_swr_master {
 			compatible = "qcom,swr-mstr";
@@ -84,7 +84,7 @@
 		clocks = <&clock_audio_tx_1 0>,
 			 <&clock_audio_tx_2 0>;
 		qcom,tx-dmic-sample-rate = <2400000>;
-		qcom,is-used-swr-gpio = <0>;
+		qcom,swr-gpio-is-used = <0>;
 	};
 
 	rx_macro: rx-macro@A600000 {
