@@ -390,19 +390,18 @@ static ssize_t sec_cmd_list_show(struct device *dev,
 {
 	struct sec_cmd_data *data = dev_get_drvdata(dev);
 	struct sec_cmd *sec_cmd_ptr = NULL;
-	char buffer[data->cmd_buffer_size + 30];
-	char buffer_name[SEC_CMD_STR_LEN];
 
-	snprintf(buffer, 30, "++factory command list++\n");
+	int len = snprintf(buf, 30, "++factory command list++\n");
 
 	list_for_each_entry(sec_cmd_ptr, &data->cmd_list_head, list) {
 		if (strncmp(sec_cmd_ptr->cmd_name, "not_support_cmd", 15)) {
-			snprintf(buffer_name, SEC_CMD_STR_LEN, "%s\n", sec_cmd_ptr->cmd_name);
-			strncat(buffer, buffer_name, SEC_CMD_STR_LEN);
+			len += snprintf(buf + len, PAGE_SIZE - len, "%s\n", sec_cmd_ptr->cmd_name);
+			if (len >= PAGE_SIZE)
+				break;
 		}
 	}
 
-	return snprintf(buf, SEC_CMD_BUF_SIZE, "%s\n", buffer);
+	return strnlen(buf, PAGE_SIZE);
 }
 
 static DEVICE_ATTR(cmd, S_IWUSR | S_IWGRP, NULL, sec_cmd_store);
@@ -426,8 +425,8 @@ static struct attribute_group sec_fac_attr_group = {
 int sec_cmd_init(struct sec_cmd_data *data, struct sec_cmd *cmds,
 			int len, int devt)
 {
-	struct class *sec_class;
 	struct sec_ts_data *ts = container_of(data, struct sec_ts_data, sec);
+	struct class *sec_class = ts->sec_class;
 	const char *dev_name;
 	int ret, i;
 
