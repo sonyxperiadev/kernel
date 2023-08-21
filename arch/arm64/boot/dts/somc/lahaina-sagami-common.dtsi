@@ -583,6 +583,16 @@
 };
 
 &q6core {
+	cdc_pri_mi2s_gpios: msm_cdc_pinctrl_pri {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&somc_pri_mi2s_sck_active &somc_pri_mi2s_ws_active
+			 &somc_pri_mi2s_sd0_active>;
+		pinctrl-1 = <&somc_pri_mi2s_sck_sleep &somc_pri_mi2s_ws_sleep
+			 &somc_pri_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
+	};
+
 	cdc_sen_mi2s_gpios: msm_cdc_pinctrl_sen {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
@@ -591,18 +601,19 @@
 		pinctrl-1 = <&somc_lpi_i2s2_sck_sleep &somc_lpi_i2s2_ws_sleep
 			 &somc_lpi_i2s2_sd0_sleep &somc_lpi_i2s2_sd1_sleep>;
 		qcom,lpi-gpios;
+		#gpio-cells = <0>;
 	};
 };
 
 &cdc_dmic01_gpios {
-		pinctrl-0 = <&somc_cdc_dmic01_clk_active &somc_cdc_dmic01_data_active>;
-		pinctrl-1 = <&somc_cdc_dmic01_clk_sleep &somc_cdc_dmic01_data_sleep>;
-	};
+	pinctrl-0 = <&somc_cdc_dmic01_clk_active &somc_cdc_dmic01_data_active>;
+	pinctrl-1 = <&somc_cdc_dmic01_clk_sleep &somc_cdc_dmic01_data_sleep>;
+};
 
 &cdc_dmic23_gpios {
-		pinctrl-0 = <&somc_cdc_dmic23_clk_active &somc_cdc_dmic23_data_active>;
-		pinctrl-1 = <&somc_cdc_dmic23_clk_sleep &somc_cdc_dmic23_data_sleep>;
-	};
+	pinctrl-0 = <&somc_cdc_dmic23_clk_active &somc_cdc_dmic23_data_active>;
+	pinctrl-1 = <&somc_cdc_dmic23_clk_sleep &somc_cdc_dmic23_data_sleep>;
+};
 
 &lahaina_snd {
 	qcom,audio-routing =
@@ -908,17 +919,6 @@
 			bias-disable;           /* NO PULL */
 			output-high;
 		};
-	};
-};
-
-&q6core {
-	cdc_pri_mi2s_gpios: msm_cdc_pinctrl_pri {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&somc_pri_mi2s_sck_active &somc_pri_mi2s_ws_active
-			 &somc_pri_mi2s_sd0_active>;
-		pinctrl-1 = <&somc_pri_mi2s_sck_sleep &somc_pri_mi2s_ws_sleep
-			 &somc_pri_mi2s_sd0_sleep>;
 	};
 };
 
