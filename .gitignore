@@ -175,3 +175,6 @@ sphinx_*/
 
 # Rust analyzer configuration
 /rust-project.json
+
+# Qualcomm CNSS WLAN Host Driver
+drivers/staging/wlan-qc/
