@@ -169,3 +169,6 @@ arch/*/boot/dts/vendor
 
 # Documentation toolchain
 sphinx_*/
+
+# Qualcomm CNSS WLAN Host Driver
+drivers/staging/wlan-qc/
