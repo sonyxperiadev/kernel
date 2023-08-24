@@ -2970,7 +2970,7 @@ static int qpnp_flash_led_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	led->pmic_type = (u8)of_device_get_match_data(&pdev->dev);
+	led->pmic_type = (uintptr_t)of_device_get_match_data(&pdev->dev);
 
 	if (led->pmic_type == PM6150L)
 		led->wa_flags |= PM6150L_IRES_WA;
