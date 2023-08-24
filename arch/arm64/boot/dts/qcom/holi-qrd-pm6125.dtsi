@@ -264,6 +264,124 @@
 };
 
 &thermal_zones {
+	quiet-therm-step {
+		polling-delay-passive = <2000>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM2_100K_PU>;
+		trips {
+			battery_trip0: battery-trip0 {
+				temperature = <42000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			modem_skin_trip0: modem-skin-trip0 {
+				temperature = <42000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			gold_trip: gold-trip {
+				temperature = <43000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			battery_trip1: battery-trip1 {
+				temperature = <44000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			modem_skin_trip1: modem-skin-trip1 {
+				temperature = <44000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			silver_trip: silver-trip {
+				temperature = <45000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			battery_trip2: battery-trip2 {
+				temperature = <46000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			battery_trip3: battery-trip3 {
+				temperature = <47000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+
+			battery_trip4: battery-trip4 {
+				temperature = <48000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+
+			cx_trip: cx-trip {
+				temperature = <55000>;
+				hysteresis = <5000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			cdsp-cdev {
+				trip = <&cx_trip>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			gpu-cdev0 {
+				trip = <&modem_skin_trip1>;
+				/* throttle to 650000000Hz */
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-4)
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+
+			gpu-cdev1 {
+				trip = <&cx_trip>;
+				/* throttle to 565000000Hz */
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-3)
+							(THERMAL_MAX_LIMIT-3)>;
+			};
+
+			silver-cdev {
+				trip = <&silver_trip>;
+				/* throttle to 1478400KHz */
+				cooling-device = <&CPU0 (THERMAL_MAX_LIMIT-6)
+							(THERMAL_MAX_LIMIT-6)>;
+			};
+
+			gold-cdev {
+				trip = <&gold_trip>;
+				/* throttle to 1536000KHz */
+				cooling-device = <&CPU6 (THERMAL_MAX_LIMIT-5)
+							(THERMAL_MAX_LIMIT-5)>;
+			};
+
+			modem-skin-cdev0 {
+				trip = <&modem_skin_trip0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+
+			modem-skin-cdev1 {
+				trip = <&modem_skin_trip1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+
+			modem-skin-cdev2 {
+				trip = <&cx_trip>;
+				cooling-device = <&modem_skin 3 3>;
+			};
+		};
+	};
+
 	pa-therm0-step {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;

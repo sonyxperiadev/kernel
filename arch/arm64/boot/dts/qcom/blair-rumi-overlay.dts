@@ -6,6 +6,6 @@
 / {
 	model = "Qualcomm Technologies, Inc. Blair RUMI";
 	compatible = "qcom,blair-rumi", "qcom,blair", "qcom,rumi";
-	qcom,msm-id = <507 0x10000>;
+	qcom,msm-id = <507 0x10000>, <578 0x10000>;
 	qcom,board-id = <15 0>;
 };

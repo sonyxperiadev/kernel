@@ -37,7 +37,7 @@
 			qcom,pon_2 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_RESIN>;
 				qcom,pull-up;
-				linux,code = <KEY_VOLUMEUP>;
+				linux,code = <KEY_VOLUMEDOWN>;
 			};
 		};
 
@@ -136,7 +136,7 @@
 		#size-cells = <0>;
 
 		pm6125_pwm: qcom,pwms@b300 {
-			status = "ok";
+			status = "disabled";
 			compatible = "qcom,pwm-lpg";
 			reg = <0xb300>;
 			reg-names = "lpg-base";

@@ -328,7 +328,7 @@
 		dma-names = "tx", "rx";
 		qcom,shared;
 		qcom,wrapper-core = <&qupv3_1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 };

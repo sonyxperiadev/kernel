@@ -1,5 +1,5 @@
 &mdss_mdp {
-	dsi_hx83112a_truly_video: qcom,mdss_dsi_hx83112a_truly_video {
+	dsi_hx83112a_truly_video: dsi_hx83112a_truly_vid_display {
 		qcom,mdss-dsi-panel-name =
 			"hx83112a video mode dsi truly panel";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";

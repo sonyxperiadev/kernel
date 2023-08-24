@@ -3,7 +3,7 @@
 &pmr735a_gpios {
 	disp_pins {
 		disp_pins_reset: disp_pins_reset {
-			pins = "gpio2"; //config amoled reset
+			pins = "gpio2";
 			function = "func1";
 			qcom,drive-strength = <2>;
 			power-source = <1>;
@@ -27,33 +27,6 @@
 			output-high;
 		};
 	};
-
-        pmx_sde_en: pmx_sde_en {
-           vci_en_active: vci_en_active {
-              mux {
-                      pins = "gpio141";
-                      function = "gpio";
-                  };
-               config {
-                      pins = "gpio141";
-                      drive-strength = <8>; /* 8 mA */
-                      bias-disable = <0>; /* no pull */
-                  };
-           };
-
-           vci_en_suspend: vci_en_suspend {
-             mux {
-                     pins = "gpio141";
-                     function = "gpio";
-                 };
-
-              config {
-                     pins = "gpio141";
-                     drive-strength = <2>; /* 2 mA */
-                     bias-pull-down; /* PULL DOWN */
-                 };
-           };
-        };
 };
 
 &soc {
@@ -81,15 +54,14 @@
 };
 
 &sde_dsi {
-	vddio-supply = <&L13A>; //config vio for amoled
+	vddio-supply = <&L13A>;
 	avdd-supply = <&display_panel_avdd>;
 	ibb-supply = <&display_panel_ibb>;
 
 	/delete-property/ lab-supply;
 
 	pinctrl-0 = <&sde_te_active &disp_pins_reset>;
-        pinctrl-1 = <&sde_te_suspend>;
-	qcom,dsi-default-panel = <&dsi_samsung_amoled_cmd>;
+	qcom,dsi-default-panel = <&dsi_rm69299_visionox_amoled_video>;
 };
 
 &dsi_sim_vid {
@@ -113,16 +85,6 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <255>;
 	qcom,bl-update-flag = "delay_until_first_frame";
-	qcom,platform-te-gpio = <&tlmm 23 0>;
-	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
-};
-
-&dsi_samsung_amoled_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-brightness-max-level = <4095>;
 	qcom,platform-te-gpio = <&tlmm 23 0>;
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 };

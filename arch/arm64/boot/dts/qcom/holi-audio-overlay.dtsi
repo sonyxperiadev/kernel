@@ -305,23 +305,8 @@
 &qupv3_se10_i2c {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	aw882xx_smartpa@34 {
-		compatible = "awinic,aw882xx_smartpa";
-		reg = <0x34>;
-		irq-gpio = <&tlmm 60 0>;
-		dc-flag = <0>;
-		sound-channel = <0>;
-		aw-tx-topo-id = <0x1000ff00>;
-		aw-rx-topo-id = <0x1000ff01>;
-		aw-tx-port-id = <0x1003>;
-		aw-rx-port-id = <0x1002>;
-		aw-re-min = <4000>;
-		aw-re-max= <30000>;
-		aw-cali-mode = "aw_attr";
-		status = "okay";
-	};
+
 	wsa881x_i2c_e: wsa881x-i2c-codec@e {
-		status = "disabled";
 		compatible = "qcom,wsa881x-i2c-codec";
 		reg = <0x0e>;
 		clock-names = "wsa_mclk";
@@ -336,7 +321,6 @@
 	};
 
 	wsa881x_i2c_44: wsa881x-i2c-codec@44 {
-		status = "disabled";
 		compatible = "qcom,wsa881x-i2c-codec";
 		reg = <0x044>;
 		qcom,wsa-analog-clk-gpio = <&wsa881x_analog_clk_gpio>;
@@ -379,6 +363,9 @@
 
 	wsa881x_analog_reset_gpio: wsa_reset_gpio {
 		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&spkr_2_sd_n_active>;
+		pinctrl-1 = <&spkr_2_sd_n_sleep>;
 		#gpio-cells = <0>;
 	};
 
@@ -436,14 +423,6 @@
 		qcom,codec-lpass-ext-clk-freq = <19200000>;
 		qcom,codec-lpass-clk-id = <0x310>;
 		#clock-cells = <1>;
-	};
-	cdc_sec_mi2s_gpios: msm_cdc_pinctrl_sec {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&lpi_i2s2_sck_active &lpi_i2s2_ws_active &lpi_i2s2_sd0_active &lpi_i2s2_sd1_active>;
-		pinctrl-1 = <&lpi_i2s2_sck_sleep &lpi_i2s2_ws_sleep &lpi_i2s2_sd0_sleep &lpi_i2s2_sd1_sleep>;
-		qcom,lpi-gpios;
-		#gpio-cells = <0>;
 	};
 };
 

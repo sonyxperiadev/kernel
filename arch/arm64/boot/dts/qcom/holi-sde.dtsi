@@ -145,7 +145,7 @@
 &mdss_dsi_phy0 {
 	vdda-0p9-supply = <&S5A_LEVEL>;
 	qcom,panel-allow-phy-poweroff;
-	/* qcom,dsi-pll-ssc-en; For disable SSC feature */
+	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 	memory-region = <&dfps_data_memory>;
 };
