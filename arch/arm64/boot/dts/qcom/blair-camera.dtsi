@@ -255,25 +255,21 @@
 		gdscr-supply = <&gcc_camss_top_gdsc>;
 		regulator-names = "gdscr";
 		clocks = <&gcc GCC_CAMSS_CCI_1_CLK>,
-		         <&gcc GCC_CAMSS_CCI_1_CLK_SRC>;
+			<&gcc GCC_CAMSS_CCI_1_CLK_SRC>;
 		clock-names = "cci_1_clk",
-		              "cci_1_clk_src";
+				"cci_1_clk_src";
 		src-clock-name = "cci_1_clk_src";
 		clock-cntl-level = "svs";
 		clock-rates = <0 37500000>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cci2_active &cci3_active>;
-		pinctrl-1 = <&cci2_suspend &cci3_suspend>;
+		pinctrl-0 = <&cci2_active>;
+		pinctrl-1 = <&cci2_suspend>;
 		gpios = <&tlmm 43 0>,
-		        <&tlmm 44 0>,
-		        <&tlmm 2 0>,
-		        <&tlmm 3 0>;
-		gpio-req-tbl-num = <0 1 2 3>;
-		gpio-req-tbl-flags = <1 1 1 1>;
+			<&tlmm 44 0>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 1>;
 		gpio-req-tbl-label = "CCI_I2C_DATA2",
-		                     "CCI_I2C_CLK2",
-		                     "CCI_I2C_DATA3",
-		                     "CCI_I2C_CLK3";
+			"CCI_I2C_CLK2";
 
 		i2c_freq_100Khz_cci1: qcom,i2c_standard_mode {
 			hw-thigh = <201>;

@@ -1,13 +1,12 @@
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 #include "holi-pm7250b.dtsi"
-#include "haptic_nv.dtsi"
-#include "haptic_ti.dtsi"
 
 &soc {
 	qrd_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "qg-batterydata-4790461_Huaqin_PDX213_ATL_4500mAH.dtsi"
+		#include "qg-batterydata-atl436186020H_3780mAh.dtsi"
+		#include "qg-batterydata-atl466271_3300mAh.dtsi"
 	};
 };
 
@@ -37,7 +36,14 @@
 		      <&pm7250b_qg PSY_IIO_CHARGE_COUNTER>,
 		      <&pm7250b_qg PSY_IIO_CYCLE_COUNT>,
 		      <&pm7250b_qg PSY_IIO_CHARGE_FULL_DESIGN>,
-		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>;
+		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>,
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_OUTPUT_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_MIN_ICL>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_SWITCHER_EN>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ENABLE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ILIM>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -61,28 +67,31 @@
 			   "charge_counter",
 			   "cycle_count",
 			   "charge_full_design",
-			   "time_to_full_now";
+			   "time_to_full_now",
+			   "cp_parallel_mode",
+			   "cp_parallel_output_mode",
+			   "cp_min_icl",
+			   "cp_switcher_en",
+			   "cp_enable",
+			   "cp_ilim",
+			   "cp_die_temp";
 	qcom,battery-data = <&qrd_batterydata>;
 	qcom,sec-charger-config = <1>;
 	qcom,auto-recharge-soc = <98>;
 	qcom,step-charging-enable;
 	qcom,sw-jeita-enable;
-	qcom,charger-temp-max = <600>;
-	qcom,smb-temp-max = <600>;
+	qcom,charger-temp-max = <800>;
+	qcom,smb-temp-max = <800>;
 	qcom,suspend-input-on-debug-batt;
 	qcom,fcc-stepping-enable;
 	qcom,fcc-step-delay-ms = <100>;
 	qcom,fcc-step-size-ua = <100000>;
 	qcom,smb-internal-pull-kohm = <0>;
 	qcom,en-skin-therm-mitigation;
-	qcom,chg-term-current-ma = <(-250)>;
-	qcom,chg-term-src = <1>;
-	qcom,panel = <&dsi_samsung_amoled_cmd>;
-	//Pay attention to ensure that the two arrays are the same size
-	qcom,thermal-mitigation = <2000000 1500000 1000000
-				500000 100000 0 0>;
-	qcom,thermal-mitigation-sleep = <3300000 2500000 2000000
-				1500000 1000000 500000 100000>;
+	qcom,thermal-mitigation = <10000000 9500000 9000000 8500000 8000000
+				7500000 7000000 6500000 6000000 5500000 5000000 4500000
+				4000000 3500000 3000000 2500000 2000000 1500000 1000000
+				500000>;
 };
 
 &pm7250b_qg {
@@ -102,7 +111,7 @@
 			   "force_recharge",
 			   "charge_done",
 			   "cp_charging_enabled";
-	qcom,qg-iterm-ma = <300>;
+	qcom,qg-iterm-ma = <150>;
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
 	qcom,cl-feedback-on;
@@ -189,9 +198,10 @@
 };
 
 &qupv3_se10_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
 	#include "smb1394.dtsi"
-	#include "aw2016.dtsi"
 };
 
 &smb1394 {
@@ -222,4 +232,35 @@
 	qcom,parallel-input-mode = <1>; /* USBIN */
 	qcom,parallel-output-mode = <2>; /* VBAT */
 	status = "ok";
+};
+
+&thermal_zones {
+	quiet-therm-step {
+		cooling-maps {
+			battery-cdev0 {
+				trip = <&battery_trip0>;
+				cooling-device = <&pm7250b_charger 6 6>;
+			};
+
+			battery-cdev1 {
+				trip = <&battery_trip1>;
+				cooling-device = <&pm7250b_charger 10 10>;
+			};
+
+			battery-cdev2 {
+				trip = <&battery_trip2>;
+				cooling-device = <&pm7250b_charger 14 14>;
+			};
+
+			battery-cdev3 {
+				trip = <&battery_trip3>;
+				cooling-device = <&pm7250b_charger 16 16>;
+			};
+
+			battery-cdev4 {
+				trip = <&battery_trip4>;
+				cooling-device = <&pm7250b_charger 18 18>;
+			};
+		};
+	};
 };

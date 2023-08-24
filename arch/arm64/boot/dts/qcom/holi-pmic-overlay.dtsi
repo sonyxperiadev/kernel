@@ -421,8 +421,8 @@
 		reg = <0x8>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&pm8008_active>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pm8008_active>;
 
 		pm8008_chip: qcom,pm8008-chip@900 {
 			compatible = "qcom,pm8008-chip";

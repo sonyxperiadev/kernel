@@ -108,10 +108,9 @@
 		resets = <&gcc GCC_QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
 		qcom,param-override-seq =
-			<0xe6 0x6c	/* override_x0 */
+			<0xa6 0x6c	/* override_x0 */
 			 0x85 0x70	/* override_x1 */
-			 0x16 0x74	/* override x2 */
-			 0x0c 0x78>;	/* override x2 */
+			 0x16 0x74>;	/* override x2 */
 	};
 
 	/* Primary USB port related QMP USB DP Combo PHY */

@@ -94,7 +94,7 @@
 		pinctrl-0 = <&cdc_dmic23_clk_active &cdc_dmic23_data_active>;
 		pinctrl-1 = <&cdc_dmic23_clk_sleep &cdc_dmic23_data_sleep>;
 		qcom,lpi-gpios;
-		qcom,tlmm-pins = <135 136>;
+		qcom,tlmm-pins = <136>;
 		#gpio-cells = <0>;
 	};
 

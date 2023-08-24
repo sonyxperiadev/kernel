@@ -279,7 +279,7 @@
 	};
 
 	pm8350b-bcl-lvl0 {
-		polling-delay-passive = <100>;
+		polling-delay-passive = <500>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8350b_bcl 5>;
@@ -294,7 +294,7 @@
 	};
 
 	pm8350b-bcl-lvl1 {
-		polling-delay-passive = <100>;
+		polling-delay-passive = <500>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8350b_bcl 6>;
@@ -309,7 +309,7 @@
 	};
 
 	pm8350b-bcl-lvl2 {
-		polling-delay-passive = <100>;
+		polling-delay-passive = <500>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8350b_bcl 7>;

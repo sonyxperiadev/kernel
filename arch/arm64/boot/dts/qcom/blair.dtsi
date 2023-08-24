@@ -17,7 +17,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. Blair ";
 	compatible = "qcom,blair";
-	qcom,msm-id = <507 0x10000>;
+	qcom,msm-id = <507 0x10000>, <578 0x10000>;
 	interrupt-parent = <&intc>;
 
 	#address-cells = <2>;
@@ -51,10 +51,6 @@
 		hsuart0 = &qupv3_se1_4uart;
 		swr0 = &swr0;
 		swr1 = &swr1;
-		i2c0 = &qupv3_se7_i2c;
-		i2c1 = &qupv3_se8_i2c;
-		i2c2 = &qupv3_se10_i2c;
-		i2c3 = &qupv3_se0_i2c;
 	};
 
 	firmware: firmware {};
@@ -255,16 +251,6 @@
 	};
 
 	soc: soc { };
-	hwinfo:HardwareInfo {
-		compatible = "huaqin,HardwareInfo";
-		pcb_type_gpios0 = <&tlmm 47 0 >;
-		pcb_type_gpios1 = <&tlmm 52 0 >;
-		pcb_type_gpios2 = <&tlmm 53 0 >;
-		sd_ufs_card_det_gpio = <&tlmm 94 0 >;
-		pinctrl-names = "default";
-		pinctrl-0=<&pcb_type_default>;
-		status = "okay";
-	};
 };
 
 &firmware {
@@ -283,7 +269,7 @@
 			compatible = "android,fstab";
 			vendor {
 				compatible = "android,vendor";
-				dev = "/dev/block/platform/soc/4804000.ufshc/by-name/vendor";
+				dev = "/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,discard";
 				fsmgr_flags = "wait,slotselect,avb";
@@ -398,6 +384,13 @@
 		label = "dfps_data_region";
 	};
 
+	qcom: ramoops {
+		compatible = "ramoops";
+		reg = <0x0 0xd0000000 0x0 0x200000>;
+		pmsg-size = <0x200000>;
+		mem-type = <2>;
+	};
+
 	/* global autoconfigured region for contiguous allocations */
 	linux,cma {
 		compatible = "shared-dma-pool";
@@ -446,39 +439,6 @@
 		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 		alignment = <0x0 0x100000>;
 		size = <0x0 0x800000>;
-	};
-
-    debug_region: debug_region@ffb00000 {
-		compatible = "removed-dma-pool", "qcom,debug_memory";
-		no-map;
-		reg = <0 0xffb00000 0 0xc0000>;
-		label = "debug_mem";
-	};
-
-	last_log_region: last_log_region@ffbc0000 {
-		compatible = "removed-dma-pool", "qcom,last_log_memory";
-		no-map;
-		reg = <0 0xffbc0000 0 0x80000>;
-		label = "last_log";
-		phandle = "log";
-	};
-
-	ramoops: ramoops@ffc40000 {
-		compatible = "removed-dma-pool", "ramoops";
-		no-map;
-		reg = <0 0xffc40000 0 0x000b0000>;
-		record-size = <0x1000>;
-		console-size = <0x40000>;
-		ftrace-size = <0x0>;
-		msg-size = <0x20000 0x20000>;
-		cc-size = <0x0>;
-	};
-
-	cmdline_region: cmdline_region@ffd00000 {
-		compatible = "removed-dma-pool", "cmdline_region";
-		no-map;
-		reg = <0 0xffd00000 0 0x1000>;
-		label = "cmdline_region";
 	};
 };
 
@@ -1004,7 +964,7 @@
 		reg-names = "wdt-base";
 		interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>,
 					<0 1 IRQ_TYPE_LEVEL_HIGH>;
-		qcom,bark-time = <15000>;
+		qcom,bark-time = <11000>;
 		qcom,pet-time = <9360>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
@@ -2812,6 +2772,9 @@
 		non-removable;
 		supports-cqe;
 
+		no-sd;
+		no-sdio;
+
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
 
@@ -2875,6 +2838,9 @@
 
 		iommus = <&apps_smmu 0x40 0x0>;
 		qcom,iommu-dma = "bypass";
+
+		no-mmc;
+		no-sdio;
 
 		qcom,devfreq,freq-table = <50000000 202000000>;
 
@@ -3292,50 +3258,6 @@
 		};
 	};
 
-    restart-reason {
-		compatible = "qcom,restart-reason";
-		unknown {
-			cmd = "unknown";
-			reg-val = <0x00 0x77665501>;
-		};
-
-		recovery {
-			cmd = "recovery";
-			reg-val = <0x01 0x77665500>;
-			reboot-cmd;
-		};
-
-		bootloader {
-			cmd = "bootloader";
-			reg-val = <0x02 0x77665500>;
-			reboot-cmd;
-		};
-
-		rtc {
-			cmd = "rtc";
-			reg-val = <0x03 0x77665500>;
-			reboot-cmd;
-		};
-
-		dm-verity-device-corrupted {
-			cmd = "dm-verity device corrupted";
-			reg-val = <0x04 0x77665508>;
-			reboot-cmd;
-		};
-
-		dm-verity-enforcing {
-			cmd = "dm-verity enforcing";
-			reg-val = <0x05 0x77665509>;
-			reboot-cmd;
-		};
-
-		keys-clear {
-			cmd = "keys clear";
-			reg-val = <0x06 0x7766550A>;
-			reboot-cmd;
-		};
-	};
-
 	qfprom: qfprom@1b40000 {
 		compatible = "qcom,qfprom";
 		reg = <0x1b40000 0x7000>;
@@ -3409,24 +3331,6 @@
 #include "holi-audio.dtsi"
 #include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
-
-&tlmm {
-	pcb_type_pins: pcb_type_pins {
-	pcb_type_default: pcb_type_default {
-		mux {
-				pins = "gpio53";
-				function = "gpio";
-		};
-
-		config {
-				pins = "gpio53";
-				drive-strength = <2>;
-				bias-pull-down;         /* PULL DOWN */
-				input-enable;
-                       };
-       };
-    };
-};
 
 &L7A {
 	regulator-min-microvolt = <720000>;
@@ -3780,6 +3684,73 @@
 				qcom,bus-max-ddr7 = <4>;
 			};
 		};
+
+		qcom,gpu-pwrlevels-3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			qcom,speed-bin = <148>;
+			qcom,ca-target-pwrlevel = <3>;
+			qcom,initial-pwrlevel = <4>;
+
+
+			/* NOM_L1 */
+			qcom,gpu-pwrlevel@0 {
+				reg = <0>;
+				qcom,gpu-freq = <700000000>;
+				qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+
+				qcom,bus-freq-ddr7 = <9>;
+				qcom,bus-min-ddr7 = <5>;
+				qcom,bus-max-ddr7 = <9>;
+
+			};
+
+			/* NOM */
+			qcom,gpu-pwrlevel@1 {
+				reg = <1>;
+				qcom,gpu-freq = <650000000>;
+				qcom,level = <RPMH_REGULATOR_LEVEL_NOM>;
+
+				qcom,bus-freq-ddr7 = <6>;
+				qcom,bus-min-ddr7 = <5>;
+				qcom,bus-max-ddr7 = <8>;
+
+			};
+
+			/* SVS_L1 */
+			qcom,gpu-pwrlevel@2 {
+				reg = <2>;
+				qcom,gpu-freq = <490000000>;
+				qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
+
+				qcom,bus-freq-ddr7 = <5>;
+				qcom,bus-min-ddr7 = <4>;
+				qcom,bus-max-ddr7 = <7>;
+
+			};
+
+			/* SVS */
+			qcom,gpu-pwrlevel@3 {
+				reg = <3>;
+				qcom,gpu-freq = <390000000>;
+				qcom,level = <RPMH_REGULATOR_LEVEL_SVS>;
+
+				qcom,bus-freq-ddr7 = <4>;
+				qcom,bus-min-ddr7 = <2>;
+				qcom,bus-max-ddr7= <5>;
+			};
+
+			/* LOW SVS */
+			qcom,gpu-pwrlevel@4 {
+				reg = <4>;
+				qcom,gpu-freq = <266000000>;
+				qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
+
+				qcom,bus-freq-ddr7 = <2>;
+				qcom,bus-min-ddr7 = <1>;
+				qcom,bus-max-ddr7 = <4>;
+			};
+		};
 	};
 };
 
@@ -3901,4 +3872,3 @@
 };
 
 #include "msm-rdbg.dtsi"
-#include "somc-murray-nfc.dtsi"
