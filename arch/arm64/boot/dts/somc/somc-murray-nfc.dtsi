@@ -11,7 +11,10 @@
  */
 
 &qupv3_se7_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
+
 	nfc@28 {
 		compatible = "nxp,sn1x0-i2c";
 		reg = <0x28>;
@@ -29,6 +32,8 @@
 	/* sm_gpio_46: SPI MOSI */
 	/* sm_gpio_56: SPI CLK */
 	/* sm_gpio_57: SPI CS/SS */
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&sm_gpio_45 &sm_gpio_46 &sm_gpio_56>;

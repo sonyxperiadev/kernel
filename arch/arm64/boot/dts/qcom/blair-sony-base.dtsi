@@ -1,0 +1,64 @@
+/* Copyright (c) 2023, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * This file contains modifications that cannot be overwritten in any
+ * way from the devicetree overlay but must be removed from the base DTS
+ */
+
+&reserved_memory {
+	/delete-node/ ramoops;
+};
+
+&soc {
+	qcom,msm-imem@c125000 {
+		/delete-node/ restart_reason@65c;
+	};
+};
+
+&tlmm {
+	/delete-node/ spkr_2_sd_n;
+};
+
+&sdhc_2 {
+	/delete-property/ no-mmc;
+	/delete-property/ no-sdio;
+};
+
+&usb0 {
+	dwc3@4e00000 {
+		/delete-property/ snps,has-lpm-erratum;
+	};
+};
+
+&mdss_dsi_phy0 {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+};
+
+&thermal_zones {
+	quiet-therm-step {
+		trips {
+			/delete-node/ battery-trip0;
+			/delete-node/ battery-trip1;
+			/delete-node/ battery-trip2;
+			/delete-node/ battery-trip3;
+			/delete-node/ battery-trip4;
+		};
+
+		cooling-maps {
+			/delete-node/ battery-cdev0;
+			/delete-node/ battery-cdev1;
+			/delete-node/ battery-cdev2;
+			/delete-node/ battery-cdev3;
+			/delete-node/ battery-cdev4;
+		};
+	};
+};

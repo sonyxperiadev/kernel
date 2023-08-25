@@ -3872,3 +3872,4 @@
 };
 
 #include "msm-rdbg.dtsi"
+#include "blair-sony-base.dtsi"
