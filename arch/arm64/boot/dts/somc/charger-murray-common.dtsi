@@ -1,23 +1,36 @@
 &tlmm {
 	if_pmic_irq: if-pmic-irq {
-		pins = "gpio136";
-		function = "gpio";
-		drive-strength = <0x2>;
-		input-enable;
-		bias-disable;
+		mux {
+			pins = "gpio136";
+			function = "gpio";
+		};
+
+		config {
+			drive-strength = <2>; /* 2 mA */
+			bias-disable;         /* NO PULL */
+			input-enable;
+		};
 	};
+
 	usbpd_irq: usbpd_irq {
-		pins = "gpio134";
-		function = "gpio";
-		drive-strength = <0x8>;
-		input-enable;
-		bias-disable;
+		mux {
+			pins = "gpio134";
+			function = "gpio";
+		};
+
+		config {
+			drive-strength = <8>; /* 8 mA */
+			bias-disable;         /* NO PULL */
+			input-enable;
+		};
 	};
 };
+
 &qupv3_se0_i2c {
-	#address-cells = <0x1>;
-	#size-cells = <0x0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "ok";
+
 	sm5038@49 {
 		status = "ok";
 		compatible = "siliconmitus,sm5038mfd";
@@ -31,7 +44,7 @@
 				&pmk8350_usb_conn_therm_default>;
 		sm5038,irq-gpio = <&tlmm 136 0>;
 		sm5038,wakeup;
-		sm5038_charger: sm5038-charger{
+		sm5038_charger: sm5038-charger {
 			battery,sw-jeita-enable;
 			battery,step-charging-enable;
 			battery,fcc-stepping-enable;
@@ -60,7 +73,7 @@
 			battery,chg_float_voltage = <4480>;
 			battery,chg_ocp_current = <5400>;
 			battery,auto-recharge-soc = <950>;
-			io-channels = 	<&pm6125_vadc ADC5_GPIO2_100K_PU>,
+			io-channels = <&pm6125_vadc ADC5_GPIO2_100K_PU>,
 					<&pmr735a_vadc ADC7_GPIO3_100K_PU>,
 					<&pmk8350_vadc PMK8350_ADC7_AMUX_THM2_100K_PU>,
 					<&pmk8350_vadc PMK8350_ADC7_AMUX_THM4_100K_PU>;
@@ -69,6 +82,7 @@
 					"pmk8350_batt_id",
 					"pmk8350_usb_conn_therm";
 		};
+
 		sm5038_fuelgauge: sm5038-fuelgauge {
 			fuelgauge,capacity_max = <1000>;
 			fuelgauge,capacity_min = <0>;
@@ -93,8 +107,9 @@
 				battery0,data_ver = <2>;
 			};
 		};
+
 		sm5038_fled: sm5038-fled{
-            compatible = "siliconmitus,sm5038-fled";
+			compatible = "siliconmitus,sm5038-fled";
 			flash-brightness = <0xA>;
 			preflash-brightness = <0x4>;
 			torch-brightness = <0x2>;
@@ -102,10 +117,12 @@
 		};
 	};
 };
+
 &qupv3_se7_i2c {
 	#address-cells = <0x1>;
 	#size-cells = <0x0>;
 	status = "ok";
+
 	sm5038_usbpd: sm5038-usbpd@33 {
 		status = "ok";
 		compatible = "sm5038-usbpd";
@@ -118,7 +135,8 @@
 		qcom,serial-rx-gpio = <&tlmm 25 0>;
 	};
 };
+
 &usb0 {
 	/* HACK: bypass SM5038 to get usb.. until the driver is ready.. */
-//	extcon = <&sm5038_usbpd>;
+	//extcon = <&sm5038_usbpd>;
 };

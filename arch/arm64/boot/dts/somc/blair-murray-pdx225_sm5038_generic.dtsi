@@ -2,5 +2,3 @@
 
 &soc {
 };
-
-#include "charger-murray-sm5038.dtsi"

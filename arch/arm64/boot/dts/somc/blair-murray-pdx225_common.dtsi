@@ -2,3 +2,10 @@
 
 &soc {
 };
+
+#include "charger-murray-common.dtsi"
+#include "charger-murray-sm5038.dtsi"
+#include "sec_touchscreen_pdx225.dtsi"
+#include "somc-murray-display.dtsi"
+#include "somc-murray-display-pdx225.dtsi"
+#include "somc-murray-nfc.dtsi"
