@@ -1,0 +1,29 @@
+&soc {
+	zambezi_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <15>;
+		#include "qg-batterydata-pdx235-4480mv.dtsi"
+	};
+};
+
+&pm7250b_charger {
+	qcom,fv-max-uv = <4480000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-246)>;
+	somc,product-max-icl-ua = <3000000>;
+	qcom,fcc-max-ua = <4000000>;
+};
+
+&pm7250b_qg {
+	qcom,battery-data = <&zambezi_batterydata>;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
+	qcom,qg-iterm-ma = <561>;
+	somc,ibat-full-term-diff = <315>;
+	somc,fv-max-mv = <4480>;
+};
+
+&pm7250b_pdphy {
+	qcom,default-sink-caps = <5000 3000>, /* 5V @ 3A */
+				 <9000 3000>; /* 9V @ 3A */
+				 //<12000 2250>; /* 12V @ 2.25A */
+};

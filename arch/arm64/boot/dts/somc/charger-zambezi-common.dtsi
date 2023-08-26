@@ -1,0 +1,78 @@
+&pm7250b_charger {
+ 	qcom,sec-charger-config = <0>;  /* No sub charger smb1396. */
+	qcom,auto-recharge-soc = <95>;  /* SOMC: recharge threshold by 95%. */
+ 	qcom,float-option = <1>;
+	qcom,otg-cl-ua = <1000000>;
+	qcom,hvdcp-disable;
+	qcom,chg-term-current-ma = <(-246)>;
+	qcom,chg-term-src = <1>;
+	somc,jeita-hard-thresholds = <0x5314 0x181d>;
+	qcom,serial-tx-gpio = <&tlmm 25 0>;
+	qcom,serial-rx-gpio = <&tlmm 26 0>;
+	qcom,thermal-mitigation = <4000000 3800000 3500000 3300000 3000000
+				2800000 2600000 2500000 2400000 2200000 2000000 1800000
+				1600000 1400000 1200000 1000000 800000 600000 400000
+				200000 100000>;
+
+	somc,thermal-fcc-ua = <
+		3000000 2000000 2000000 2000000 2000000 1600000 1000000 1000000 1000000
+		400000 400000 100000 0 3000000 2000000 1000000 600000 400000 200000 100000 0 0>;
+	somc,thermal-usb-icl-ua = <
+		3000000 3000000 3000000 3000000 3000000 3000000 3000000 3000000 3000000
+		3000000 3000000 3000000 0 3000000 3000000 3000000 3000000 3000000 3000000 3000000 0 0>;
+	somc,thermal-charging-indication = <
+		0 0 0 0 0 0 0 0 0 0
+		0 0 2 0 0 0 0 0 0 0 2 2>;
+	somc,thermal-fcc-sleep-ua = <
+		4000000 4000000 3500000 3300000 3000000 2800000 2500000 2200000 2000000
+		1600000 400000 100000 0 3000000 2000000 1000000 600000 400000 200000 100000 0 0>;
+	somc,thermal-usb-icl-sleep-ua = <
+		3000000 3000000 3000000 3000000 3000000 3000000 3000000 3000000 3000000
+		3000000 3000000 3000000 0 3000000 3000000 3000000 3000000 3000000 3000000 3000000 0 0>;
+	somc,thermal-charging-indication-sleep = <
+		0 0 0 0 0 0 0 0 0 0
+		0 0 2 0 0 0 0 0 0 0 2 2>;
+	somc,thermal-usb-cc-open = <
+		0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1>;
+	panel = <&dsi_samsung_amoled_cmd>;
+	pinctrl-names = "sleep";
+	pinctrl-0 = <&qupv3_se9_2uart_sleep>;
+
+};
+
+&pm7250b_qg {
+	io-channels = <&pm7250b_vadc ADC5_BAT_THERM_100K_PU>,
+		      <&pm7250b_vadc ADC5_BAT_ID_100K_PU>,
+		      <&pm7250b_charger PSY_IIO_INPUT_CURRENT_LIMITED>,
+		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
+		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
+		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>;/*,
+		      <&pm7250b_charger PSY_IIO_JEITA_STEP_FCC>,
+		      <&pm7250b_charger PSY_IIO_JEITA_STEP_FV>,
+		      <&pm7250b_charger PSY_IIO_JEITA_STEP_ITERM>,
+		      <&pm7250b_charger PSY_IIO_JEITA_CONDITION>,
+		      <&pm7250b_charger PSY_IIO_CV_STATUS>;*/
+	io-channel-names = "batt-therm",
+			   "batt-id",
+			   "input_current_limited",
+			   "recharge_soc",
+			   "force_recharge",
+			   "charge_done";/*,
+			   "jeita_step_fcc",
+			   "jeita_step_fv",
+			   "jeita_step_iterm",
+			   "jeita_condition",
+			   "cv_status";*/
+	qcom,qg-iterm-ma = <561>;
+ 	qcom,hold-soc-while-full;
+ 	qcom,linearize-soc;
+	qcom,vbatt-cutoff-mv = <3400>;
+ 	qcom,vbatt-empty-mv = <3000>;
+ 	qcom,vbatt-empty-cold-mv = <3000>;
+	/delete-property/ qcom,cl-disable;
+ 	qcom,cl-feedback-on;
+ 	qcom,cl-min-start-soc = <0>;
+	qcom,cl-max-start-soc = <40>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+};

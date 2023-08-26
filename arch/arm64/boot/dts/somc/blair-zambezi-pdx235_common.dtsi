@@ -1,0 +1,10 @@
+#include "blair-zambezi-common.dtsi"
+
+&soc {
+};
+
+#include "charger-zambezi-common.dtsi"
+#include "charger-zambezi-pdx235.dtsi"
+#include "somc-zambezi-display.dtsi"
+#include "somc-zambezi-display-pdx235.dtsi"
+#include "somc-zambezi-nfc.dtsi"
