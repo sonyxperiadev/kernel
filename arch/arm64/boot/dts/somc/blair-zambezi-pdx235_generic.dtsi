@@ -1,0 +1,4 @@
+#include "blair-zambezi-pdx235_common.dtsi"
+
+&soc {
+};
