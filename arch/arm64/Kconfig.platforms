@@ -498,10 +498,10 @@ config MACH_SONY_PDX215
 
 config ARCH_SONY_MURRAY
 	bool "Sony Mobile Murray platform"
-	depends on ARCH_HOLI
+	depends on ARCH_BLAIR
 	help
 	  Support for the SONY Mobile Murray platform
-	  which is based on QCOM HOLI chipset.
+	  which is based on QCOM BLAIR chipset.
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
@@ -516,10 +516,10 @@ config MACH_SONY_PDX225
 
 config ARCH_SONY_ZAMBEZI
 	bool "Sony Mobile Zambezi platform"
-	depends on ARCH_HOLI
+	depends on ARCH_BLAIR
 	help
 	  Support for the SONY Mobile Zambezi platform
-	  which is based on QCOM HOLI chipset.
+	  which is based on QCOM BLAIR chipset.
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
