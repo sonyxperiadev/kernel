@@ -306,7 +306,7 @@ static int smb5_chg_config_init(struct smb5 *chip)
 {
 	struct smb_charger *chg = &chip->chg;
 	struct device_node *node = chg->dev->of_node;
-	int subtype = (u8)of_device_get_match_data(chg->dev);
+	int subtype = (uintptr_t)of_device_get_match_data(chg->dev);
 
 	switch (subtype) {
 	case PM8150B:
