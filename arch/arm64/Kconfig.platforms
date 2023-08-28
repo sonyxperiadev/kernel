@@ -195,60 +195,6 @@ config ARCH_KONA
 	  This enables support for the KONA chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.\
 
-config ARCH_SONY_EDO
-	bool "Sony Mobile Edo platform"
-	depends on ARCH_KONA
-	help
-	Support for the SONY Mobile Edo platform
-	which is based on QCOM KONA chipset.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_PDX203
-	bool "Sony Mobile PDX-203"
-	depends on ARCH_SONY_EDO
-	help
-	Support for the SONY Mobile PDX-203 device
-	which is based on SONY Edo platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_PDX206
-	bool "Sony Mobile PDX-206"
-	depends on ARCH_SONY_EDO
-	help
-	Support for the SONY Mobile PDX-206 device
-	which is based on SONY Edo platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config ARCH_SONY_SAGAMI
-	bool "Sony Mobile Sagami platform"
-	depends on ARCH_LAHAINA
-	help
-	  Support for the SONY Mobile Sagami platform
-	  which is based on QCOM LAHAINA chipset.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
-
-config MACH_SONY_PDX214
-	bool "Sony Mobile PDX-214"
-	depends on ARCH_SONY_SAGAMI
-	help
-	  Support for the SONY Mobile PDX-214 board
-	  which is based on SONY Sagami platform.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
-
-config MACH_SONY_PDX215
-	bool "Sony Mobile PDX-215"
-	depends on ARCH_SONY_SAGAMI
-	help
-	  Support for the SONY Mobile PDX-215 board
-	  which is based on SONY Sagami platform.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
-
 config ARCH_LITO
 	bool "Enable Support for Qualcomm Technologies, Inc. LITO"
 	depends on ARCH_QCOM
@@ -256,24 +202,6 @@ config ARCH_LITO
 	help
 	  This enables support for the LITO chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.
-
-config ARCH_SONY_LENA
-	bool "Sony Mobile Lena platform"
-	depends on ARCH_LITO
-	help
-	  Support for the SONY Mobile Lena platform
-	  which is based on QCOM LITO chipset.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
-
-config MACH_SONY_PDX213
-	bool "Sony Mobile PDX213"
-	depends on ARCH_SONY_LENA
-	help
-	  Support for the SONY Mobile PDX213 device
-	  which is based on SONY Lena platform.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
 
 config ARCH_LAGOON
 	bool "Enable Support for Qualcomm Technologies, Inc. LAGOON"
@@ -315,24 +243,6 @@ config ARCH_HOLI
 	  This enables support for the Qualcomm Technologies, Inc.'s
 	  HOLI chipset. If you do not wish to build a kernel that
 	  runs on this chipset or if you are unsure, say 'N' here.
-
-config ARCH_SONY_MURRAY
-	bool "Sony Mobile Murray platform"
-	depends on ARCH_HOLI
-	help
-	  Support for the SONY Mobile Murray platform
-	  which is based on QCOM HOLI chipset.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
-
-config MACH_SONY_PDX225
-	bool "Sony Mobile PDX225"
-	depends on ARCH_SONY_MURRAY
-	help
-	  Support for the SONY Mobile PDX225 board
-	  which is based on SONY Murray platform.
-	  If you enable this config,
-	  please use SONY Mobile device tree.
 
 config ARCH_BLAIR
 	bool "Enable Support for Qualcomm Technologies, Inc. BLAIR"
@@ -513,5 +423,95 @@ config ARCH_SA2150P
 	  SA2150P SoC.
 	  If you do not wish to build a kernel that runs on this chipset,
 	  say 'N' here.
+
+config ARCH_SONY_EDO
+	bool "Sony Mobile Edo platform"
+	depends on ARCH_KONA
+	help
+	Support for the SONY Mobile Edo platform
+	which is based on QCOM KONA chipset.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_PDX203
+	bool "Sony Mobile PDX-203"
+	depends on ARCH_SONY_EDO
+	help
+	Support for the SONY Mobile PDX-203 device
+	which is based on SONY Edo platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_PDX206
+	bool "Sony Mobile PDX-206"
+	depends on ARCH_SONY_EDO
+	help
+	Support for the SONY Mobile PDX-206 device
+	which is based on SONY Edo platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config ARCH_SONY_LENA
+	bool "Sony Mobile Lena platform"
+	depends on ARCH_LITO
+	help
+	  Support for the SONY Mobile Lena platform
+	  which is based on QCOM LITO chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX213
+	bool "Sony Mobile PDX213"
+	depends on ARCH_SONY_LENA
+	help
+	  Support for the SONY Mobile PDX213 device
+	  which is based on SONY Lena platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config ARCH_SONY_SAGAMI
+	bool "Sony Mobile Sagami platform"
+	depends on ARCH_LAHAINA
+	help
+	  Support for the SONY Mobile Sagami platform
+	  which is based on QCOM LAHAINA chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX214
+	bool "Sony Mobile PDX-214"
+	depends on ARCH_SONY_SAGAMI
+	help
+	  Support for the SONY Mobile PDX-214 board
+	  which is based on SONY Sagami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX215
+	bool "Sony Mobile PDX-215"
+	depends on ARCH_SONY_SAGAMI
+	help
+	  Support for the SONY Mobile PDX-215 board
+	  which is based on SONY Sagami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config ARCH_SONY_MURRAY
+	bool "Sony Mobile Murray platform"
+	depends on ARCH_HOLI
+	help
+	  Support for the SONY Mobile Murray platform
+	  which is based on QCOM HOLI chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX225
+	bool "Sony Mobile PDX225"
+	depends on ARCH_SONY_MURRAY
+	help
+	  Support for the SONY Mobile PDX225 board
+	  which is based on SONY Murray platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 endmenu
