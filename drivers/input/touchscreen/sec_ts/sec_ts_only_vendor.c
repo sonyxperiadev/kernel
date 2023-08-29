@@ -2,13 +2,17 @@
  *
  * Copyright (C) 2015 Samsung Electronics Co., Ltd.
  * http://www.samsungsemi.com/
- * Copyright (C) 2018 Sony Mobile Communications Inc.
  *
  * Core file for Samsung TSC driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
+ */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
  */
 
 #include <linux/kernel.h>
@@ -32,13 +36,14 @@
 #include <linux/uaccess.h>
 /*#include <asm/gpio.h>*/
 
-#include "include/sec_ts.h"
+#include "sec_ts.h"
 
 u8 lv1cmd;
 u8 *read_lv1_buff;
 static int lv1_readsize;
 static int lv1_readremain;
 static int lv1_readoffset;
+struct class *sec_class = NULL;
 
 static ssize_t sec_ts_reg_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size);
@@ -104,6 +109,7 @@ static ssize_t sec_ts_regread_show(struct device *dev, struct device_attribute *
 		return -EIO;
 	}
 
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, false);
 
 	mutex_lock(&ts->device_mutex);
@@ -142,6 +148,7 @@ i2c_err:
 malloc_err:
 	mutex_unlock(&ts->device_mutex);
 	lv1_readremain = 0;
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, true);
 
 	return lv1_readsize;
@@ -194,6 +201,7 @@ static ssize_t sec_ts_enter_recovery_store(struct device *dev, struct device_att
 	}
 
 	if (on == 1) {
+		pr_err("***%s\n", __func__);
 		sec_ts_set_irq(ts, false);
 		gpio_free(pdata->irq_gpio);
 
@@ -229,18 +237,15 @@ static ssize_t sec_ts_enter_recovery_store(struct device *dev, struct device_att
 		sec_ts_delay(500);
 		pdata->power(ts, true);
 		sec_ts_delay(500);
-#if 0
+
 		/* AFE Calibration */
 		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_CALIBRATION_AMBIENT, NULL, 0);
 		if (ret < 0)
 			input_err(true, &ts->client->dev, "%s: fail to write AFE_CAL\n", __func__);
 
 		sec_ts_delay(1000);
-		sec_ts_set_irq(ts, true);
-
-#endif
 		pr_err("***%s\n", __func__);
-	sec_ts_set_irq(ts, true);
+		sec_ts_set_irq(ts, true);
 	}
 
 	sec_ts_read_information(ts);
@@ -270,14 +275,14 @@ int sec_ts_raw_device_init(struct sec_ts_data *ts)
 {
 	int ret;
 
-	ts->sec_class = class_create(THIS_MODULE, "sec");
-	ret = IS_ERR_OR_NULL(ts->sec_class);
+	sec_class = class_create(THIS_MODULE, "sec");
+	ret = IS_ERR_OR_NULL(sec_class);
 	if (ret) {
 		input_err(true, &ts->client->dev, "%s: fail - class_create\n", __func__);
 		return ret;
 	}
 
-	ts->dev = device_create(ts->sec_class, NULL, 0, ts, "sec_ts");
+	ts->dev = device_create(sec_class, NULL, 0, ts, "sec_ts");
 
 	ret = IS_ERR(ts->dev);
 	if (ret) {

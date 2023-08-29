@@ -2,7 +2,6 @@
  *
  * Copyright (C) 2015 Samsung Electronics Co., Ltd.
  * http://www.samsungsemi.com/
- * Copyright (C) 2018 Sony Mobile Communications Inc.
  *
  * Core file for Samsung TSC driver
  *
@@ -10,8 +9,13 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
-#include "include/sec_ts.h"
+#include "sec_ts.h"
 
 #define SEC_TS_FW_BLK_SIZE		256
 
@@ -424,7 +428,6 @@ err:
 	return -EIO;
 }
 
-#ifdef SEC_TS_FIRMWARE_VERIFICATION
 static int sec_ts_memoryblockread(struct sec_ts_data *ts, u32 mem_addr, int mem_size, u8 *buf)
 {
 	int ret;
@@ -478,9 +481,7 @@ static int sec_ts_memoryblockread(struct sec_ts_data *ts, u32 mem_addr, int mem_
 #endif
 	return 0;
 }
-#endif
 
-#ifdef SEC_TS_FIRMWARE_VERIFICATION
 static int sec_ts_memoryread(struct sec_ts_data *ts, u32 mem_addr, u8 *mem_data, u32 mem_size)
 {
 	int ret;
@@ -523,15 +524,12 @@ static int sec_ts_memoryread(struct sec_ts_data *ts, u32 mem_addr, u8 *mem_data,
 
 	return read_size;
 }
-#endif
 
 static int sec_ts_chunk_update(struct sec_ts_data *ts, u32 addr, u32 size, u8 *data, int retry)
 {
 	u32 fw_size;
 	u32 write_size;
-#ifdef SEC_TS_FIRMWARE_VERIFICATION
 	u8 *mem_rb;
-#endif
 	int ret = 0;
 
 	fw_size = size;
@@ -543,7 +541,6 @@ static int sec_ts_chunk_update(struct sec_ts_data *ts, u32 addr, u32 size, u8 *d
 		goto err_write_fail;
 	}
 
-#ifdef SEC_TS_FIRMWARE_VERIFICATION
 	mem_rb = vzalloc(fw_size);
 	if (!mem_rb) {
 		input_err(true, &ts->client->dev, "%s: vzalloc failed\n", __func__);
@@ -573,7 +570,6 @@ static int sec_ts_chunk_update(struct sec_ts_data *ts, u32 addr, u32 size, u8 *d
 
 out:
 	vfree(mem_rb);
-#endif
 err_write_fail:
 	sec_ts_delay(10);
 
@@ -614,12 +610,12 @@ static int sec_ts_firmware_update(struct sec_ts_data *ts, const u8 *data,
 		return -1;
 	}
 
-	input_info(true, &ts->client->dev, "%s: num_chunk : %d\n", __func__, fw_hd->num_chunk);
+	input_err(true, &ts->client->dev, "%s: num_chunk : %d\n", __func__, fw_hd->num_chunk);
 
 	for (i = 0; i < fw_hd->num_chunk; i++) {
 		fw_ch = (fw_chunk *)fd;
 
-		input_info(true, &ts->client->dev, "%s: [%d] 0x%08X, 0x%08X, 0x%08X, 0x%08X\n", __func__, i,
+		input_err(true, &ts->client->dev, "%s: [%d] 0x%08X, 0x%08X, 0x%08X, 0x%08X\n", __func__, i,
 				fw_ch->signature, fw_ch->addr, fw_ch->size, fw_ch->reserved);
 
 		if (fw_ch->signature != SEC_TS_FW_CHUNK_SIGN) {
@@ -689,7 +685,9 @@ int sec_ts_firmware_update_bl(struct sec_ts_data *ts)
 	const struct firmware *fw_entry;
 	char fw_path[SEC_TS_MAX_FW_PATH];
 	int result = -1;
+	int ret = 0;
 
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, false);
 
 	snprintf(fw_path, SEC_TS_MAX_FW_PATH, "%s", SEC_TS_DEFAULT_BL_NAME);
@@ -697,8 +695,9 @@ int sec_ts_firmware_update_bl(struct sec_ts_data *ts)
 	input_info(true, &ts->client->dev, "%s: initial bl update %s\n", __func__, fw_path);
 
 	/* Loading Firmware------------------------------------------ */
-	if (request_firmware(&fw_entry, fw_path, &ts->client->dev) !=  0) {
-		input_err(true, &ts->client->dev, "%s: bt is not available\n", __func__);
+	ret = request_firmware(&fw_entry, fw_path, &ts->client->dev);
+	if (ret !=  0) {
+		input_err(true, &ts->client->dev, "%s: bt is not available ret = %d\n", __func__,ret);
 		goto err_request_fw;
 	}
 	input_info(true, &ts->client->dev, "%s: request bt done! size = %d\n", __func__, (int)fw_entry->size);
@@ -707,6 +706,7 @@ int sec_ts_firmware_update_bl(struct sec_ts_data *ts)
 
 err_request_fw:
 	release_firmware(fw_entry);
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, true);
 
 	return result;
@@ -777,6 +777,7 @@ int sec_ts_firmware_update_on_probe(struct sec_ts_data *ts, bool force_update)
 	else
 		return 0;
 
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, false);
 
 	/* read cal status */
@@ -786,8 +787,9 @@ int sec_ts_firmware_update_on_probe(struct sec_ts_data *ts, bool force_update)
 			__func__, fw_path, ts->cal_status);
 
 	/* Loading Firmware */
-	if (request_firmware(&fw_entry, fw_path, &ts->client->dev) !=  0) {
-		input_err(true, &ts->client->dev, "%s: firmware is not available\n", __func__);
+	ret = request_firmware(&fw_entry, fw_path, &ts->client->dev);
+	if (ret !=  0) {
+		input_err(true, &ts->client->dev, "%s: firmware is not available ret = %d \n", __func__,ret);
 		goto err_request_fw;
 	}
 	input_info(true, &ts->client->dev, "%s: request firmware done! size = %d\n", __func__, (int)fw_entry->size);
@@ -824,6 +826,8 @@ int sec_ts_firmware_update_on_probe(struct sec_ts_data *ts, bool force_update)
 
 err_request_fw:
 	release_firmware(fw_entry);
+	pr_err("***%s\n", __func__);
+	sec_ts_set_irq(ts, true);
 	return result;
 }
 
@@ -835,7 +839,8 @@ static int sec_ts_load_fw_from_bin(struct sec_ts_data *ts)
 	int restore_cal = 0;
 
 	if (ts->client->irq)
-		sec_ts_set_irq(ts, false);
+		pr_err("***%s\n", __func__);
+	sec_ts_set_irq(ts, false);
 
 	if (!ts->plat_data->firmware_name)
 		snprintf(fw_path, SEC_TS_MAX_FW_PATH, "%s", SEC_TS_DEFAULT_FW_NAME);
@@ -845,8 +850,9 @@ static int sec_ts_load_fw_from_bin(struct sec_ts_data *ts)
 	input_info(true, &ts->client->dev, "%s: initial firmware update  %s\n", __func__, fw_path);
 
 	/* Loading Firmware */
-	if (request_firmware(&fw_entry, fw_path, &ts->client->dev) !=  0) {
-		input_err(true, &ts->client->dev, "%s: firmware is not available\n", __func__);
+	error = request_firmware(&fw_entry, fw_path, &ts->client->dev);
+	if (error !=  0) {
+		input_err(true, &ts->client->dev, "%s: firmware is not available error= %d\n", __func__, error);
 		error = -1;
 		goto err_request_fw;
 	}
@@ -863,88 +869,9 @@ static int sec_ts_load_fw_from_bin(struct sec_ts_data *ts)
 err_request_fw:
 	release_firmware(fw_entry);
 	if (ts->client->irq)
-		sec_ts_set_irq(ts, true);
+		pr_err("***%s\n", __func__);
+	sec_ts_set_irq(ts, true);
 
-	return error;
-}
-
-static int sec_ts_load_fw_from_ums(struct sec_ts_data *ts)
-{
-	fw_header *fw_hd;
-	struct file *fp;
-	mm_segment_t old_fs;
-	long fw_size, nread;
-	int error = 0;
-	int restore_cal = 0;
-
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-
-	fp = filp_open(SEC_TS_DEFAULT_UMS_FW, O_RDONLY, S_IRUSR);
-	if (IS_ERR(fp)) {
-		input_err(true, ts->dev, "%s: failed to open %s.\n", __func__,
-				SEC_TS_DEFAULT_UMS_FW);
-		error = -ENOENT;
-		goto open_err;
-	}
-
-	fw_size = fp->f_path.dentry->d_inode->i_size;
-
-	if (fw_size > 0) {
-		unsigned char *fw_data;
-
-		fw_data = vzalloc(fw_size);
-		if (!fw_data) {
-			input_err(true, ts->dev, "%s: failed to alloc mem\n", __func__);
-			error = -ENOMEM;
-			filp_close(fp, NULL);
-			goto open_err;
-		}
-		nread = vfs_read(fp, (char __user *)fw_data,
-				fw_size, &fp->f_pos);
-
-		input_info(true, ts->dev,
-				"%s: start, file path %s, size %ld Bytes\n",
-				__func__, SEC_TS_DEFAULT_UMS_FW, fw_size);
-
-		if (nread != fw_size) {
-			input_err(true, ts->dev,
-					"%s: failed to read firmware file, nread %ld Bytes\n",
-					__func__, nread);
-			error = -EIO;
-		} else {
-			fw_hd = (fw_header *)fw_data;
-#if 0
-			sec_ts_check_firmware_version(ts, fw_data);
-#endif
-			input_info(true, &ts->client->dev, "%s: firmware version %08X\n", __func__, fw_hd->fw_ver);
-			input_info(true, &ts->client->dev, "%s: parameter version %08X\n", __func__, fw_hd->para_ver);
-
-			if (ts->client->irq)
-				sec_ts_set_irq(ts, false);
-			/* use virtual pat_control - magic cal 1 */
-			if (sec_ts_firmware_update(ts, fw_data, fw_size, 0, restore_cal, 0) < 0) {
-				error = -1; /* firmware failed */
-				goto done;
-			}
-
-			sec_ts_save_version_of_ic(ts);
-		}
-
-		if (error < 0)
-			input_err(true, ts->dev, "%s: failed update firmware\n",
-					__func__);
-
-done:
-		if (ts->client->irq)
-			sec_ts_set_irq(ts, true);
-		vfree(fw_data);
-	}
-
-	filp_close(fp, NULL);
-
-open_err:
-	set_fs(old_fs);
 	return error;
 }
 
@@ -953,14 +880,17 @@ static int sec_ts_load_fw_from_ffu(struct sec_ts_data *ts)
 	const struct firmware *fw_entry;
 	const char *fw_path = SEC_TS_DEFAULT_FFU_FW;
 	int result = -1;
+	int ret = 0;
 
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, false);
 
 	input_info(true, ts->dev, "%s: Load firmware : %s\n", __func__, fw_path);
 
 	/* Loading Firmware */
-	if (request_firmware(&fw_entry, fw_path, &ts->client->dev) !=  0) {
-		input_err(true, &ts->client->dev, "%s: firmware is not available\n", __func__);
+	ret = request_firmware(&fw_entry, fw_path, &ts->client->dev);
+	if (ret !=  0) {
+		input_err(true, &ts->client->dev, "%s: firmware is not available ret = %d\n", __func__, ret);
 		goto err_request_fw;
 	}
 	input_info(true, &ts->client->dev, "%s: request firmware done! size = %d\n", __func__, (int)fw_entry->size);
@@ -976,6 +906,7 @@ static int sec_ts_load_fw_from_ffu(struct sec_ts_data *ts)
 
 err_request_fw:
 	release_firmware(fw_entry);
+	pr_err("***%s\n", __func__);
 	sec_ts_set_irq(ts, true);
 	return result;
 }
@@ -996,9 +927,6 @@ int sec_ts_firmware_update_on_hidden_menu(struct sec_ts_data *ts, int update_typ
 	switch (update_type) {
 	case BUILT_IN:
 		ret = sec_ts_load_fw_from_bin(ts);
-		break;
-	case UMS:
-		ret = sec_ts_load_fw_from_ums(ts);
 		break;
 	case FFU:
 		ret = sec_ts_load_fw_from_ffu(ts);
@@ -1024,6 +952,12 @@ int sec_ts_firmware_update_on_hidden_menu(struct sec_ts_data *ts, int update_typ
 				__func__, update_type);
 		break;
 	}
+
+#ifdef SEC_TS_SUPPORT_CUSTOMLIB
+	sec_ts_check_custom_library(ts);
+	if (ts->use_customlib)
+		sec_ts_set_custom_library(ts);
+#endif
 
 	return ret;
 }
