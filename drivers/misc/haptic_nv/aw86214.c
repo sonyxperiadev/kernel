@@ -119,13 +119,6 @@ const unsigned char aw86214_reg_list[] = {
  ******************************************************/
 static char *aw86214_ram_name = "aw86214_haptic.bin";
 
-/******************************************************
- *
- * functions declaration
- *
- ******************************************************/
-static int aw86214_analyse_duration_range(struct aw86214 *aw86214);
-
  /******************************************************
  *
  * aw86214 i2c write/read
@@ -248,33 +241,6 @@ irqreturn_t aw86214_irq(int irq, void *data)
 	aw_dev_info("%s exit\n", __func__);
 
 	return IRQ_HANDLED;
-}
-
-static int aw86214_analyse_duration_range(struct aw86214 *aw86214)
-{
-	int i = 0;
-	int ret = 0;
-	int len = 0;
-	int *duration_time = NULL;
-
-	len = ARRAY_SIZE(aw86214->dts_info.duration_time);
-	duration_time = aw86214->dts_info.duration_time;
-	if (len < 2) {
-		aw_dev_err("%s: duration time range error\n", __func__);
-		return -ERANGE;
-	}
-	for (i = (len - 1); i > 0; i--) {
-		if (duration_time[i] > duration_time[i-1])
-			continue;
-		else
-			break;
-
-	}
-	if (i > 0) {
-		aw_dev_err("%s: duration time range error\n", __func__);
-		ret = -ERANGE;
-	}
-	return ret;
 }
 
 static int
@@ -952,45 +918,6 @@ static int aw86214_container_update(struct aw86214 *aw86214,
 	aw86214_haptic_raminit(aw86214, false);
 	mutex_unlock(&aw86214->lock);
 	aw_dev_info("%s exit\n", __func__);
-	return ret;
-}
-
-static int aw86214_haptic_ram_config(struct aw86214 *aw86214, int duration)
-{
-	int ret = 0;
-
-	if (aw86214->duration_time_flag < 0) {
-		aw_dev_err("%s: duration time error, array size = %d\n",
-			   __func__, aw86214->duration_time_size);
-		return -ERANGE;
-	}
-	ret = aw86214_analyse_duration_range(aw86214);
-	if (ret < 0)
-		return ret;
-
-	if ((duration > 0) && (duration <
-				aw86214->dts_info.duration_time[0])) {
-		aw86214->index = 3;	/*3*/
-		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
-	} else if ((duration >= aw86214->dts_info.duration_time[0]) &&
-		(duration < aw86214->dts_info.duration_time[1])) {
-		aw86214->index = 2;	/*2*/
-		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
-	} else if ((duration >= aw86214->dts_info.duration_time[1]) &&
-		(duration < aw86214->dts_info.duration_time[2])) {
-		aw86214->index = 1;	/*1*/
-		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
-	} else if (duration >= aw86214->dts_info.duration_time[2]) {
-		aw86214->index = 4;	/*4*/
-		aw86214->activate_mode = AW86214_HAPTIC_RAM_LOOP_MODE;
-	} else {
-		aw_dev_err("%s: duration time error, duration= %d\n",
-			   __func__, duration);
-		aw86214->index = 0;
-		aw86214->activate_mode = AW86214_HAPTIC_NULL;
-		ret = -ERANGE;
-	}
-
 	return ret;
 }
 
@@ -1851,6 +1778,89 @@ static ssize_t aw86214_reg_store(struct device *dev,
 	return count;
 }
 
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
+static int aw86214_analyse_duration_range(struct aw86214 *aw86214)
+{
+	int i = 0;
+	int ret = 0;
+	int len = 0;
+	int *duration_time = NULL;
+
+	len = ARRAY_SIZE(aw86214->dts_info.duration_time);
+	duration_time = aw86214->dts_info.duration_time;
+	if (len < 2) {
+		aw_dev_err("%s: duration time range error\n", __func__);
+		return -ERANGE;
+	}
+	for (i = (len - 1); i > 0; i--) {
+		if (duration_time[i] > duration_time[i-1])
+			continue;
+		else
+			break;
+
+	}
+	if (i > 0) {
+		aw_dev_err("%s: duration time range error\n", __func__);
+		ret = -ERANGE;
+	}
+	return ret;
+}
+
+static int aw86214_haptic_ram_config(struct aw86214 *aw86214, int duration)
+{
+	int ret = 0;
+
+	if (aw86214->duration_time_flag < 0) {
+		aw_dev_err("%s: duration time error, array size = %d\n",
+			   __func__, aw86214->duration_time_size);
+		return -ERANGE;
+	}
+	ret = aw86214_analyse_duration_range(aw86214);
+	if (ret < 0)
+		return ret;
+
+	if ((duration > 0) && (duration <
+				aw86214->dts_info.duration_time[0])) {
+		aw86214->index = 3;	/*3*/
+		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
+	} else if ((duration >= aw86214->dts_info.duration_time[0]) &&
+		(duration < aw86214->dts_info.duration_time[1])) {
+		aw86214->index = 2;	/*2*/
+		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
+	} else if ((duration >= aw86214->dts_info.duration_time[1]) &&
+		(duration < aw86214->dts_info.duration_time[2])) {
+		aw86214->index = 1;	/*1*/
+		aw86214->activate_mode = AW86214_HAPTIC_RAM_MODE;
+	} else if (duration >= aw86214->dts_info.duration_time[2]) {
+		aw86214->index = 4;	/*4*/
+		aw86214->activate_mode = AW86214_HAPTIC_RAM_LOOP_MODE;
+	} else {
+		aw_dev_err("%s: duration time error, duration= %d\n",
+			   __func__, duration);
+		aw86214->index = 0;
+		aw86214->activate_mode = AW86214_HAPTIC_NULL;
+		ret = -ERANGE;
+	}
+
+	return ret;
+}
+
+static ssize_t aw86214_state_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	cdev_t *cdev = dev_get_drvdata(dev);
+	struct aw86214 *aw86214 = container_of(cdev, struct aw86214, vib_dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", aw86214->state);
+}
+
+static ssize_t aw86214_state_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	return count;
+}
+
 static ssize_t aw86214_duration_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
@@ -1925,6 +1935,7 @@ static ssize_t aw86214_activate_store(struct device *dev,
 	schedule_work(&aw86214->vibrator_work);
 	return count;
 }
+#endif
 
 static ssize_t aw86214_seq_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -2011,22 +2022,6 @@ static ssize_t aw86214_loop_store(struct device *dev,
 					    aw86214->loop[databuf[0]]);
 		mutex_unlock(&aw86214->lock);
 	}
-	return count;
-}
-
-static ssize_t aw86214_state_show(struct device *dev,
-				  struct device_attribute *attr, char *buf)
-{
-	cdev_t *cdev = dev_get_drvdata(dev);
-	struct aw86214 *aw86214 = container_of(cdev, struct aw86214, vib_dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", aw86214->state);
-}
-
-static ssize_t aw86214_state_store(struct device *dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
-{
 	return count;
 }
 
@@ -2695,19 +2690,21 @@ static ssize_t aw86214_awrw_store(struct device *dev,
 	return count;
 }
 
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
+static DEVICE_ATTR(state, 0644, aw86214_state_show, aw86214_state_store);
+static DEVICE_ATTR(duration, 0644, aw86214_duration_show,
+		   aw86214_duration_store);
+static DEVICE_ATTR(activate, 0644, aw86214_activate_show,
+		   aw86214_activate_store);
+#endif
 static DEVICE_ATTR(f0, 0644, aw86214_f0_show, aw86214_f0_store);
 static DEVICE_ATTR(cont, 0644, aw86214_cont_show, aw86214_cont_store);
 static DEVICE_ATTR(reg, 0644, aw86214_reg_show, aw86214_reg_store);
-static DEVICE_ATTR(duration, 0644, aw86214_duration_show,
-		   aw86214_duration_store);
 static DEVICE_ATTR(index, 0644, aw86214_index_show, aw86214_index_store);
-static DEVICE_ATTR(activate, 0644, aw86214_activate_show,
-		   aw86214_activate_store);
 static DEVICE_ATTR(activate_mode, 0644, aw86214_activate_mode_show,
 		   aw86214_activate_mode_store);
 static DEVICE_ATTR(seq, 0644, aw86214_seq_show, aw86214_seq_store);
 static DEVICE_ATTR(loop, 0644, aw86214_loop_show, aw86214_loop_store);
-static DEVICE_ATTR(state, 0644, aw86214_state_show, aw86214_state_store);
 static DEVICE_ATTR(gain, 0644, aw86214_gain_show, aw86214_gain_store);
 static DEVICE_ATTR(ram_update, 0644, aw86214_ram_update_show,
 		   aw86214_ram_update_store);
@@ -2736,9 +2733,11 @@ static DEVICE_ATTR(haptic_audio, 0644, aw86214_haptic_audio_show,
 static DEVICE_ATTR(ram_num, 0644, aw86214_ram_num_show, NULL);
 static DEVICE_ATTR(awrw, 0644, aw86214_awrw_show, aw86214_awrw_store);
 static struct attribute *aw86214_vibrator_attributes[] = {
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
 	&dev_attr_state.attr,
 	&dev_attr_duration.attr,
 	&dev_attr_activate.attr,
+#endif
 	&dev_attr_activate_mode.attr,
 	&dev_attr_index.attr,
 	&dev_attr_gain.attr,
