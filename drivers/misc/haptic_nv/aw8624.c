@@ -147,7 +147,6 @@ struct pm_qos_request aw8624_pm_qos_req_vb;
 static void aw8624_interrupt_clear(struct aw8624 *aw8624);
 static void aw8624_haptic_upload_lra(struct aw8624 *aw8624, unsigned int flag);
 static int aw8624_haptic_stop(struct aw8624 *aw8624);
-static int aw8624_analyse_duration_range(struct aw8624 *aw8624);
 
 /******************************************************
  *
@@ -834,44 +833,6 @@ static int aw8624_haptic_swicth_motorprotect_config(struct aw8624 *aw8624,
 	}
 
 	 return 0;
-}
-
-static int aw8624_haptic_ram_config(struct aw8624 *aw8624, int duration)
-{
-	int ret = 0;
-
-	if (aw8624->duration_time_flag < 0) {
-		aw_dev_err("%s: duration time error, array size = %d\n",
-			   __func__, aw8624->duration_time_size);
-		return -ERANGE;
-	}
-	ret = aw8624_analyse_duration_range(aw8624);
-	if (ret < 0)
-		return ret;
-	if ((duration > 0) && (duration <
-				aw8624_dts_data.aw8624_duration_time[0])) {
-		aw8624->index = 3;	/*3*/
-		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
-	} else if ((duration >= aw8624_dts_data.aw8624_duration_time[0]) &&
-		(duration < aw8624_dts_data.aw8624_duration_time[1])) {
-		aw8624->index = 2;	/*2*/
-		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
-	} else if ((duration >= aw8624_dts_data.aw8624_duration_time[1]) &&
-		(duration < aw8624_dts_data.aw8624_duration_time[2])) {
-		aw8624->index = 1;	/*1*/
-		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
-	} else if (duration >= aw8624_dts_data.aw8624_duration_time[2]) {
-		aw8624->index = 4;	/*4*/
-		aw8624->activate_mode = AW8624_HAPTIC_RAM_LOOP_MODE;
-	} else {
-		aw_dev_err("%s: duration time error, duration= %d\n",
-			   __func__, duration);
-		aw8624->index = 0;
-		aw8624->activate_mode = AW8624_HAPTIC_NULL;
-		ret = -ERANGE;
-	}
-
-	return ret;
 }
 
 static int aw8624_haptic_select_pin(struct aw8624 *aw8624, unsigned char pin)
@@ -2031,7 +1992,6 @@ static void aw8624_vibrator_enable(struct timed_output_dev *vib_dev, int value)
 
 	mutex_unlock(&aw8624->lock);
 }
-
 #else
 static void
 aw8624_vibrator_enable(struct led_classdev *dev, enum led_brightness value)
@@ -2056,8 +2016,73 @@ aw8624_vibrator_enable(struct led_classdev *dev, enum led_brightness value)
 
 
 }
-
 #endif
+
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
+static int aw8624_analyse_duration_range(struct aw8624 *aw8624)
+{
+	int i = 0;
+	int ret = 0;
+	int len = 0;
+	int *duration_time = NULL;
+
+	len = ARRAY_SIZE(aw8624_dts_data.aw8624_duration_time);
+	duration_time = aw8624_dts_data.aw8624_duration_time;
+	if (len < 2) {
+		aw_dev_err("%s: duration time range error\n", __func__);
+		return -ERANGE;
+	}
+	for (i = (len - 1); i > 0; i--) {
+		if (duration_time[i] > duration_time[i-1])
+			continue;
+		else
+			break;
+
+	}
+	if (i > 0) {
+		aw_dev_err("%s: duration time range error\n", __func__);
+		ret = -ERANGE;
+	}
+	return ret;
+}
+
+static int aw8624_haptic_ram_config(struct aw8624 *aw8624, int duration)
+{
+	int ret = 0;
+
+	if (aw8624->duration_time_flag < 0) {
+		aw_dev_err("%s: duration time error, array size = %d\n",
+			   __func__, aw8624->duration_time_size);
+		return -ERANGE;
+	}
+	ret = aw8624_analyse_duration_range(aw8624);
+	if (ret < 0)
+		return ret;
+	if ((duration > 0) && (duration <
+				aw8624_dts_data.aw8624_duration_time[0])) {
+		aw8624->index = 3;	/*3*/
+		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
+	} else if ((duration >= aw8624_dts_data.aw8624_duration_time[0]) &&
+		(duration < aw8624_dts_data.aw8624_duration_time[1])) {
+		aw8624->index = 2;	/*2*/
+		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
+	} else if ((duration >= aw8624_dts_data.aw8624_duration_time[1]) &&
+		(duration < aw8624_dts_data.aw8624_duration_time[2])) {
+		aw8624->index = 1;	/*1*/
+		aw8624->activate_mode = AW8624_HAPTIC_RAM_MODE;
+	} else if (duration >= aw8624_dts_data.aw8624_duration_time[2]) {
+		aw8624->index = 4;	/*4*/
+		aw8624->activate_mode = AW8624_HAPTIC_RAM_LOOP_MODE;
+	} else {
+		aw_dev_err("%s: duration time error, duration= %d\n",
+			   __func__, duration);
+		aw8624->index = 0;
+		aw8624->activate_mode = AW8624_HAPTIC_NULL;
+		ret = -ERANGE;
+	}
+
+	return ret;
+}
 
 static ssize_t aw8624_state_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -2157,6 +2182,7 @@ static ssize_t aw8624_activate_store(struct device *dev,
 
 	return count;
 }
+#endif
 
 static ssize_t aw8624_activate_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -3636,9 +3662,11 @@ static irqreturn_t aw8624_irq(int irq, void *data)
  * device tree
  *
  *****************************************************/
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
 static DEVICE_ATTR(state, 0664, aw8624_state_show, aw8624_state_store);
 static DEVICE_ATTR(duration, 0664, aw8624_duration_show, aw8624_duration_store);
 static DEVICE_ATTR(activate, 0664, aw8624_activate_show, aw8624_activate_store);
+#endif
 static DEVICE_ATTR(activate_mode, 0664,
 		aw8624_activate_mode_show, aw8624_activate_mode_store);
 static DEVICE_ATTR(index, 0664, aw8624_index_show, aw8624_index_store);
@@ -3678,9 +3706,11 @@ static DEVICE_ATTR(trig, 0664,
 static DEVICE_ATTR(ram_num, 0664, aw8624_ram_num_show, NULL);
 static DEVICE_ATTR(awrw, 0644, aw8624_awrw_show, aw8624_awrw_store);
 static struct attribute *aw8624_vibrator_attributes[] = {
+#ifndef CONFIG_LEDS_TRIGGER_TRANSIENT
 	&dev_attr_state.attr,
 	&dev_attr_duration.attr,
 	&dev_attr_activate.attr,
+#endif
 	&dev_attr_activate_mode.attr,
 	&dev_attr_index.attr,
 	&dev_attr_gain.attr,
@@ -3899,33 +3929,6 @@ irqreturn_t aw8624_irq(int irq, void *data)
 		aw8624_haptic_set_rtp_aei(aw8624, false);
 
 	return IRQ_HANDLED;
-}
-
-static int aw8624_analyse_duration_range(struct aw8624 *aw8624)
-{
-	int i = 0;
-	int ret = 0;
-	int len = 0;
-	int *duration_time = NULL;
-
-	len = ARRAY_SIZE(aw8624_dts_data.aw8624_duration_time);
-	duration_time = aw8624_dts_data.aw8624_duration_time;
-	if (len < 2) {
-		aw_dev_err("%s: duration time range error\n", __func__);
-		return -ERANGE;
-	}
-	for (i = (len - 1); i > 0; i--) {
-		if (duration_time[i] > duration_time[i-1])
-			continue;
-		else
-			break;
-
-	}
-	if (i > 0) {
-		aw_dev_err("%s: duration time range error\n", __func__);
-		ret = -ERANGE;
-	}
-	return ret;
 }
 
 static int
