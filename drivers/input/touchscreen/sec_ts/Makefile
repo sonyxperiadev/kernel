@@ -1,7 +1,4 @@
-sec_touchscreen-objs := sec_ts.o
-sec_touchscreen-objs += sec_ts_fn.o
-sec_touchscreen-objs += sec_ts_fw.o
-sec_touchscreen-objs += sec_ts_only_vendor.o
-sec_touchscreen-objs += sec_cmd.o
+# Makefile for the Samsung Electronics Touchscreen driver
 
-obj-$(CONFIG_TOUCHSCREEN_SAMSUNG_INCELL) := sec_touchscreen.o
+obj-$(CONFIG_TOUCHSCREEN_SEC_TS) += sec_ts_drv.o
+sec_ts_drv-y := sec_cmd.o sec_ts.o sec_ts_fw.o sec_ts_fn.o sec_ts_only_vendor.o

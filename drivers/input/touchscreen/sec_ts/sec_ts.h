@@ -9,6 +9,11 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #ifndef __SEC_TS_H__
 #define __SEC_TS_H__
@@ -641,6 +646,7 @@ struct sec_ts_data {
 	struct mutex i2c_mutex;
 	struct mutex eventlock;
 	struct mutex modechange;
+	struct mutex irq_mutex;
 
 	struct delayed_work work_read_info;
 #ifdef USE_POWER_RESET_WORK
@@ -650,7 +656,7 @@ struct sec_ts_data {
 	struct delayed_work fw_update_work;
 	bool force_update;
 	struct completion resume_done;
-	struct wakeup_source *wakelock;
+	struct wakeup_source *ws;
 	struct sec_cmd_data sec;
 	short *pFrame;
 
