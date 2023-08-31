@@ -3667,7 +3667,7 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 
 #ifdef TIMED_OUTPUT
 	aw_dev_info("%s: TIMED_OUT FRAMEWORK!\n", __func__);
-	aw8622x->vib_dev.name = "awinic_vibrator";
+	aw8622x->vib_dev.name = "vibrator";
 	aw8622x->vib_dev.get_time = aw8622x_vibrator_get_time;
 	aw8622x->vib_dev.enable = aw8622x_vibrator_enable;
 
@@ -3685,7 +3685,7 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 #else
 	aw_dev_info("%s: loaded in leds_cdev framework!\n",
 		    __func__);
-	aw8622x->vib_dev.name = "awinic_vibrator";
+	aw8622x->vib_dev.name = "vibrator";
 	aw8622x->vib_dev.brightness_get = aw8622x_haptic_brightness_get;
 	aw8622x->vib_dev.brightness_set = aw8622x_haptic_brightness_set;
 

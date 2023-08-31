@@ -3721,7 +3721,7 @@ int aw8624_vibrator_init(struct aw8624 *aw8624)
 	aw_dev_dbg("%s enter\n", __func__);
 
 #ifdef TIMED_OUTPUT
-	aw8624->vib_dev.name = "awinic_vibrator";
+	aw8624->vib_dev.name = "vibrator";
 	aw8624->vib_dev.get_time = aw8624_vibrator_get_time;
 	aw8624->vib_dev.enable = aw8624_vibrator_enable;
 
@@ -3740,7 +3740,7 @@ int aw8624_vibrator_init(struct aw8624 *aw8624)
 		return ret;
 	}
 #else
-	aw8624->vib_dev.name = "awinic_vibrator";
+	aw8624->vib_dev.name = "vibrator";
 	aw8624->vib_dev.brightness_set = aw8624_vibrator_enable;
 
 
