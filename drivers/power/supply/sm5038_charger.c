@@ -3151,7 +3151,7 @@ static void sm5038_charger_enable_aicl_irq(struct sm5038_charger_data *charger)
 	int ret;
 	u8 reg_data;
 
-	ret = request_threaded_irq(charger->irq_aicl, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_aicl, NULL,
 			chg_aicl_isr, 0, "aicl-irq", charger);
 	if (ret < 0) {
 		charger->irq_aicl_enabled = -1;
@@ -4963,7 +4963,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 
 	/* Request IRQs */
 	charger->irq_vbuspok = pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSPOK;
-	ret = request_threaded_irq(charger->irq_vbuspok, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_vbuspok, NULL,
 			chg_vbuspok_isr, 0, "vbuspok-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request vbuspok-irq:%d (ret=%d)\n",
@@ -4972,7 +4972,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->irq_wpcinpok = pdata->irq_base + SM5038_CHG_IRQ_INT1_WPCINPOK;
-	ret = request_threaded_irq(charger->irq_wpcinpok, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_wpcinpok, NULL,
 			chg_wpcinpok_isr, 0, "wpcinpok-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request wpcinpok-irq:%d (ret=%d)\n",
@@ -4983,7 +4983,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	charger->irq_aicl = pdata->irq_base + SM5038_CHG_IRQ_INT2_AICL;
 
 	charger->irq_done = pdata->irq_base + SM5038_CHG_IRQ_INT2_DONE;
-	ret = request_threaded_irq(charger->irq_done, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_done, NULL,
 			chg_done_isr, 0, "done-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request done-irq:%d (ret=%d)\n",
@@ -4993,7 +4993,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	charger->irq_chgon = pdata->irq_base + SM5038_CHG_IRQ_INT2_CHGON;
-	ret = request_threaded_irq(charger->irq_chgon, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_chgon, NULL,
 			chg_chgon_isr, 0, "chgon-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request chgon-irq:%d (ret=%d)\n",
@@ -5003,7 +5003,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 
 #endif
 	charger->irq_vsysovp = pdata->irq_base + SM5038_CHG_IRQ_INT3_VSYSOVP;
-	ret = request_threaded_irq(charger->irq_vsysovp, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_vsysovp, NULL,
 			chg_vsysovp_isr, 0, "vsysovp-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request vsysovp-irq:%d (ret=%d)\n",
@@ -5012,7 +5012,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->irq_vbusuvlo = pdata->irq_base + SM5038_CHG_IRQ_INT1_VBUSUVLO;
-	ret = request_threaded_irq(charger->irq_vbusuvlo, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_vbusuvlo, NULL,
 			chg_vbusuvlo_isr, 0, "vbusuvlo-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request vbusuvlo-irq:%d (ret=%d)\n",
@@ -5021,7 +5021,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->irq_fasttmroff = pdata->irq_base + SM5038_CHG_IRQ_INT3_FASTTMROFF;
-	ret = request_threaded_irq(charger->irq_fasttmroff, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_fasttmroff, NULL,
 			chg_fasttmroff_isr, 0, "fasttmroff-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request fasttmroff-irq:%d (ret=%d)\n",
@@ -5030,7 +5030,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->irq_otgfail = pdata->irq_base + SM5038_CHG_IRQ_INT3_OTGFAIL;
-	ret = request_threaded_irq(charger->irq_otgfail, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_otgfail, NULL,
 			chg_otgfail_isr, 0, "otgfail-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request otgfail-irq:%d (ret=%d)\n",
@@ -5039,7 +5039,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 	charger->irq_topoff = pdata->irq_base + SM5038_CHG_IRQ_INT2_TOPOFF;
-	ret = request_threaded_irq(charger->irq_topoff, NULL,
+	ret = devm_request_threaded_irq(charger->dev, charger->irq_topoff, NULL,
 			chg_topoff_isr, 0, "topoff-irq", charger);
 	if (ret < 0) {
 		pr_err("sm5038-charger: %s: fail to request topoff-irq:%d (ret=%d)\n",

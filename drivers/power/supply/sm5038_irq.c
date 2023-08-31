@@ -231,7 +231,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 			if (sm5038->check_fg_reset)
 				sm5038->check_fg_reset(sm5038->fuelgauge_i2c, sm5038->fg_data);
 
-			ret = gpio_request(sm5038->irq_gpio, "if_pmic_irq");
+			ret = devm_gpio_request(sm5038->dev, sm5038->irq_gpio, "if_pmic_irq");
 			if (ret) {
 				dev_err(sm5038->dev, "%s: failed requesting gpio %d\n",
 					__func__, sm5038->irq_gpio);
@@ -240,7 +240,7 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 			}				
 			rtn = gpio_direction_output(sm5038->irq_gpio, 1);
 
-			ret = gpio_request(sm5038->irq_gpio, "if_pmic_irq");
+			ret = devm_gpio_request(sm5038->dev, sm5038->irq_gpio, "if_pmic_irq");
 			if (ret) {
 				dev_err(sm5038->dev, "%s: failed requesting gpio %d\n",
 					__func__, sm5038->irq_gpio);
@@ -249,7 +249,6 @@ static irqreturn_t sm5038_irq_thread(int irq, void *data)
 			}
 			rtn = gpio_direction_input(sm5038->irq_gpio);
 			pr_info("%s:%s Done gpio_direction_input: %d(%d)\n", SM5038_DEV_NAME, __func__, rtn, ret);
-			gpio_free(sm5038->irq_gpio);
 		}
 	}
 
@@ -335,14 +334,13 @@ int sm5038_irq_init(struct sm5038_dev *sm5038)
 	pr_err("%s:%s irq=%d, irq->gpio=%d\n", SM5038_DEV_NAME, __func__,
 			sm5038->irq, sm5038->irq_gpio);
 
-	ret = gpio_request(sm5038->irq_gpio, "if_pmic_irq");
+	ret = devm_gpio_request(sm5038->dev, sm5038->irq_gpio, "if_pmic_irq");
 	if (ret) {
 		dev_err(sm5038->dev, "%s: failed requesting gpio %d\n",
 			__func__, sm5038->irq_gpio);
 		return ret;
 	}
 	gpio_direction_input(sm5038->irq_gpio);
-	gpio_free(sm5038->irq_gpio);
 
 	/* Mask individual interrupt sources */
 	for (i = 0; i < SM5038_IRQ_GROUP_NR; i++) {
@@ -372,7 +370,9 @@ int sm5038_irq_init(struct sm5038_dev *sm5038)
 		irq_set_noprobe(cur_irq);
 	}
 
-	ret = request_threaded_irq(sm5038->irq, NULL, sm5038_irq_thread, IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+	ret = devm_request_threaded_irq(sm5038->dev, sm5038->irq, NULL,
+			sm5038_irq_thread,
+			IRQF_TRIGGER_LOW | IRQF_ONESHOT,
 			"sm5038_irq", sm5038);
 	if (ret) {
 		dev_err(sm5038->dev, "[sm5038]Fail to request IRQ %d: %d\n", sm5038->irq, ret);
@@ -382,12 +382,5 @@ int sm5038_irq_init(struct sm5038_dev *sm5038)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sm5038_irq_init);
-
-void sm5038_irq_exit(struct sm5038_dev *sm5038)
-{
-	if (sm5038->irq)
-		free_irq(sm5038->irq, sm5038);
-}
-EXPORT_SYMBOL_GPL(sm5038_irq_exit);
 
 MODULE_LICENSE("GPL");

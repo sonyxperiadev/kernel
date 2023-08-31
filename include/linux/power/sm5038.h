@@ -435,7 +435,6 @@ enum sm5038_fled_mode {
 
 
 extern int sm5038_irq_init(struct sm5038_dev *sm5038);
-extern void sm5038_irq_exit(struct sm5038_dev *sm5038);
 
 /* SM5038 shared i2c API function */
 extern int sm5038_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);

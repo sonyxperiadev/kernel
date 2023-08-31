@@ -2533,7 +2533,7 @@ int sm5038_fuelgauge_probe(struct platform_device *pdev)
 			if (fuelgauge->fg_irq) {
 				INIT_DELAYED_WORK(&fuelgauge->isr_work, sm5038_fg_isr_work);
 
-				ret = request_threaded_irq(fuelgauge->fg_irq,
+				ret = devm_request_threaded_irq(fuelgauge->dev, fuelgauge->fg_irq,
 						NULL, sm5038_fg_irq_thread,
 						0,
 						"fuelgauge-irq", fuelgauge);

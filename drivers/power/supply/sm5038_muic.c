@@ -966,9 +966,10 @@ void sm5038_muic_register_reset(struct i2c_client *i2c, void *muic)
 
 }
 EXPORT_SYMBOL_GPL(sm5038_muic_register_reset);
-#define REQUEST_IRQ(_irq, _dev_id, _name)				\
+#define REQUEST_IRQ(_dev, _irq, _dev_id, _name)				\
 do {									\
-	ret = request_threaded_irq(_irq, NULL, sm5038_muic_irq_thread,	\
+	ret = devm_request_threaded_irq(_dev, _irq, NULL,	\
+				sm5038_muic_irq_thread,	\
 				0, _name, _dev_id);	\
 	if (ret < 0) {							\
 		pr_err("[%s:%s] Failed to request IRQ #%d: %d\n",	\
@@ -986,28 +987,28 @@ static int sm5038_muic_irq_init(struct sm5038_muic_data *muic_data)
 		/* request MUIC IRQ */
 		muic_data->irqs.irq_dpdm_ovp =
 			irq_base + SM5038_MUIC_IRQ_INT1_DPDM_OVP;
-		REQUEST_IRQ(muic_data->irqs.irq_dpdm_ovp, muic_data,
-				"muic-dpdm_ovp");
+		REQUEST_IRQ(muic_data->dev, muic_data->irqs.irq_dpdm_ovp,
+				muic_data, "muic-dpdm_ovp");
 
 		muic_data->irqs.irq_vbus_detach =
 			irq_base + SM5038_MUIC_IRQ_INT1_VBUS_DETACH;
-		REQUEST_IRQ(muic_data->irqs.irq_vbus_detach, muic_data,
-				"muic-vbus_detach");
+		REQUEST_IRQ(muic_data->dev, muic_data->irqs.irq_vbus_detach,
+				muic_data, "muic-vbus_detach");
 
 		muic_data->irqs.irq_chgtype_attach =
 			irq_base + SM5038_MUIC_IRQ_INT1_CHGTYPE;
-		REQUEST_IRQ(muic_data->irqs.irq_chgtype_attach, muic_data,
-				"muic-chgtype_attach");
+		REQUEST_IRQ(muic_data->dev, muic_data->irqs.irq_chgtype_attach,
+				muic_data, "muic-chgtype_attach");
 
 		muic_data->irqs.irq_dcdtimeout =
 			irq_base + SM5038_MUIC_IRQ_INT1_DCDTIMEOUT;
-		REQUEST_IRQ(muic_data->irqs.irq_dcdtimeout, muic_data,
-				"muic-dcdtimeout");
+		REQUEST_IRQ(muic_data->dev, muic_data->irqs.irq_dcdtimeout,
+				muic_data, "muic-dcdtimeout");
 
 		muic_data->irqs.irq_hvdcp =
 			irq_base + SM5038_MUIC_IRQ_INT2_HVDCP;
-		REQUEST_IRQ(muic_data->irqs.irq_hvdcp, muic_data,
-				"muic-hvdcp");
+		REQUEST_IRQ(muic_data->dev, muic_data->irqs.irq_hvdcp,
+				muic_data, "muic-hvdcp");
 	}
 
 	pr_info("[%s:%s] muic-dpdm_ovp(%d), muic-vbus_detach(%d)",
@@ -1022,29 +1023,6 @@ static int sm5038_muic_irq_init(struct sm5038_muic_data *muic_data)
 		MUIC_DEV_NAME, __func__, muic_data->irqs.irq_hvdcp);
 
 	return ret;
-}
-
-#define FREE_IRQ(_irq, _dev_id, _name)					\
-do {									\
-	if (_irq) {							\
-		free_irq(_irq, _dev_id);				\
-		pr_info("[%s:%s] IRQ(%d):%s free done\n", MUIC_DEV_NAME,\
-				__func__, _irq, _name);			\
-	}								\
-} while (0)
-
-static void sm5038_muic_free_irqs(struct sm5038_muic_data *muic_data)
-{
-	pr_info("[%s:%s]\n", MUIC_DEV_NAME, __func__);
-
-	/* free MUIC IRQ */
-	FREE_IRQ(muic_data->irqs.irq_dpdm_ovp, muic_data, "muic-dpdm_ovp");
-	FREE_IRQ(muic_data->irqs.irq_vbus_detach, muic_data, "muic-vbus_detach");
-	FREE_IRQ(muic_data->irqs.irq_chgtype_attach, muic_data, "muic-chgtype_attach");
-	FREE_IRQ(muic_data->irqs.irq_dcdtimeout, muic_data, "muic-dcdtimeout");
-
-	FREE_IRQ(muic_data->irqs.irq_hvdcp, muic_data, "muic-hvdcp");
-
 }
 
 static enum power_supply_property sm5038_muic_usb_port_props[] = {
@@ -1414,8 +1392,6 @@ int sm5038_muic_probe(struct platform_device *pdev)
 	return 0;
 
 fail_init_irq:
-	sm5038_muic_free_irqs(muic_data);
-
 	mutex_destroy(&muic_data->muic_mutex);
 
 err_kfree1:
@@ -1438,7 +1414,6 @@ int sm5038_muic_remove(struct platform_device *pdev)
 		cancel_delayed_work_sync(&muic_data->muic_noti_work);
 		wakeup_source_unregister(muic_data->wake_lock);
 		disable_irq_wake(muic_data->i2c->irq);
-		sm5038_muic_free_irqs(muic_data);
 		mutex_destroy(&muic_data->muic_mutex);
 		i2c_set_clientdata(muic_data->i2c, NULL);
 		kfree(muic_data);
