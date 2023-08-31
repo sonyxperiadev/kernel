@@ -298,7 +298,6 @@ static int sm5038_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *
 
 err_mfd:
 	mfd_remove_devices(sm5038->dev);
-	sm5038_irq_exit(sm5038);
 err_irq_init:
 	i2c_unregister_device(sm5038->fuelgauge_i2c);
 	i2c_unregister_device(sm5038->muic_i2c);
@@ -316,7 +315,6 @@ static int sm5038_i2c_remove(struct i2c_client *i2c)
 	struct sm5038_dev *sm5038 = i2c_get_clientdata(i2c);
 
 	mfd_remove_devices(sm5038->dev);
-	sm5038_irq_exit(sm5038);
 
 	i2c_unregister_device(sm5038->muic_i2c);
 	i2c_unregister_device(sm5038->fuelgauge_i2c);

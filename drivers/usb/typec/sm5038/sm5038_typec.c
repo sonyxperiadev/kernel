@@ -2546,7 +2546,7 @@ static int sm5038_usbpd_irq_init(struct sm5038_phydrv_data *_data)
 
 	i2c->irq = gpio_to_irq(_data->irq_gpio);
 
-	ret = gpio_request(_data->irq_gpio, "usbpd_irq");
+	ret = devm_gpio_request(dev, _data->irq_gpio, "usbpd_irq");
 	if (ret) {
 		dev_err(_data->dev, "%s: failed requesting gpio %d\n",
 			__func__, _data->irq_gpio);
@@ -2555,14 +2555,13 @@ static int sm5038_usbpd_irq_init(struct sm5038_phydrv_data *_data)
 	gpio_direction_input(_data->irq_gpio);
 
 	if (i2c->irq) {
-		ret = request_threaded_irq(i2c->irq, NULL,
+		ret = devm_request_threaded_irq(dev, i2c->irq, NULL,
 			sm5038_pdic_irq_thread,
 			(IRQF_TRIGGER_LOW | IRQF_ONESHOT),
 			"sm5038-usbpd", _data);
 		if (ret < 0) {
 			dev_err(dev, "%s failed to request irq(%d)\n",
 					__func__, i2c->irq);
-			gpio_free(_data->irq_gpio);
 			return ret;
 		}
 
@@ -3076,8 +3075,6 @@ static int sm5038_usbpd_probe(struct i2c_client *i2c,
 	pr_info("%s : sm5038 usbpd driver uploaded!\n", __func__);
 	return 0;
 fail_init_irq:
-	if (i2c->irq)
-		free_irq(i2c->irq, pdic_data);
 	kfree(pdic_data);
 err_return:
 	return ret;
@@ -3147,8 +3144,6 @@ static int sm5038_usbpd_remove(struct i2c_client *i2c)
 #endif
 		typec_unregister_port(_data->port);
 		disable_irq_wake(_data->i2c->irq);
-		free_irq(_data->i2c->irq, _data);
-		gpio_free(_data->irq_gpio);
 		mutex_destroy(&_data->_mutex);
 		sm5038_usbpd_set_vbus_dischg_gpio(_data, 0);
 		sm5038_usbpd_device_unregister(pd_data);
