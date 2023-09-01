@@ -1622,7 +1622,7 @@ static enum led_brightness aw86214_haptic_brightness_get(struct led_classdev
 	return aw86214->amplitude;
 }
 
-static void aw86214_haptic_brightness_set(struct led_classdev *cdev,
+static int aw86214_haptic_brightness_set(struct led_classdev *cdev,
 					  enum led_brightness level)
 {
 	struct aw86214 *aw86214 = container_of(cdev, struct aw86214, vib_dev);
@@ -1631,10 +1631,10 @@ static void aw86214_haptic_brightness_set(struct led_classdev *cdev,
 	if (!aw86214->ram_init) {
 		aw_dev_err("%s: ram init failed, not allow to play!\n",
 			   __func__);
-		return;
+		return 0;
 	}
 	if (aw86214->ram_update_flag < 0)
-		return;
+		return 0;
 	aw86214->amplitude = level;
 	mutex_lock(&aw86214->lock);
 	aw86214_haptic_stop(aw86214);
@@ -1644,6 +1644,8 @@ static void aw86214_haptic_brightness_set(struct led_classdev *cdev,
 		aw86214_haptic_play_wav_seq(aw86214, aw86214->amplitude);
 	}
 	mutex_unlock(&aw86214->lock);
+
+	return 0;
 }
 #endif
 
@@ -2860,7 +2862,7 @@ int aw86214_vibrator_init(struct aw86214 *aw86214)
 		    __func__);
 	aw86214->vib_dev.name = "vibrator";
 	aw86214->vib_dev.brightness_get = aw86214_haptic_brightness_get;
-	aw86214->vib_dev.brightness_set = aw86214_haptic_brightness_set;
+	aw86214->vib_dev.brightness_set_blocking = aw86214_haptic_brightness_set;
 
 	ret = devm_led_classdev_register(&aw86214->i2c->dev, &aw86214->vib_dev);
 	if (ret < 0) {
