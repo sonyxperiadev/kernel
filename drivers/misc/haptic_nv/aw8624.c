@@ -1989,11 +1989,10 @@ static void aw8624_vibrator_enable(struct timed_output_dev *vib_dev, int value)
 		aw8624_haptic_ram_vbat_comp(aw8624, false);
 		aw8624_haptic_play_wav_seq(aw8624, value);
 	}
-
 	mutex_unlock(&aw8624->lock);
 }
 #else
-static void
+static int
 aw8624_vibrator_enable(struct led_classdev *dev, enum led_brightness value)
 {
 	struct aw8624 *aw8624 = container_of(dev, struct aw8624, vib_dev);
@@ -2002,7 +2001,7 @@ aw8624_vibrator_enable(struct led_classdev *dev, enum led_brightness value)
 	if (!aw8624->ram_init) {
 		aw_dev_err("%s: ram init failed, not allow to play!\n",
 		       __func__);
-		return;
+		return 0;
 	}
 	mutex_lock(&aw8624->lock);
 	aw8624_haptic_stop(aw8624);
@@ -2011,10 +2010,9 @@ aw8624_vibrator_enable(struct led_classdev *dev, enum led_brightness value)
 		aw8624_haptic_ram_vbat_comp(aw8624, false);
 		aw8624_haptic_play_wav_seq(aw8624, value);
 	}
-
 	mutex_unlock(&aw8624->lock);
 
-
+	return 0;
 }
 #endif
 
@@ -3771,7 +3769,7 @@ int aw8624_vibrator_init(struct aw8624 *aw8624)
 	}
 #else
 	aw8624->vib_dev.name = "vibrator";
-	aw8624->vib_dev.brightness_set = aw8624_vibrator_enable;
+	aw8624->vib_dev.brightness_set_blocking = aw8624_vibrator_enable;
 
 
 	ret = devm_led_classdev_register(&aw8624->i2c->dev, &(aw8624->vib_dev));
