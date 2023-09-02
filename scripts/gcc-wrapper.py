@@ -32,7 +32,7 @@ ofile = None
 warning_re = re.compile(r'''(.*/|)([^/]+\.[a-z]+:\d+):(\d+:)? warning:''')
 def interpret_warning(line):
     """Decode the message from gcc.  The messages we care about have a filename, and a warning"""
-    line = line.rstrip().decode()
+    line = line.rstrip()
     m = warning_re.match(line)
     if m and m.group(2) not in allowed_warnings:
         print("error, forbidden warning:", m.group(2))
@@ -60,6 +60,7 @@ def run_gcc():
     try:
         proc = subprocess.Popen(args, stderr=subprocess.PIPE)
         for line in proc.stderr:
+            line = line.decode()
             print(line, end=' ')
             interpret_warning(line)
 
