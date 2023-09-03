@@ -128,4 +128,9 @@ config SOMC_BATTERY_CHARGER
 	  Say Y to include support for SOMC Battery Charger.
 	  The driver supports SOMC charger used by SONY Xperia 1III/5III devices.
 
+config SOMC_CHARGER_EXTENSION
+	bool "Charger driver extension"
+	help
+	  Say Y here to enable extensional function of charger driver.
+
 endif
