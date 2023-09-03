@@ -274,6 +274,22 @@
 	#size-cells = <0>;
 	status = "okay";
 
+	aw882xx_smartpa@34 {
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x34>;
+		irq-gpio = <&tlmm 60 0>;
+		dc-flag = <0>;
+		sound-channel = <0>;
+		aw-tx-topo-id = <0x1000ff00>;
+		aw-rx-topo-id = <0x1000ff01>;
+		aw-tx-port-id = <0x1003>;
+		aw-rx-port-id = <0x1002>;
+		aw-re-min = <4000>;
+		aw-re-max= <30000>;
+		aw-cali-mode = "aw_attr";
+		status = "okay";
+	};
+
 	awinic_haptic@58 {
 		compatible = "awinic,haptic_nv";
 		reg = <0x58>;
