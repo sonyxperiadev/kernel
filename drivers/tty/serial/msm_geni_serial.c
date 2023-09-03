@@ -234,9 +234,9 @@ struct msm_geni_serial_port {
 	bool pm_auto_suspend_disable;
 	atomic_t is_clock_off;
 	enum uart_error_code uart_error;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	bool gpio_suspend_state;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 };
 
 static const struct uart_ops msm_geni_serial_pops;
@@ -2885,10 +2885,10 @@ static int msm_geni_console_setup(struct console *co, char *options)
 
 	uport = &dev_port->uport;
 
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	if (dev_port->gpio_suspend_state == true)
 		return -ENXIO;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 	if (unlikely(!uport->membase))
 		return -ENXIO;
 
@@ -3022,10 +3022,10 @@ static void msm_geni_serial_cons_pm(struct uart_port *uport,
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	if (msm_port->gpio_suspend_state == true)
 		return;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 
 	if (new_state == UART_PM_STATE_ON && old_state == UART_PM_STATE_OFF) {
 		se_geni_resources_on(&msm_port->serial_rsc);
@@ -3042,10 +3042,10 @@ static void msm_geni_serial_hs_pm(struct uart_port *uport,
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	if (msm_port->gpio_suspend_state == true)
 		return;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 
 	/*
 	 * This will get call for system suspend/resume and
@@ -3159,13 +3159,12 @@ exit_ver_info:
 	return ret;
 }
 
-/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 int msm_geni_serial_gpio_suspend(bool state)
 {
 	int ret = 0;
 	struct msm_geni_serial_port *port = NULL;
 
-/*PDX225 code for QN5965F-837  at 2022/01/11 start*/
 	port = get_port_from_line(0, true);
 	if (IS_ERR_OR_NULL(port))
 		return -EINVAL;
@@ -3174,7 +3173,6 @@ int msm_geni_serial_gpio_suspend(bool state)
 		IS_ERR_OR_NULL(port->serial_rsc.geni_gpio_suspend)) {
 		return -EINVAL;
 	}
-/*PDX225 code for QN5965F-837  at 2022/01/11 end*/
 
 	pr_err("%s-%d: gpio_suspend_state=%d, state=%d", __func__, __LINE__, port->gpio_suspend_state, state);
 
@@ -3226,7 +3224,7 @@ static ssize_t geni_gpio_suspend_store(struct device *dev,
 	return size;
 }
 static DEVICE_ATTR_RW(geni_gpio_suspend);
-/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 
 static int msm_geni_serial_get_irq_pinctrl(struct platform_device *pdev,
 					struct msm_geni_serial_port *dev_port)
@@ -3291,7 +3289,7 @@ static int msm_geni_serial_get_irq_pinctrl(struct platform_device *pdev,
 		}
 	}
 
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	dev_port->serial_rsc.geni_gpio_suspend=
 		pinctrl_lookup_state(dev_port->serial_rsc.geni_pinctrl,
 						PINCTRL_SLEEP);
@@ -3299,7 +3297,7 @@ static int msm_geni_serial_get_irq_pinctrl(struct platform_device *pdev,
 		dev_err(&pdev->dev, "No suspend config specified!\n");
 		return PTR_ERR(dev_port->serial_rsc.geni_gpio_suspend);
 	}
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 
 	uport->irq = platform_get_irq(pdev, 0);
 	if (uport->irq < 0) {
@@ -3561,9 +3559,9 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 	device_create_file(uport->dev, &dev_attr_loopback);
 	device_create_file(uport->dev, &dev_attr_xfer_mode);
 	device_create_file(uport->dev, &dev_attr_ver_info);
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	device_create_file(uport->dev, &dev_attr_geni_gpio_suspend);
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 	msm_geni_serial_debug_init(uport, is_console);
 	dev_port->port_setup = false;
 
@@ -3725,10 +3723,10 @@ static int msm_geni_serial_runtime_resume(struct device *dev)
 	struct msm_geni_serial_port *port = platform_get_drvdata(pdev);
 	int ret = 0;
 
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	if (port->gpio_suspend_state == true)
 		return ret;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 	/*
 	 * Do an unconditional relax followed by a stay awake in case the
 	 * wake source is activated by the wakeup isr.
