@@ -23,7 +23,6 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/consumer.h>
 
-#include <linux/hardware_info.h>
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #include <linux/pmic-voter.h>
 #endif
@@ -937,7 +936,6 @@ static int sm5038_read_iio_channel(struct sm5038_charger_data *charger,
 int sm5038_get_batt_id_ohm(unsigned int *batt_id_ohm)
 {
 	int ret, batt_id_mv;
-	static int batt_id_adc;
 	int64_t denom;
 	struct sm5038_charger_data *charger = static_charger_data;
 
@@ -952,12 +950,6 @@ int sm5038_get_batt_id_ohm(unsigned int *batt_id_ohm)
 		pr_err("sm5038-charger: %s: Failed to read BATT_ID over ADC, ret=%d\n", __func__, ret);
 		return ret;
 	}
-
-	batt_id_adc = batt_id_mv;
-
-	get_hardware_info_data(HWID_BATERY_ID, "SNYSCA6");
-	get_hardware_info_data(HWID_BATERY_ID_ADC, &batt_id_adc);
-//	pr_info("sm5038-charger: %s: read BATT_ID_ADC = %d\n", __func__, batt_id_adc);
 
 	batt_id_mv = div_s64(batt_id_mv, 1000);
 	if (batt_id_mv == 0) {
