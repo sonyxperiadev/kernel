@@ -571,6 +571,24 @@
 	};
 };
 
+&pmk8350_vadc {
+	pmk8350_batt_id {
+		reg = <PMK8350_ADC7_AMUX_THM2_100K_PU>;
+		label = "pmk8350_batt_id";
+		//qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pmk8350_usb_conn_therm {
+		reg = <PMK8350_ADC7_AMUX_THM4_100K_PU>;
+		label = "pmk8350_usb_conn_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
 &pmk8350_adc_tm {
 	io-channels = <&pmk8350_vadc PMK8350_ADC7_AMUX_THM1_100K_PU
 		        &pmk8350_vadc PMK8350_ADC7_AMUX_THM4_100K_PU>;
