@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config NFC_SN1X0
+	tristate "NXP NCI based NFC I2C Slave Driver for SNxxx"
+	depends on I2C
+	---help---
+	  This module adds support for a NXP NCI based NFC I2C Slave Driver
+	  for SNxxx.
+	  Select this if your platform is using the I2C bus.
+
+	  To compile this driver as a module, choose m here. The module will
+	  be called sn1x0.
+	  Say Y if unsure.
