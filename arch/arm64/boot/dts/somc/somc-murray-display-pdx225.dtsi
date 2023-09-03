@@ -2,6 +2,7 @@
 
 &dsi_samsung_amoled_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
+	qcom,mdss-dsi-bl-inverted-dbv;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
