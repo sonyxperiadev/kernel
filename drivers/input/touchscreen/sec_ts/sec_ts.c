@@ -18,7 +18,6 @@
 struct sec_ts_data *tsp_info;
 
 #include "sec_ts.h"
-#include "linux/hardware_info.h"
 
 struct sec_ts_data *ts_dup;
 struct drm_panel *sec_ts_active_panel = NULL;
@@ -1360,15 +1359,8 @@ int sec_ts_power(void *data, bool on)
 		// }
 	} else {
 		// regulator_disable(regulator_avdd);
-                printk("sec_ts: get_stage_adc_mb = %s\n", get_stage_adc_mb());
 
-                if(strstr(get_stage_adc_mb(),"EVT")) {
-                    printk("sec_ts: EVT Mboard, enable avdd when suspend!\n");
-                    gpio_set_value(pdata->avdd_en_gpio, 1);
-                } else {
-                    gpio_set_value(pdata->avdd_en_gpio, 0);
-                }
-
+		gpio_set_value(pdata->avdd_en_gpio, 0);
 		sec_ts_delay(4);
 		regulator_disable(regulator_dvdd);
 		gpio_set_value(pdata->reset_gpio, 0);
