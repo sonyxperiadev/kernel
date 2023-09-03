@@ -71,9 +71,9 @@ struct se_geni_rsc {
 	struct pinctrl_state *geni_gpio_shutdown;
 	struct pinctrl_state *geni_gpio_active;
 	struct pinctrl_state *geni_gpio_sleep;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	struct pinctrl_state *geni_gpio_suspend;
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
+#endif
 	int	clk_freq_out;
 	unsigned int num_clk_levels;
 	unsigned long *clk_perf_tbl;
