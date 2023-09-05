@@ -1,4 +1,5 @@
 #include "blair-zambezi-common.dtsi"
+#include "blair-zambezi-camera.dtsi"
 
 &soc {
 };
