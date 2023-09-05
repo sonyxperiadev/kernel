@@ -332,9 +332,12 @@
 	};
 };
 
-&dai_mi2s5 {
-	qcom,msm-mi2s-rx-lines = <1>;
-	qcom,msm-mi2s-tx-lines = <2>;
+&dai_mi2s5_rx {
+	qcom,msm-mi2s-lines = <1>;
+};
+
+&dai_mi2s5_tx {
+	qcom,msm-mi2s-lines = <2>;
 };
 
 &lpi_tlmm {
@@ -831,9 +834,12 @@
 	};
 };
 
-&dai_mi2s0 {
-	qcom,msm-mi2s-rx-lines = <1>;
-	qcom,msm-mi2s-tx-lines = <0>;
+&dai_mi2s0_rx {
+	qcom,msm-mi2s-lines = <1>;
+};
+
+&dai_mi2s0_tx {
+	qcom,msm-mi2s-lines = <0>;
 };
 
 &tlmm {
