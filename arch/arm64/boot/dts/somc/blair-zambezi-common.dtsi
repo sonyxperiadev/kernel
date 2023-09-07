@@ -386,6 +386,10 @@
 	};
 };
 
+&smb1394 {
+	status = "disabled";
+};
+
 &pm6125_pon {
 	qcom,pon_2 {
 		linux,code = <KEY_VOLUMEUP>;
