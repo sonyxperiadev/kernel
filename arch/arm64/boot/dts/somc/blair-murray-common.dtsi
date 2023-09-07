@@ -250,6 +250,7 @@
 		irq-gpio = <&tlmm 60 0>;
 		dc-flag = <0>;
 		sound-channel = <0>;
+		rename-flag = <1>;
 		aw-tx-topo-id = <0x1000ff00>;
 		aw-rx-topo-id = <0x1000ff01>;
 		aw-tx-port-id = <0x1003>;
