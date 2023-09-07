@@ -250,10 +250,16 @@
  * You should rename fw to "focaltech_ts_fw_tianma", and push it into
  * etc/firmware or by customers
  */
+#if defined(CONFIG_ARCH_SONY_ZAMBEZI) || \
+	defined(CONFIG_ARCH_SONY_COLUMBIA)
+#define FTS_MODULE_NAME                        ""
+#define FTS_MODULE2_NAME                       ""
+#define FTS_MODULE3_NAME                       ""
+#else
 #define FTS_MODULE_NAME                        "gvo"
 #define FTS_MODULE2_NAME                       "jdi"
 #define FTS_MODULE3_NAME                       ""
-
+#endif
 /*
  * FW.i file for auto upgrade, you must replace it with your own
  * define your own fw_file, the sample one to be replaced is invalid
