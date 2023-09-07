@@ -66,6 +66,20 @@ struct cap_learning {
 	int (*store_learned_capacity)(void *data, int64_t learned_cap_uah);
 	int (*get_cc_soc)(void *data, int *cc_soc_sw);
 	int (*prime_cc_soc)(void *data, u32 cc_soc_sw);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int			batt_soc_cp_drop;
+	int			cc_soc_drop;
+	int			max_bsoc_cp_during_active;
+	int			max_ccsoc_during_active;
+	s64			max_bsoc_time_ms;
+	s64			start_time_ms;
+	s64			hold_time;
+	s64			total_time;
+	s64			learned_time_ms;
+	int			learning_trial_counter;
+	int			learning_counter;
+	int (*get_monotonic_soc)(void *data, int *msoc);
+#endif
 };
 
 enum ttf_mode {
@@ -161,6 +175,9 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 int cap_learning_init(struct cap_learning *cl);
 int cap_learning_post_profile_init(struct cap_learning *cl,
 		int64_t nom_cap_uah);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+void cap_learning_somc_limit_learned_cap(struct cap_learning *cl);
+#endif
 void ttf_update(struct ttf *ttf, bool input_present);
 int ttf_get_time_to_empty(struct ttf *ttf, int *val);
 int ttf_get_time_to_full(struct ttf *ttf, int *val);

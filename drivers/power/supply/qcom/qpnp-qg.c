@@ -51,7 +51,11 @@ static const char *qg_get_battery_type(struct qpnp_qg *chip);
 static int qg_process_rt_fifo(struct qpnp_qg *chip);
 static int qg_load_battery_profile(struct qpnp_qg *chip);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static int qg_debug_mask = QG_DEBUG_SOMC | QG_DEBUG_PROFILE;
+#else
 static int qg_debug_mask;
+#endif
 
 static int qg_esr_mod_count = 30;
 static ssize_t esr_mod_count_show(struct device *dev, struct device_attribute
@@ -1620,7 +1624,11 @@ static int qg_store_learned_capacity(void *data, int64_t learned_cap_uah)
 	if (chip->battery_missing || !learned_cap_uah)
 		return -ENODEV;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	cc_mah = DIV_ROUND_CLOSEST(learned_cap_uah, 1000);
+#else
 	cc_mah = div64_s64(learned_cap_uah, 1000);
+#endif
 	rc = qg_sdam_multibyte_write(QG_SDAM_LEARNED_CAPACITY_OFFSET,
 					 (u8 *)&cc_mah, 2);
 	if (rc < 0) {
@@ -1628,8 +1636,13 @@ static int qg_store_learned_capacity(void *data, int64_t learned_cap_uah)
 		return rc;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	qg_dbg(chip, QG_DEBUG_SOMC, "Stored learned capacity %llduah\n",
+					learned_cap_uah);
+#else
 	qg_dbg(chip, QG_DEBUG_ALG_CL, "Stored learned capacity %llduah\n",
 					learned_cap_uah);
+#endif
 	return 0;
 }
 
@@ -1673,6 +1686,20 @@ static int qg_store_batt_age_level(void *data, u32 batt_age_level)
 
 	return 0;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static int qg_somc_get_monotonic_soc(void *data, int *msoc)
+{
+	struct qpnp_qg *chip = data;
+
+	if (!chip)
+		return -ENODEV;
+
+	*msoc = chip->msoc;
+
+	return 0;
+}
+#endif
 
 static int qg_get_cc_soc(void *data, int *cc_soc)
 {
@@ -2061,6 +2088,26 @@ done:
 
 static int qg_setprop_batt_age_level(struct qpnp_qg *chip, int batt_age_level)
 {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int rc = 0;
+
+	if (batt_age_level != chip->batt_age_level) {
+		qg_dbg(chip, QG_DEBUG_SOMC, "Update batt age level from %d to %d\n",
+					chip->batt_age_level, batt_age_level);
+		chip->batt_age_level = batt_age_level;
+
+		rc = qg_store_batt_age_level(chip, batt_age_level);
+		if (rc < 0)
+			pr_err("error in storing batt_age_level rc =%d\n", rc);
+
+		if (chip->cl->active)
+			cap_learning_abort(chip->cl);
+
+		if (chip->qg_psy)
+			power_supply_changed(chip->qg_psy);
+	}
+	return 0;
+#else
 	int rc = 0;
 	u16 data = 0;
 
@@ -2087,19 +2134,111 @@ static int qg_setprop_batt_age_level(struct qpnp_qg *chip, int batt_age_level)
 		if (rc < 0)
 			pr_err("error in storing batt_age_level rc =%d\n", rc);
 	}
-
 	/* Clear the learned capacity on loading a new profile */
 	rc = qg_sdam_multibyte_write(QG_SDAM_LEARNED_CAPACITY_OFFSET,
 						(u8 *)&data, 2);
 
 	if (rc < 0)
 		pr_err("Failed to clear SDAM learnt capacity rc=%d\n", rc);
-
 	qg_dbg(chip, QG_DEBUG_PROFILE, "Profile with batt_age_level = %d loaded\n",
 						chip->batt_age_level);
 
 	return rc;
+#endif
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int qg_somc_get_aux_temp(struct qpnp_qg *chip, int *val)
+{
+	int rc = 0;
+
+	if (chip->aux_temp_chan) {
+		rc = iio_read_channel_processed(chip->aux_temp_chan, val);
+		if (rc < 0)
+			return -ENODATA;
+	} else {
+		return -ENODATA;
+	}
+	*val /= 100;
+	return 0;
+}
+
+#define ECELSIUS_DEGREE (-2730)
+static int qg_somc_get_real_temp(struct qpnp_qg *chip, int *val)
+{
+	int rc;
+	int batt_temp;
+	int aux_temp = ECELSIUS_DEGREE;
+	int corrected_batt_temp = ECELSIUS_DEGREE;
+	int corrected_aux_temp = ECELSIUS_DEGREE;
+
+	if (chip->use_real_temp && (chip->real_temp_debug != -EINVAL)) {
+		*val = chip->real_temp_debug;
+		return 0;
+	}
+
+	rc = qg_get_battery_temp(chip, &batt_temp);
+	if (rc < 0) {
+		pr_err("failed to read batt_temp rc=%d\n", rc);
+		return rc;
+	}
+	if (chip->use_real_temp) {
+		corrected_batt_temp = batt_temp + chip->batt_temp_correctton;
+	} else {
+		*val = batt_temp;
+		qg_dbg(chip, QG_DEBUG_STATUS,
+			"Real Temp is not supported. So, batt_temp is used\n");
+		return 0;
+	}
+
+	if (chip->real_temp_use_aux) {
+		rc = qg_somc_get_aux_temp(chip, &aux_temp);
+		if (rc) {
+			pr_err("Couldn't get aux_temp rc = %d\n", rc);
+		} else {
+			corrected_aux_temp =
+					aux_temp + chip->aux_temp_correctton;
+		}
+	}
+
+	*val = max(corrected_batt_temp, corrected_aux_temp);
+	qg_dbg(chip, QG_DEBUG_STATUS, "batt:%d aux:%d -> real battery temp:%d\n",
+						batt_temp, aux_temp, *val);
+	return 0;
+}
+
+static int qg_somc_set_real_temp_debug(struct qpnp_qg *chip, int val)
+{
+	int rc = 0;
+
+	if (val < ECELSIUS_DEGREE) {
+		chip->real_temp_debug = -EINVAL;
+		rc = -EINVAL;
+	} else {
+		chip->real_temp_debug = val;
+	}
+
+	if (chip->batt_psy)
+		power_supply_changed(chip->batt_psy);
+
+	return 0;
+}
+
+static int qg_somc_get_batt_soc(struct qpnp_qg *chip, int *batt_soc)
+{
+	if (!chip)
+		return -ENODEV;
+
+	if (is_debug_batt_id(chip) || chip->battery_missing) {
+		*batt_soc = -EINVAL;
+		return 0;
+	}
+
+	*batt_soc = chip->batt_soc;
+
+	return 0;
+}
+#endif
 
 static int qg_iio_write_raw(struct iio_dev *indio_dev,
 		struct iio_chan_spec const *chan, int val1,
@@ -2110,6 +2249,17 @@ static int qg_iio_write_raw(struct iio_dev *indio_dev,
 
 	switch (chan->channel) {
 	case PSY_IIO_CHARGE_FULL:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		mutex_lock(&chip->cl->lock);
+		chip->cl->learned_cap_uah = val1;
+		cap_learning_somc_limit_learned_cap(chip->cl);
+		rc = qg_store_learned_capacity(chip, chip->cl->learned_cap_uah);
+		mutex_unlock(&chip->cl->lock);
+		if (chip->cl->learned_cap_uah == chip->cl->nom_cap_uah)
+			qg_reset(chip);
+		if (chip->cl->active)
+			cap_learning_abort(chip->cl);
+#else
 		if (chip->dt.cl_disable) {
 			pr_warn("Capacity learning disabled!\n");
 			return 0;
@@ -2127,6 +2277,7 @@ static int qg_iio_write_raw(struct iio_dev *indio_dev,
 		if (!rc)
 			chip->cl->learned_cap_uah = val1;
 		mutex_unlock(&chip->cl->lock);
+#endif
 		break;
 	case PSY_IIO_SOH:
 		chip->soh = val1;
@@ -2148,8 +2299,24 @@ static int qg_iio_write_raw(struct iio_dev *indio_dev,
 		qg_reset(chip);
 		break;
 	case PSY_IIO_BATT_AGE_LEVEL:
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		rc = qg_setprop_batt_age_level(chip, val1);
+#endif
+		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	case PSY_IIO_REAL_TEMP:
+		rc = qg_somc_set_real_temp_debug(chip, val1);
+		if (rc < 0) {
+			pr_err("Error in writing real_temp_debug, rc=%d\n", rc);
+			return rc;
+		}
+		break;
+	case PSY_IIO_BATT_AGING_LEVEL:
+		qg_dbg(chip, QG_DEBUG_SOMC, "set batt_aging_level %d for SOMC\n",
+					val1);
 		rc = qg_setprop_batt_age_level(chip, val1);
 		break;
+#endif
 	default:
 		pr_debug("Unsupported QG IIO chan %d\n", chan->channel);
 		rc = -EINVAL;
@@ -2193,7 +2360,20 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 		rc = qg_sdam_read(SDAM_OCV_UV, val1);
 		break;
 	case PSY_IIO_TEMP:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		/* Get real_temp */
+		if (chip->use_real_temp)
+			rc = qg_somc_get_real_temp(chip, val1);
+		else
+			rc = qg_get_battery_temp(chip, val1);
+
+		if (rc < 0) {
+			pr_err("failed to get temp\n");
+			*val1 = 250;
+		}
+#else
 		rc = qg_get_battery_temp(chip, val1);
+#endif
 		break;
 	case PSY_IIO_RESISTANCE_ID:
 		*val1 = chip->batt_id_ohm;
@@ -2219,7 +2399,14 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 		*val1 = chip->bp.float_volt_uv;
 		break;
 	case PSY_IIO_BATT_FULL_CURRENT:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		if (chip->step_ibatt_full)
+			*val1 = chip->step_ibatt_full * 1000;
+		else
+			*val1 = chip->dt.iterm_ma * 1000;
+#else
 		*val1 = chip->dt.iterm_ma * 1000;
+#endif
 		break;
 	case PSY_IIO_BATT_PROFILE_VERSION:
 		*val1 = chip->bp.qg_profile_version;
@@ -2236,9 +2423,19 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 			*val1 = (int)temp;
 		break;
 	case PSY_IIO_CHARGE_FULL_DESIGN:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		if (chip->initial_capacity >= 0) {
+			*val1 = chip->initial_capacity;
+		} else {
+			rc = qg_get_nominal_capacity((int *)&temp, 250, true);
+			if (!rc)
+				*val1 = (int)temp;
+		}
+#else
 		rc = qg_get_nominal_capacity((int *)&temp, 250, true);
 		if (!rc)
 			*val1 = (int)temp;
+#endif
 		break;
 	case PSY_IIO_CYCLE_COUNT:
 		rc = get_cycle_count(chip->counter, val1);
@@ -2293,6 +2490,52 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 	case PSY_IIO_FG_TYPE:
 		*val1 = chip->qg_mode;
 		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	case PSY_IIO_REAL_TEMP:
+		rc = qg_somc_get_real_temp(chip, val1);
+		break;
+	case PSY_IIO_AUX_TEMP:
+		rc = qg_somc_get_aux_temp(chip, val1);
+		break;
+	case PSY_IIO_CHARGE_FULL_RAW:
+		*val1 = chip->cl->final_cap_uah;
+		break;
+	case PSY_IIO_LEARNING_COUNTER:
+		*val1 = chip->cl->learning_counter;
+		break;
+	case PSY_IIO_LEARNING_TRIAL_COUNTER:
+		*val1 = chip->cl->learning_trial_counter;
+		break;
+	case PSY_IIO_BATT_AGING_LEVEL:
+		*val1 = chip->batt_age_level;
+		break;
+	case PSY_IIO_REAL_NOM_CAP:
+		rc = qg_get_nominal_capacity((int *)&temp, 250, true);
+		if (!rc)
+			*val1 = (int)temp;
+		break;
+	case PSY_IIO_BATTERY_RAW_SOC:
+		rc = qg_somc_get_batt_soc(chip, val1);
+		break;
+	case PSY_IIO_FULL_COUNTER:
+		*val1 = chip->full_counter;
+		break;
+	case PSY_IIO_RECHARGE_COUNTER:
+		*val1 = chip->recharge_counter;
+		break;
+	case PSY_IIO_STEP_PHASE:
+		*val1 = chip->cur_step_phase;
+		break;
+	case PSY_IIO_STEP_JEITA_ZONE:
+		*val1 = chip->cur_jeita_zone;
+		break;
+	case PSY_IIO_STEP_FCC:
+		*val1 = chip->step_fcc;
+		break;
+	case PSY_IIO_STEP_FV:
+		*val1 = chip->step_fv;
+		break;
+#endif
 	default:
 		pr_debug("Unsupported QG IIO chan %d\n", chan->channel);
 		rc = -EINVAL;
@@ -2370,7 +2613,12 @@ static int qg_charge_full_update(struct qpnp_qg *chip)
 				chip->msoc, health, chip->charge_full,
 				chip->charge_done);
 	if (chip->charge_done && !chip->charge_full) {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		if (chip->msoc > 99 && health == POWER_SUPPLY_HEALTH_GOOD) {
+			chip->full_counter++;
+#else
 		if (chip->msoc >= 99 && health == POWER_SUPPLY_HEALTH_GOOD) {
+#endif
 			chip->charge_full = true;
 			qg_dbg(chip, QG_DEBUG_STATUS, "Setting charge_full (0->1) @ msoc=%d\n",
 					chip->msoc);
@@ -2415,6 +2663,9 @@ static int qg_charge_full_update(struct qpnp_qg *chip)
 				qg_scale_soc(chip, false);
 			}
 			chip->charge_full = false;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+			chip->recharge_counter++;
+#endif
 			qg_dbg(chip, QG_DEBUG_STATUS, "msoc=%d recharge_soc=%d charge_full (1->0)\n",
 					chip->msoc, recharge_soc);
 		} else {
@@ -2610,6 +2861,506 @@ static void qg_sleep_exit_work(struct work_struct *work)
 	vote(chip->awake_votable, SLEEP_EXIT_VOTER, false, 0);
 }
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static void qg_somc_jeita_step_wakelock(struct qpnp_qg *chip, bool en)
+{
+	if (en)
+		__pm_stay_awake(chip->step_ws);
+	else
+		__pm_relax(chip->step_ws);
+
+	qg_dbg(chip, QG_DEBUG_SOMC_STEP,
+			"wake lock for JEITA/Step: %d\n", (int)en);
+	chip->step_lock_en = en;
+}
+
+static void qg_somc_jeita_step_update(struct qpnp_qg *chip)
+{
+	bool input_present;
+
+	if (!chip->step_en)
+		return;
+
+	input_present = is_input_present(chip);
+
+	qg_dbg(chip, QG_DEBUG_SOMC_STEP, "step_lock_en=%d input_present=%d bsoc=%d\n",
+			chip->step_lock_en, input_present, chip->batt_soc);
+
+	if (!chip->step_lock_en && input_present) {
+		mutex_lock(&chip->step_lock);
+		qg_somc_jeita_step_wakelock(chip, true);
+		qg_dbg(chip, QG_DEBUG_SOMC, "schedule JEITA/Step worker\n");
+		schedule_delayed_work(&chip->somc_jeita_step_charge_work,
+							msecs_to_jiffies(0));
+		mutex_unlock(&chip->step_lock);
+	}
+}
+
+#define CELL_IMPEDANCE_MOHM 30
+static void qg_somc_get_current_step_value(struct qpnp_qg *chip,
+					struct qg_dt_step_data *step_data,
+					int *fv, int *fcc,
+					int *health, int *iterm)
+{
+	chip->cur_jeita_zone = step_data->jeita_zone;
+	chip->cur_step_phase = step_data->step_phase;
+	chip->cur_check_current = step_data->check_current;
+	chip->init_check_current = step_data->check_current;
+	chip->cur_target_current = step_data->target_current;
+	*fv = step_data->fv;
+	*fcc = step_data->fcc;
+	*health = step_data->health;
+	*iterm = step_data->term_current;
+}
+
+static void qg_somc_jeita_step_charge_work(struct work_struct *work)
+{
+	struct qpnp_qg *chip = container_of(work, struct qpnp_qg,
+					somc_jeita_step_charge_work.work);
+	int rc, val;
+	int lv = 0;
+	s64 currentTime;
+	int iterm_final = 0;
+	int real_temp = 0, vbatt_mv = 0, ibat_ma = 0;
+	bool batt_aging_level_changed = false;
+	bool jeita_zone_charged = false;
+	bool step_val_obtained = false;
+	int charging_status;
+	int msoc = 0, bsoc = 0;
+	int current_now = 0, vbatt_uv = 0;
+	int step_fv = 0, step_fcc = 0, step_health = 0, step_iterm = 0;
+	int max_fv = 0;
+	int cv_status;
+	int i = 0, sel = -1;
+	bool input_present;
+	bool need_psy_changed = false;
+	struct qg_dt_step_data step_data[STEP_DATA_MAX_CFG_NUM];
+
+	static const char * const str_status[] = {"-", "Charging",
+				"Discharging", "NotCharging", "FULL", "-"};
+
+	/* read input present status */
+	input_present = is_input_present(chip);
+
+	/* Get battery charging status */
+	charging_status = chip->charge_status;
+	rc = qg_read_iio_chan(chip, CV_STATUS, &val);
+	if (rc < 0) {
+		pr_err("Failed to get cv_status, rc=%d\n", rc);
+		cv_status = 0;
+	} else {
+		cv_status = val;
+	}
+
+	/* Get real_temp */
+	if (chip->use_real_temp)
+		rc = qg_somc_get_real_temp(chip, &real_temp);
+	else
+		rc = qg_get_battery_temp(chip, &real_temp);
+
+	if (rc < 0) {
+		pr_err("failed to get temp\n");
+		real_temp = 250;
+	}
+
+	/* Get voltage */
+	rc = qg_get_battery_voltage(chip, &vbatt_uv);
+	if (rc < 0) {
+		pr_err("failed to get battery voltage, rc=%d\n", rc);
+		vbatt_uv = 0;
+	}
+	vbatt_mv = vbatt_uv / 1000;
+
+	/* Get Ibat (Reverse sign, Positive value means charging) */
+	rc = qg_get_battery_current(chip, &current_now);
+	if (rc < 0) {
+		pr_err("failed to get battery current, rc=%d\n", rc);
+		current_now = 0;
+	}
+	ibat_ma = (-1) * current_now / 1000;
+
+	/* Get Aging Level, Select step_data, Set stbl */
+	lv = chip->batt_age_level;
+	if (lv < 0 || lv >= AGING_LV_NUM)
+		lv = 0;
+	for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++)
+		step_data[i] = chip->step_data[lv][i];
+
+	/* Get socs */
+	msoc = chip->msoc;
+	bsoc = chip->batt_soc;
+
+	/* calc avarage value of temp, current and voltage */
+	for (i = STEP_INPUT_BUF_NUM - 1; i > 0; i--)
+		chip->step_input_data[i] = chip->step_input_data[i - 1];
+	chip->step_input_data[0].temp = real_temp;
+	chip->step_input_data[0].current_now = current_now;
+	chip->step_input_data[0].voltage_now = vbatt_uv;
+	chip->step_input_data[0].stored_ktime_ms =
+					ktime_to_ms(ktime_get_boottime());
+	currentTime = chip->step_input_data[0].stored_ktime_ms;
+
+	qg_dbg(chip, QG_DEBUG_SOMC_STEP, "%s, cv=%d, batt_aging_level=%d, bsoc=%d, msoc=%d, real_temp=%d, vbatt_mv=%d, ibat_ma=%d",
+				str_status[charging_status], cv_status, lv,
+				bsoc, msoc, real_temp, vbatt_mv, ibat_ma);
+
+	if (chip->cvstep_jeita_is_running) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "somc_step_jeita_is_running=%d, cur_jeita_zone=%d, cur_step_phase=%d",
+				chip->cvstep_jeita_is_running,
+				chip->cur_jeita_zone, chip->cur_step_phase);
+
+		/* Check jeita_zone change */
+		for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+			if (real_temp >= step_data[i].temp_range_l &&
+			    real_temp < step_data[i].temp_range_h) {
+				if (chip->cur_jeita_zone !=
+					step_data[i].jeita_zone) {
+					jeita_zone_charged = true;
+					qg_dbg(chip, QG_DEBUG_SOMC, "jeita_zone_charged");
+				}
+				break;
+			}
+		}
+
+		if (batt_aging_level_changed) {
+			/* During charging - 1 : Update config when aging_lv is changed */
+			for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+				if (real_temp >= step_data[i].temp_range_l &&
+				    real_temp < step_data[i].temp_range_h) {
+					sel = i;
+					if (vbatt_mv < step_data[i].fv)
+						break;
+				}
+			}
+			if (sel >= 0) {
+				qg_somc_get_current_step_value(chip,
+							&step_data[sel],
+							&step_fv,
+							&step_fcc,
+							&step_health,
+							&step_iterm);
+				step_val_obtained = true;
+				qg_dbg(chip, QG_DEBUG_SOMC, "AgingLv is changed during charging !! jeita_zone=%d(%d-%d), health=%d, step_phase=%d, fcc=%d, fv=%d",
+					chip->cur_jeita_zone,
+					step_data[sel].temp_range_l,
+					step_data[sel].temp_range_h,
+					step_health,
+					chip->cur_step_phase,
+					step_fcc, step_fv);
+			}
+		} else if (jeita_zone_charged) {
+			/* During charging - 2 : Update config when jeita_zone is changed */
+			for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+				if (real_temp >= step_data[i].temp_range_l &&
+				    real_temp < step_data[i].temp_range_h) {
+					sel = i;
+					if (vbatt_mv < step_data[i].fv)
+						break;
+				}
+			}
+			if (sel >= 0) {
+				qg_somc_get_current_step_value(chip,
+							&step_data[sel],
+							&step_fv,
+							&step_fcc,
+							&step_health,
+							&step_iterm);
+				step_val_obtained = true;
+				qg_dbg(chip, QG_DEBUG_SOMC, "JEITA_ZONE Changed!! jeita_zone=%d(%d-%d), health=%d, step_phase=%d, fcc=%d, fv=%d",
+					chip->cur_jeita_zone,
+					step_data[sel].temp_range_l,
+					step_data[sel].temp_range_h,
+					step_health,
+					chip->cur_step_phase,
+					step_fcc, step_fv);
+			}
+		} else if (chip->step_phase_is_changed) {
+			/* During charging - 3 : Proceed next step */
+			for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+				if (real_temp >= step_data[i].temp_range_l &&
+				    real_temp < step_data[i].temp_range_h &&
+					chip->cur_step_phase ==
+						step_data[i].step_phase) {
+
+					qg_somc_get_current_step_value(chip,
+							&step_data[i],
+							&step_fv,
+							&step_fcc,
+							&step_health,
+							&step_iterm);
+					step_val_obtained = true;
+					qg_dbg(chip, QG_DEBUG_SOMC, "Step Phase proceeded!! jeita_zone=%d(%d-%d), health=%d, step_phase=%d, fcc=%d, fv=%d",
+						chip->cur_jeita_zone,
+						step_data[i].temp_range_l,
+						step_data[i].temp_range_h,
+						step_health,
+						chip->cur_step_phase,
+						step_fcc, step_fv);
+					break;
+				}
+			}
+		}
+	} else {
+		for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+			if (real_temp >= step_data[i].temp_range_l &&
+			    real_temp < step_data[i].temp_range_h) {
+				sel = i;
+				if (vbatt_mv < step_data[i].fv)
+					break;
+			}
+		}
+		if (sel >= 0) {
+			qg_somc_get_current_step_value(chip,
+							&step_data[sel],
+							&step_fv,
+							&step_fcc,
+							&step_health,
+							&step_iterm);
+			step_val_obtained = true;
+			qg_dbg(chip, QG_DEBUG_SOMC, "Jeita/Step phase determined!! jeita_zone=%d(%d-%d), health=%d, step_phase=%d, fcc=%d, fv=%d",
+				chip->cur_jeita_zone,
+				step_data[sel].temp_range_l,
+				step_data[sel].temp_range_h,
+				step_health,
+				chip->cur_step_phase,
+				step_fcc, step_fv);
+		}
+	}
+	if (batt_aging_level_changed || jeita_zone_charged ||
+					chip->step_phase_is_changed)
+		need_psy_changed = true;
+
+	qg_dbg(chip, QG_DEBUG_SOMC_STEP, "batt_aging_level_changed=%d, jeita_zone_charged=%d, chip->step_phase_is_changed=%d, need_psy_changed=%d",
+				batt_aging_level_changed, jeita_zone_charged,
+				chip->step_phase_is_changed, need_psy_changed);
+
+	/* request vote for FV and FCC and health condition to smb driver */
+	if (step_val_obtained && step_fv != chip->step_fv) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "Set FV=%d from %d",
+			step_fv, chip->step_fv);
+		rc = qg_write_iio_chan(chip, JEITA_STEP_FV,
+						(step_fv * 1000));
+		if (rc < 0)
+			pr_err("Error in step jeita fv set, rc=%d\n", rc);
+
+		chip->step_fv = step_fv;
+	}
+
+	if (step_val_obtained && step_fcc != chip->step_fcc) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "Set FCC=%d from %d",
+			step_fcc, chip->step_fcc);
+		rc = qg_write_iio_chan(chip, JEITA_STEP_FCC,
+							(step_fcc * 1000));
+		if (rc < 0)
+			pr_err("Error in step current set, rc=%d\n", rc);
+
+		chip->step_fcc = step_fcc;
+	}
+
+	if (step_val_obtained && step_health != chip->step_health) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "Set JEITA_CONDITION=%d from %d",
+			step_health, chip->step_health);
+		rc = qg_write_iio_chan(chip, JEITA_CONDITION, step_health);
+		if (rc < 0)
+			pr_err("Error in step jeita cond set, rc=%d\n", rc);
+
+		chip->step_health = step_health;
+	}
+
+	/* Check charging status and taper current to determine next phase */
+	if (charging_status == POWER_SUPPLY_STATUS_CHARGING && !cv_status) {
+		chip->cur_check_current = chip->init_check_current;
+		chip->cvstep_jeita_is_running = 1;
+		chip->step_phase_is_changed = false;
+	} else if (charging_status == POWER_SUPPLY_STATUS_CHARGING &&
+								cv_status) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "POWER_SUPPLY_CHARGE_TYPE_TAPER::: ibat_ma=%d, cur_check_current=%d, cur_target_current=%d",
+			ibat_ma, chip->cur_check_current,
+			chip->cur_target_current);
+		if (!chip->cvstep_jeita_is_running) {
+			if (ibat_ma < chip->cur_target_current) {
+				chip->cur_step_phase++;
+				chip->step_phase_is_changed = true;
+				qg_dbg(chip, QG_DEBUG_SOMC_STEP, "Step charge started with TAPER but Step Phase should proceeded soon. cur_step_phase->%d, ibat_ma=%d",
+					chip->cur_step_phase, ibat_ma);
+			}
+		} else if (ibat_ma < chip->cur_check_current) {
+			if (chip->cur_check_current <
+						chip->cur_target_current) {
+				chip->cur_step_phase++;
+				chip->step_phase_is_changed = true;
+				qg_dbg(chip, QG_DEBUG_SOMC_STEP, "cur_step_phase->%d, ibat_ma=%d, cur_check_current=%d",
+					chip->cur_step_phase,
+					ibat_ma, chip->cur_check_current);
+			} else {
+				chip->cur_check_current -= 500;
+				if (chip->cur_check_current <
+						chip->cur_target_current) {
+					chip->cur_check_current =
+						chip->cur_target_current - 10;
+				}
+				chip->step_phase_is_changed = false;
+				qg_dbg(chip, QG_DEBUG_SOMC_STEP, "cur_check_current->%d",
+						chip->cur_check_current);
+			}
+		}
+		chip->cvstep_jeita_is_running = 1;
+	} else if (charging_status == POWER_SUPPLY_STATUS_FULL) {
+		if (chip->cur_target_current == 0) {
+			chip->cvstep_jeita_is_running = 0;
+			chip->cur_step_phase = 0;
+			chip->step_phase_is_changed = false;
+			if (chip->cvstep_jeita_is_running)
+				qg_dbg(chip, QG_DEBUG_SOMC, "Step Charge Terminated!! (Full)");
+		} else {
+			chip->cur_step_phase++;
+			chip->step_phase_is_changed = true;
+			chip->cvstep_jeita_is_running = 1;
+			qg_dbg(chip, QG_DEBUG_SOMC, "Terminated during Step Charging!!");
+		}
+	} else { /*PAUSE, CHARGING_DISABLED, INVALID*/
+		chip->cvstep_jeita_is_running = 0;
+		chip->step_phase_is_changed = false;
+		if (chip->cvstep_jeita_is_running)
+			qg_dbg(chip, QG_DEBUG_SOMC, "Step Charge Terminated!! (Pause/Disabled/Invalid)");
+	}
+
+	/* Configure digital Iterm */
+	if (step_val_obtained && step_iterm != chip->step_iterm) {
+		qg_dbg(chip, QG_DEBUG_SOMC_STEP, "Set JEITA_STEP_ITERM=%d from %d",
+			step_iterm, chip->step_iterm);
+		rc = qg_write_iio_chan(chip, JEITA_STEP_ITERM, step_iterm);
+		if (rc < 0)
+			pr_err("Error in iterm set on batt_psy, rc=%d\n", rc);
+
+		chip->step_iterm = step_iterm;
+	}
+
+	/* Configure Ibat full. hvdcp_opti reads this param via psy get */
+	for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+		if (step_data[i].jeita_zone == chip->cur_jeita_zone &&
+					step_data[i].term_current > 0) {
+			iterm_final = step_data[i].term_current;
+			break;
+		}
+	}
+	chip->step_ibatt_full = iterm_final + chip->ibat_full_term_diff;
+	chip->dt.iterm_ma = chip->step_ibatt_full; /* Overwrite iterm_ma for qg-soc algorithm*/
+
+	/* Configure Vbat full after search max FV on current aging_lv */
+	for (i = 0; i < STEP_DATA_MAX_CFG_NUM; i++) {
+		if (step_data[i].fv > max_fv)
+			max_fv = step_data[i].fv;
+	}
+	if (max_fv > 0 && max_fv <= chip->product_max_fv)
+		chip->bp.float_volt_uv = max_fv * 1000;
+
+	/* Configure FCSS. If iterm = zero, then slow down FCSS */
+	/* TBD */
+
+	/*
+	 * Enable ECC to reset Battery OV RT status
+	 * when Vbatt falls below threshold with final step only
+	 */
+	/* TBD */
+
+	/* Log Full/OV related params*/
+	qg_dbg(chip, QG_DEBUG_SOMC_STEP, "iterm=%d, ibat_full=%d, vbat_full=%d",
+		chip->step_iterm , chip->step_ibatt_full, max_fv);
+
+	if (chip->qg_psy && need_psy_changed)
+		power_supply_changed(chip->qg_psy);
+
+	/* re-schedule work */
+	if (input_present &&
+		(chip->charge_status != POWER_SUPPLY_STATUS_FULL)) {
+		schedule_delayed_work(&chip->somc_jeita_step_charge_work,
+							msecs_to_jiffies(2000));
+	} else {
+		qg_dbg(chip, QG_DEBUG_SOMC,
+			"exit step_work input_present:%d status:%d\n",
+					input_present, chip->charge_status);
+		memset(chip->step_input_data, 0, sizeof(chip->step_input_data));
+		qg_somc_jeita_step_wakelock(chip, false);
+	}
+	mutex_unlock(&chip->step_lock);
+}
+
+static enum alarmtimer_restart qg_somc_psy_chg_alarm_timer(struct alarm *alarm,
+								ktime_t time)
+{
+	struct qpnp_qg *chip = container_of(alarm, struct qpnp_qg,
+						psy_chg_alarm_timer);
+
+	chip->psy_chg_awake = true;
+	pm_stay_awake(chip->dev);
+
+	qg_dbg(chip, QG_DEBUG_SOMC, "PSY CHANGE timer expired\n");
+	schedule_work(&chip->psy_chg_work);
+
+	return ALARMTIMER_NORESTART;
+}
+
+#define PSY_CHG_ALARM_ONLINE_HOT_TIME_MS	(10 * 60 * 1000)
+#define PSY_CHG_ALARM_ONLINE_OTHER_TIME_MS	(60 * 60 * 1000)
+#define PSY_CHG_ALARM_OFFLINE_HOT_TIME_MS	(30 * 60 * 1000)
+#define PSY_CHG_ALARM_OFFLINE_OTHER_TIME_MS	(24 * 60 * 60 * 1000)
+#define PSY_CHG_ALARM_FIRST_TIME_MS		(10 * 60 * 1000)
+#define PSY_CHG_HOT_THRESHOLD			(400)
+#define PSY_CHG_WAKE_HOLD_TIME_MS		(20)
+static void qg_somc_psy_chg_work(struct work_struct *work)
+{
+	struct qpnp_qg *chip = container_of(work, struct qpnp_qg, psy_chg_work);
+	int rc;
+	bool input_present;
+	int temp, next_time = 0;
+
+	if (chip->psy_chg_awake)
+		vote(chip->awake_votable, PSY_CHG_VOTER, true, 0);
+
+	/* read real temp */
+	if (chip->use_real_temp)
+		rc = qg_somc_get_real_temp(chip, &temp);
+	else
+		rc = qg_get_battery_temp(chip, &temp);
+
+	if (rc < 0) {
+		pr_err("failed to get temp\n");
+		temp = 250;
+	}
+
+	/* read input present status */
+	input_present = is_input_present(chip);
+
+	if (input_present) {
+		if (temp > PSY_CHG_HOT_THRESHOLD)
+			next_time = PSY_CHG_ALARM_ONLINE_HOT_TIME_MS;
+		else
+			next_time = PSY_CHG_ALARM_ONLINE_OTHER_TIME_MS;
+	} else {
+		if (temp > PSY_CHG_HOT_THRESHOLD)
+			next_time = PSY_CHG_ALARM_OFFLINE_HOT_TIME_MS;
+		else
+			next_time = PSY_CHG_ALARM_OFFLINE_OTHER_TIME_MS;
+	}
+
+	if (chip->batt_psy) {
+		chip->psy_chg_counter++;
+		power_supply_changed(chip->batt_psy);
+		msleep(PSY_CHG_WAKE_HOLD_TIME_MS);
+	}
+
+	qg_dbg(chip, QG_DEBUG_SOMC, "Sent power_supply_changed. input_present:%d, temp=%d, next_time:%d\n",
+					input_present, temp, next_time);
+	if (next_time)
+		alarm_start_relative(&chip->psy_chg_alarm_timer,
+						ms_to_ktime(next_time));
+
+	chip->psy_chg_awake = false;
+	vote(chip->awake_votable, PSY_CHG_VOTER, false, 0);
+}
+#endif
+
 static void qg_status_change_work(struct work_struct *work)
 {
 	struct qpnp_qg *chip = container_of(work,
@@ -2681,6 +3432,11 @@ static void qg_status_change_work(struct work_struct *work)
 		pr_err("Failed in charge_full_update, rc=%d\n", rc);
 
 	ttf_update(chip->ttf, input_present);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	qg_somc_jeita_step_update(chip);
+	chip->prev_charge_status = chip->charge_status;
+#endif
 out:
 	pm_relax(chip->dev);
 }
@@ -3037,11 +3793,22 @@ static int get_batt_id_ohm(struct qpnp_qg *chip, u32 *batt_id_ohm)
 	return 0;
 }
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define PROPERTY_NAME_SIZE 128
+#endif
 static int qg_load_battery_profile(struct qpnp_qg *chip)
 {
 	struct device_node *node = chip->dev->of_node;
 	struct device_node *profile_node;
 	int rc, tuple_len, len, i, avail_age_level = 0;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int num, lv;
+	int step_len;
+	u32 step_buf[STEP_DATA_DT_MAX_NUM];
+	char prop_name[PROPERTY_NAME_SIZE];
+
+	memset(step_buf, 0, sizeof(step_buf));
+#endif
 
 	chip->batt_node = of_find_node_by_name(node, "qcom,battery-data");
 	if (!chip->batt_node) {
@@ -3069,6 +3836,18 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 			chip->batt_age_level = avail_age_level;
 		}
 	} else {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		if (chip->batt_age_level == -EINVAL) {
+			rc = qg_get_batt_age_level(chip, &chip->batt_age_level);
+			if (rc < 0) {
+				pr_err("error in retrieving batt age level rc=%d\n",
+									rc);
+				chip->batt_age_level = 0;
+			}
+		}
+		qg_dbg(chip, QG_DEBUG_SOMC, "Read batt_age_level from SDAM: lv=%d\n",
+							chip->batt_age_level);
+#endif
 		profile_node = of_batterydata_get_best_profile(chip->batt_node,
 				chip->batt_id_ohm / 1000, NULL);
 	}
@@ -3119,6 +3898,17 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 		pr_err("Failed to read QG profile version rc:%d\n", rc);
 		chip->bp.qg_profile_version = -EINVAL;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = of_property_read_u32(profile_node, "somc,initial-capacity-uah",
+				&chip->initial_capacity);
+	if (rc < 0) {
+		pr_err("battery initial capacity unavailable, rc:%d\n", rc);
+		chip->initial_capacity = -EINVAL;
+	}
+
+	qg_notify_charger(chip);
+#endif
 
 	/*
 	 * Currently step charging thresholds should be read only for Vbatt
@@ -3177,6 +3967,83 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 				chip->ttf->step_chg_cfg[i].value);
 		}
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	mutex_lock(&chip->step_lock);
+	chip->step_en = false;
+	rc = of_property_count_elems_of_size(profile_node,
+					"somc,step-cfg", sizeof(u32));
+
+	for (lv = 0; lv < AGING_LV_NUM; lv++) {
+		snprintf(prop_name, PROPERTY_NAME_SIZE, "somc,cvstep-cfg-lv%d", lv);
+		rc = of_property_count_elems_of_size(profile_node, prop_name, sizeof(u32));
+		if (rc < 0) {
+			pr_err("Can't get size of %s %d\n", prop_name, rc);
+			goto step_err;
+		} else {
+			step_len = rc;
+			qg_dbg(chip, QG_DEBUG_SOMC_STEP,
+				"size of %s: %d\n", prop_name, step_len);
+		}
+		if (step_len > STEP_DATA_DT_MAX_NUM || (step_len % STEP_DATA_RAW)) {
+			pr_err("step config table size is invalid\n");
+			goto step_err;
+		} else {
+			rc = of_property_read_u32_array(profile_node, prop_name,
+								&step_buf[0], step_len);
+			if (rc < 0) {
+				pr_err("Can't get %s %d\n", prop_name, rc);
+				goto step_err;
+			}
+			num = 0;
+			for (i = 0; i < step_len; i += STEP_DATA_RAW) {
+				chip->step_data[lv][num].temp_range_l =
+							step_buf[i];
+				chip->step_data[lv][num].temp_range_h =
+							step_buf[i + 1];
+				chip->step_data[lv][num].jeita_zone =
+							step_buf[i + 2];
+				chip->step_data[lv][num].step_phase =
+							step_buf[i + 3];
+				chip->step_data[lv][num].fv =
+							step_buf[i + 4];
+				chip->step_data[lv][num].fcc =
+							step_buf[i + 5];
+				chip->step_data[lv][num].target_current =
+							step_buf[i + 6];
+				chip->step_data[lv][num].check_current =
+							step_buf[i + 7];
+				chip->step_data[lv][num].term_current =
+							step_buf[i + 8];
+				chip->step_data[lv][num].health =
+							step_buf[i + 9];
+				num++;
+			}
+
+			/* Check Step Data */
+			qg_dbg(chip, QG_DEBUG_SOMC, "Step/JEITA table for Aging Level %d\n", lv);
+			qg_dbg(chip, QG_DEBUG_SOMC, "| No |  Temp Range   |Zone|Step|  FV  | FCC  |Target| Term |Hlth|\n");
+			for (i = 0; i < num; i++)
+				qg_dbg(chip, QG_DEBUG_SOMC,
+					"| %2d | %5d - %5d | %2d | %2d | %4d | %4d | %4d | %4d | %2d |\n",
+					i + 1,
+					chip->step_data[lv][i].temp_range_l,
+					chip->step_data[lv][i].temp_range_h,
+					chip->step_data[lv][i].jeita_zone,
+					chip->step_data[lv][i].step_phase,
+					chip->step_data[lv][i].fv,
+					chip->step_data[lv][i].fcc,
+					chip->step_data[lv][i].target_current,
+					chip->step_data[lv][i].term_current,
+					chip->step_data[lv][i].health);
+
+		}
+	}
+	chip->step_iterm = -1;
+	chip->step_en = true;
+step_err:
+	mutex_unlock(&chip->step_lock);
+#endif
 
 	qg_dbg(chip, QG_DEBUG_PROFILE, "profile=%s FV=%duV FCC=%dma\n",
 			chip->bp.batt_type_str, chip->bp.float_volt_uv,
@@ -3400,6 +4267,9 @@ done:
 	if (chip->qg_mode == QG_V_I_MODE)
 		chip->cc_soc = soc_raw;
 	chip->sys_soc = soc_raw;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	chip->batt_soc = soc_raw;
+#endif
 	chip->last_adj_ssoc = chip->catch_up_soc = chip->msoc = soc;
 	chip->kdata.param[QG_PON_OCV_UV].data = ocv_uv;
 	chip->kdata.param[QG_PON_OCV_UV].valid = true;
@@ -3738,6 +4608,9 @@ done_fifo:
 
 static int qg_soh_batt_profile_init(struct qpnp_qg *chip)
 {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	return 0;
+#else
 	int rc = 0;
 
 	if (!chip->dt.multi_profile_load)
@@ -3767,6 +4640,7 @@ static int qg_soh_batt_profile_init(struct qpnp_qg *chip)
 	}
 
 	return rc;
+#endif
 }
 
 static int qg_post_init(struct qpnp_qg *chip)
@@ -3932,6 +4806,9 @@ static int qg_alg_init(struct qpnp_qg *chip)
 	cl->get_learned_capacity = qg_get_learned_capacity;
 	cl->store_learned_capacity = qg_store_learned_capacity;
 	cl->ok_to_begin = qg_cl_ok_to_begin;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	cl->get_monotonic_soc = qg_somc_get_monotonic_soc;
+#endif
 	cl->data = chip;
 
 	rc = cap_learning_init(cl);
@@ -4082,7 +4959,12 @@ static int qg_parse_s2_dt(struct qpnp_qg *chip)
 }
 
 #define DEFAULT_CL_MIN_START_SOC	10
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define DEFAULT_MAX_FV_MV		4480
+#define DEFAULT_CL_MAX_START_SOC	40
+#else
 #define DEFAULT_CL_MAX_START_SOC	15
+#endif
 #define DEFAULT_CL_MIN_TEMP_DECIDEGC	150
 #define DEFAULT_CL_MAX_TEMP_DECIDEGC	500
 #define DEFAULT_CL_MAX_INC_DECIPERC	10
@@ -4439,12 +5321,267 @@ static int qg_parse_dt(struct qpnp_qg *chip)
 	chip->dt.multi_profile_load = of_property_read_bool(node,
 					"qcom,multi-profile-load");
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	chip->use_real_temp = of_property_read_bool(node,
+					"somc,jeita-step-use-real-temp");
+	if (chip->use_real_temp) {
+		rc = of_property_read_u32(node,
+					  "somc,jeita-aux-temp-correction",
+					  &temp);
+		if (rc < 0)
+			chip->aux_temp_correctton = 0;
+		else
+			chip->aux_temp_correctton = temp;
+
+		chip->real_temp_use_aux = (rc < 0) ? false : true;
+
+		rc = of_property_read_u32(node,
+					  "somc,jeita-batt-temp-correction",
+					  &temp);
+		if (rc < 0)
+			chip->batt_temp_correctton = 0;
+		else
+			chip->batt_temp_correctton = temp;
+	}
+
+	rc = of_property_read_u32(node, "somc,ibat-full-term-diff", &temp);
+	if (rc < 0)
+		chip->ibat_full_term_diff = 0;
+	else
+		chip->ibat_full_term_diff = temp;
+
+	rc = of_property_read_u32(node, "somc,fv-max-mv", &temp);
+	if (rc < 0)
+		chip->product_max_fv = DEFAULT_MAX_FV_MV;
+	else
+		chip->product_max_fv = temp;
+#endif
+
 	qg_dbg(chip, QG_DEBUG_PON, "DT: vbatt_empty_mv=%dmV vbatt_low_mv=%dmV delta_soc=%d ext-sns=%d\n",
 			chip->dt.vbatt_empty_mv, chip->dt.vbatt_low_mv,
 			chip->dt.delta_soc, chip->dt.qg_ext_sense);
 
 	return 0;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+/*****************************
+ * somc sysfs implementation *
+ *****************************/
+enum qg_somc_sysfs {
+	ATTR_REG_QGAUGE_STATUS1 = 0,
+	ATTR_REG_QGAUGE_STATUS2,
+	ATTR_REG_QGAUGE_STATUS4,
+	ATTR_REG_QGAUGE_INT_RT_STS,
+	ATTR_CC_SOC,
+	ATTR_BATT_SOC,
+	ATTR_SYS_SOC,
+	ATTR_CATCH_UP_SOC,
+	ATTR_MAINT_SOC,
+	ATTR_MSOC,
+	ATTR_PON_SOC,
+	ATTR_FULL_SOC,
+	ATTR_RECHARGE_SOC,
+	ATTR_CHARGE_FULL,
+	ATTR_VCELL_MAX,
+	ATTR_CL_ACTIVE,
+	ATTR_CL_BSOC_DROP,
+	ATTR_CL_CCSOC_DROP,
+	ATTR_CL_HOLD_TIME,
+	ATTR_CL_TOTAL_TIME,
+	ATTR_NOM_CAP,
+	ATTR_PSY_CHG_COUNTER,
+};
+
+static ssize_t qg_somc_param_show(struct device *dev,
+				struct device_attribute *attr, char *buf);
+
+static struct device_attribute qg_somc_attrs[] = {
+	__ATTR(somc_reg_qgauge_status1, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_reg_qgauge_status2, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_reg_qgauge_status4, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_reg_qgauge_int_rt_sts, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cc_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_batt_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_sys_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_catch_up_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_maint_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_msoc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_pon_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_full_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_recharge_soc, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_charge_full, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_vcell_max, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cl_active, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cl_bsoc_drop, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cl_ccsoc_drop, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cl_hold_time, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_cl_total_time, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_nom_cap, 0444, qg_somc_param_show, NULL),
+	__ATTR(somc_psy_chg_counter, 0444, qg_somc_param_show, NULL),
+};
+
+static ssize_t qg_somc_param_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct qpnp_qg *chip = dev_get_drvdata(dev);
+	ssize_t size = 0;
+	const ptrdiff_t off = attr - qg_somc_attrs;
+	int rc = 0;
+	u8 reg;
+	int val;
+
+	switch (off) {
+	case ATTR_REG_QGAUGE_STATUS1:
+		rc = qg_read(chip, chip->qg_base + QG_STATUS1_REG, &reg, 1);
+		if (rc < 0) {
+			pr_err("Failed to read STATUS1_REG rc=%d\n", rc);
+			return rc;
+		}
+		size = scnprintf(buf, PAGE_SIZE, "%02X\n", reg);
+		break;
+	case ATTR_REG_QGAUGE_STATUS2:
+		rc = qg_read(chip, chip->qg_base + QG_STATUS2_REG, &reg, 1);
+		if (rc < 0) {
+			pr_err("Failed to read STATUS2_REG rc=%d\n", rc);
+			return rc;
+		}
+		size = scnprintf(buf, PAGE_SIZE, "%02X\n", reg);
+		break;
+	case ATTR_REG_QGAUGE_STATUS4:
+		rc = qg_read(chip, chip->qg_base + QG_STATUS4_REG, &reg, 1);
+		if (rc < 0) {
+			pr_err("Failed to read STATUS4_REG rc=%d\n", rc);
+			return rc;
+		}
+		size = scnprintf(buf, PAGE_SIZE, "%02X\n", reg);
+		break;
+	case ATTR_REG_QGAUGE_INT_RT_STS:
+		rc = qg_read(chip, chip->qg_base + QG_INT_RT_STS_REG, &reg, 1);
+		if (rc < 0) {
+			pr_err("Failed to read RT status, rc=%d\n", rc);
+			return rc;
+		}
+		size = scnprintf(buf, PAGE_SIZE, "%02X\n", reg);
+		break;
+	case ATTR_CC_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%s%d.%02d\n",
+					chip->cc_soc < 0 ? "-" : "",
+					chip->cc_soc / 100,
+					abs(chip->cc_soc % 100));
+		break;
+	case ATTR_BATT_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%s%d.%02d\n",
+					chip->batt_soc < 0 ? "-" : "",
+					chip->batt_soc / 100,
+					abs(chip->batt_soc % 100));
+		break;
+	case ATTR_SYS_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%s%d.%02d\n",
+					chip->sys_soc < 0 ? "-" : "",
+					chip->sys_soc / 100,
+					abs(chip->sys_soc % 100));
+		break;
+	case ATTR_CATCH_UP_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->catch_up_soc);
+		break;
+	case ATTR_MAINT_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->maint_soc);
+		break;
+	case ATTR_MSOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->msoc);
+		break;
+	case ATTR_PON_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->pon_soc);
+		break;
+	case ATTR_FULL_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%s%d.%02d\n",
+					chip->full_soc < 0 ? "-" : "",
+					chip->full_soc / 100,
+					abs(chip->full_soc % 100));
+		break;
+	case ATTR_RECHARGE_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->recharge_soc);
+		break;
+	case ATTR_CHARGE_FULL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->charge_full);
+		break;
+	case ATTR_VCELL_MAX:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->vcell_max_mv);
+		break;
+	case ATTR_CL_ACTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", (int)chip->cl->active);
+		break;
+	case ATTR_CL_BSOC_DROP:
+		val = chip->cl->batt_soc_cp_drop;
+		if (val >= 0) {
+			size = scnprintf(buf, PAGE_SIZE, "%d.%02d\n",
+							val / 100, val % 100);
+		} else {
+			size = scnprintf(buf, PAGE_SIZE, "-%d.%02d\n",
+					abs(val / 100), abs(val % 100));
+		}
+		break;
+	case ATTR_CL_CCSOC_DROP:
+		val = (int)chip->cl->cc_soc_drop;
+		if (val >= 0) {
+			size = scnprintf(buf, PAGE_SIZE, "%d.%02d\n",
+							val / 100, val % 100);
+		} else {
+			size = scnprintf(buf, PAGE_SIZE, "-%d.%02d\n",
+					abs(val / 100), abs(val % 100));
+		}
+		break;
+	case ATTR_CL_HOLD_TIME:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					(int)(chip->cl->hold_time / 1000));
+		break;
+	case ATTR_CL_TOTAL_TIME:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					(int)(chip->cl->total_time / 1000));
+		break;
+	case ATTR_NOM_CAP:
+		rc = qg_get_nominal_capacity(&val, 250, true);
+		if (!rc)
+			size = scnprintf(buf, PAGE_SIZE, "%d\n", val);
+		break;
+	case ATTR_PSY_CHG_COUNTER:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->psy_chg_counter);
+		break;
+	default:
+		size = 0;
+		break;
+	}
+	return size;
+}
+
+static int qg_somc_create_sysfs_entries(struct device *dev)
+{
+	int i;
+	int rc = 0;
+
+	for (i = 0; i < ARRAY_SIZE(qg_somc_attrs); i++) {
+		rc = device_create_file(dev, &qg_somc_attrs[i]);
+		if (rc < 0) {
+			dev_err(dev, "device_create_file failed rc = %d\n", rc);
+			goto revert;
+		}
+	}
+	return 0;
+revert:
+	for (i = i - 1; i >= 0; i--)
+		device_remove_file(dev, &qg_somc_attrs[i]);
+	return rc;
+}
+
+static void qg_somc_remove_sysfs_entries(struct device *dev)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(qg_somc_attrs); i++)
+		device_remove_file(dev, &qg_somc_attrs[i]);
+}
+#endif
 
 static int process_suspend(struct qpnp_qg *chip)
 {
@@ -4711,6 +5848,13 @@ static int qpnp_qg_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	if (!alarmtimer_get_rtcdev()) {
+		pr_err("Failed to get soc alarm-timer, probe later\n");
+		return -EPROBE_DEFER;
+	}
+#endif
+
 	/* ADC for BID & THERM */
 	chip->batt_id_chan = iio_channel_get(&pdev->dev, "batt-id");
 	if (IS_ERR(chip->batt_id_chan)) {
@@ -4730,15 +5874,41 @@ static int qpnp_qg_probe(struct platform_device *pdev)
 		return rc;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	chip->aux_temp_chan = iio_channel_get(&pdev->dev, "aux-temp");
+	if (IS_ERR(chip->aux_temp_chan)) {
+		rc = PTR_ERR(chip->aux_temp_chan);
+		if (rc != -EPROBE_DEFER)
+			pr_err("aux-temp channel unavailable, rc=%d\n", rc);
+		chip->aux_temp_chan = NULL;
+	}
+#endif
+
 	chip->dev = &pdev->dev;
 	chip->debug_mask = &qg_debug_mask;
 	platform_set_drvdata(pdev, chip);
 	INIT_WORK(&chip->udata_work, process_udata_work);
 	INIT_WORK(&chip->qg_status_change_work, qg_status_change_work);
 	INIT_DELAYED_WORK(&chip->qg_sleep_exit_work, qg_sleep_exit_work);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	INIT_DELAYED_WORK(&chip->somc_jeita_step_charge_work,
+					qg_somc_jeita_step_charge_work);
+	INIT_WORK(&chip->psy_chg_work, qg_somc_psy_chg_work);
+	if (alarmtimer_get_rtcdev()) {
+		alarm_init(&chip->psy_chg_alarm_timer,
+			ALARM_BOOTTIME, qg_somc_psy_chg_alarm_timer);
+	} else {
+		pr_err("Error in alarm_init, rc:%d\n", rc);
+		return rc;
+	}
+	chip->step_ws = wakeup_source_register(chip->dev, "somc_jeita_step");
+#endif
 	mutex_init(&chip->bus_lock);
 	mutex_init(&chip->soc_lock);
 	mutex_init(&chip->data_lock);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	mutex_init(&chip->step_lock);
+#endif
 	init_waitqueue_head(&chip->qg_wait_q);
 	chip->maint_soc = -EINVAL;
 	chip->batt_soc = INT_MIN;
@@ -4750,6 +5920,9 @@ static int qpnp_qg_probe(struct platform_device *pdev)
 	chip->esr_actual = -EINVAL;
 	chip->esr_nominal = -EINVAL;
 	chip->batt_age_level = -EINVAL;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	chip->real_temp_debug = -EINVAL;
+#endif
 
 	config = (struct qg_config *)of_device_get_match_data(
 							&pdev->dev);
@@ -4899,6 +6072,17 @@ static int qpnp_qg_probe(struct platform_device *pdev)
 		goto fail_votable;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = qg_somc_create_sysfs_entries(chip->dev);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"Error in creating qg_somc_sysfs entries, rc:%d\n", rc);
+		goto fail_votable;
+	}
+	alarm_start_relative(&chip->psy_chg_alarm_timer,
+				ms_to_ktime(PSY_CHG_ALARM_FIRST_TIME_MS));
+#endif
+
 	rc = qg_request_irqs(chip);
 	if (rc < 0) {
 		pr_err("Failed to register QG interrupts, rc=%d\n", rc);
@@ -4945,6 +6129,9 @@ static int qpnp_qg_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&chip->qg_sleep_exit_work);
 	cancel_work_sync(&chip->udata_work);
 	cancel_work_sync(&chip->qg_status_change_work);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	cancel_work_sync(&chip->psy_chg_work);
+#endif
 	sysfs_remove_groups(&chip->dev->kobj, qg_groups);
 	debugfs_remove_recursive(chip->dfs_root);
 	device_destroy(chip->qg_class, chip->dev_no);
@@ -4955,6 +6142,11 @@ static int qpnp_qg_remove(struct platform_device *pdev)
 	mutex_destroy(&chip->soc_lock);
 	if (chip->awake_votable)
 		destroy_votable(chip->awake_votable);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	wakeup_source_unregister(chip->step_ws);
+	qg_somc_remove_sysfs_entries(chip->dev);
+#endif
 
 	return 0;
 }

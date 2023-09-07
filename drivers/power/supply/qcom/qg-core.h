@@ -91,6 +91,43 @@ struct qg_esr_data {
 	bool			valid;
 };
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define STEP_INPUT_BUF_NUM 3
+struct qg_step_input {
+	int	temp;
+	int	current_now;
+	int	voltage_now;
+	s64	stored_ktime_ms;
+};
+
+#define AGING_LV_NUM 6
+#define STEP_DATA_MAX_CFG_NUM	30
+#define STEP_DATA_RAW		10
+#define STEP_DATA_DT_MAX_NUM	(STEP_DATA_MAX_CFG_NUM * STEP_DATA_RAW)
+struct qg_dt_step_data {
+	int	data_num;
+	int	temp_range_l;
+	int	temp_range_h;
+	int	jeita_zone;
+	int	step_phase;
+	int	fv;
+	int	fcc;
+	int	target_current;
+	int	check_current;
+	int	term_current;
+	int	health;
+};
+
+#define CVSTEP_INPUT_BUF_NUM 3
+struct qg_cvstep_input {
+	int	temp;
+	int	current_now;
+	int	voltage_now;
+	s64	stored_ktime_ms;
+};
+
+#endif
+
 struct qpnp_qg {
 	struct device		*dev;
 	struct regmap		*regmap;
@@ -215,6 +252,53 @@ struct qpnp_qg {
 	struct cycle_counter	*counter;
 	/* ttf */
 	struct ttf		*ttf;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	/* JEITA/Step charge */
+	int			prev_charge_status;
+	struct delayed_work	somc_jeita_step_charge_work;
+	struct wakeup_source	*step_ws;
+	struct mutex		step_lock;
+	bool			step_lock_en;
+	bool			step_en;
+	int			step_fv;
+	int			step_fcc;
+	int			step_health;
+	int			step_ibatt_full;
+	struct qg_dt_step_data	step_data[AGING_LV_NUM][STEP_DATA_MAX_CFG_NUM];
+	int			cvstep_jeita_is_running;
+	int			cur_jeita_zone;
+	int			cur_step_phase;
+	int			cur_target_current;
+	int			cur_check_current;
+	int			step_iterm;
+	int			init_check_current;
+	int			step_phase_is_changed;
+	int			cell_impedance_mohm;
+	int			vcell_max_mv;
+	struct qg_step_input	step_input_data[STEP_INPUT_BUF_NUM];
+	bool			use_real_temp;
+	bool			real_temp_use_aux;
+	int			batt_temp_correctton;
+	int			aux_temp_correctton;
+	int			real_temp_debug;
+	int			ibat_full_term_diff;
+	int			product_max_fv;
+
+		/* Battery aging */
+	struct alarm		psy_chg_alarm_timer;
+	struct work_struct	psy_chg_work;
+	bool			psy_chg_awake;
+	int			psy_chg_counter;
+
+	/* Capacity learning */
+	int			initial_capacity;
+
+	/* Misc */
+	struct iio_channel	*aux_temp_chan;
+	int			full_counter;
+	int			recharge_counter;
+#endif
 };
 
 struct ocv_all {
@@ -251,6 +335,10 @@ enum debug_mask {
 	QG_DEBUG_BUS_WRITE	= BIT(9),
 	QG_DEBUG_ALG_CL		= BIT(10),
 	QG_DEBUG_ESR		= BIT(11),
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	QG_DEBUG_SOMC_STEP	= BIT(14),
+	QG_DEBUG_SOMC		= BIT(15),
+#endif
 };
 
 enum qg_irq {
