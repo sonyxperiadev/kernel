@@ -231,33 +231,22 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
-	qcom,i2c-touch-active = "focaltech,fts";
+	qcom,i2c-touch-active = "focaltech,fts_ts";
 
 	focaltech@38 {
-		compatible = "focaltech,fts";
+		compatible = "focaltech,fts_ts";
 		reg = <0x38>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <22 0x02>;
-		//vdd-supply = <&L13A>;
-		//vcc_i2c-supply = <&pm8916_l16>;
 		focaltech,reset-gpio = <&tlmm 21 0x01>;
 		focaltech,irq-gpio = <&tlmm 22 0x02>;
 		focaltech,max-touch-number = <10>;
 		focaltech,display-coords =  <0 0 1080 2520>;
 		focaltech,avdd-gpio = <&tlmm 59 0x0>;
-		pinctrl-names = "pmx_ts_active","pmx_ts_suspend","pmx_ts_release";
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&pmx_ts_release>;
-
-		//focaltech,regulator_dvdd = "vdd";
-		/*
-		focaltech,have-key;
-		focaltech,key-number = <3>;
-		focaltech,keys = <139 102 158>;
-		focaltech,key-x-coords = <200 600 800>;
-		focaltech,key-y-coords = <2000 2000 2000>;
-		*/
 
 		panel = <&dsi_samsung_amoled_cmd>;
 	};
