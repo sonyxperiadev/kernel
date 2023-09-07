@@ -1593,8 +1593,10 @@ static const struct msm_pingroup blair_groups[] = {
 };
 
 static const int blair_reserved_gpios[] = {
-#if defined(CONFIG_ARCH_SONY_MURRAY) || defined(CONFIG_ARCH_SONY_ZAMBEZI)
+#if defined(CONFIG_ARCH_SONY_MURRAY)
 	13, 14, 15, 16, -1
+#elif defined(CONFIG_ARCH_SONY_ZAMBEZI)
+	13, 14, 15, 16, 48, -1
 #else
 	13, 14, 15, 16, 17, 45, 46, 48, 56, 57, -1
 #endif
