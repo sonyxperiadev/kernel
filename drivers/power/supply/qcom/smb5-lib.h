@@ -20,6 +20,15 @@
 #include "storm-watch.h"
 #include "battery.h"
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#ifdef CONFIG_OF
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#endif
+#include <linux/gpio.h>
+#include <linux/pm_wakeup.h>
+#endif
+
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
 	PR_REGISTER	= BIT(1),
@@ -27,6 +36,9 @@ enum print_reason {
 	PR_PARALLEL	= BIT(3),
 	PR_OTG		= BIT(4),
 	PR_WLS		= BIT(5),
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	PR_SOMC		= BIT(15),
+#endif
 };
 
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
@@ -84,6 +96,22 @@ enum print_reason {
 #define OVERHEAT_LIMIT_VOTER		"OVERHEAT_LIMIT_VOTER"
 #define TYPEC_SWAP_VOTER		"TYPEC_SWAP_VOTER"
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define BATTCHG_SMART_EN_VOTER		"BATTCHG_SMART_EN_VOTER"
+#define BATTCHG_LRC_EN_VOTER		"BATTCHG_LRC_EN_VOTER"
+#define LRC_OVER_SOC_EN_VOTER		"LRC_OVER_SOC_EN_VOTER"
+#define LOW_BATT_EN_VOTER		"LOW_BATT_EN_VOTER"
+#define SOMC_JEITA_STEP_VOTER		"SOMC_JEITA_STEP_VOTER"
+#define SOMC_JEITA_STEP_RECHG_VOTER	"SOMC_JEITA_STEP_RECHG_VOTER"
+#define SOMC_JEITA_WARM_FULL_VOTER	"SOMC_JEITA_WARM_FULL_VOTER"
+#define SOMC_PROFILE_RB_VOTER		"SOMC_PROFILE_RB_VOTER"
+#define SOMC_CHG_PWR_VOTER		"SOMC_CHG_PWR_VOTER"
+#define SOMC_PRODUCT_VOTER		"SOMC_PRODUCT_VOTER"
+#define TIMED_FAKE_CHG_VOTER		"TIMED_FAKE_CHG_VOTER"
+#define JEITA_HARD_LIMIT_VOTER		"JEITA_HARD_LIMIT_VOTER"
+#define THERMAL_VOTER			"THERMAL_VOTER"
+#endif
+
 #define BOOST_BACK_STORM_COUNT	3
 #define WEAK_CHG_STORM_COUNT	8
 
@@ -105,6 +133,42 @@ enum print_reason {
 #define DCIN_ICL_MAX_UA			1500000
 #define DCIN_ICL_STEP_UA		100000
 #define ROLE_REVERSAL_DELAY_MS		500
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define OCP_CURRENT_UA			1000000
+
+#define MAX_THERM_LEVEL			21
+#define NUM_THERM_MITIG_STEPS		(MAX_THERM_LEVEL + 1)
+
+#define CHG_IND_DEFAULT			0
+#define CHG_IND_FAKE_CHARGING		1
+#define CHG_IND_FAKE_CHARGING_DISALLOW	2
+
+struct somc_thermal_mitigation {
+	struct {
+		int fcc_ma;
+		int usb_icl_ma;
+		int charging_indication;
+	} cond[2];
+
+	int usb_cc_open;
+};
+
+enum somc_lrc_status {
+	LRC_DISABLE,
+	LRC_CHG_OFF,
+	LRC_CHG_ON,
+};
+
+enum somc_temp_condition {
+	TEMP_CONDITION_DEFAULT,
+	TEMP_CONDITION_COLD,
+	TEMP_CONDITION_COOL,
+	TEMP_CONDITION_NORMAL,
+	TEMP_CONDITION_WARM,
+	TEMP_CONDITION_HOT,
+};
+#endif
 
 enum smb_mode {
 	PARALLEL_MASTER = 0,
@@ -417,6 +481,9 @@ struct smb_charger {
 	struct power_supply		*dc_psy;
 	struct power_supply		*usb_port_psy;
 	struct power_supply		*wls_psy;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	struct power_supply		*batt_ext_psy;
+#endif
 
 	/* notifiers */
 	struct notifier_block	nb;
@@ -459,6 +526,15 @@ struct smb_charger {
 	struct votable		*bat_temp_irq_disable_votable;
 	struct votable		*qnovo_disable_votable;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	struct votable		*fake_chg_votable;
+	struct votable		*fake_chg_disallow_votable;
+	/*thermal */
+	struct somc_thermal_mitigation	therm_mitig[NUM_THERM_MITIG_STEPS];
+	struct drm_panel	*active_panel;
+	struct notifier_block	fb_notifier;
+#endif
+
 	/* work */
 	struct work_struct	bms_update_work;
 	struct work_struct	pl_update_work;
@@ -481,6 +557,11 @@ struct smb_charger {
 	struct delayed_work	pr_lock_clear_work;
 	struct delayed_work	role_reversal_check;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	struct delayed_work info_charge_status_work;
+	struct delayed_work somc_screen_on_register_notifier_work;
+#endif
+
 	struct alarm		lpd_recheck_timer;
 	struct alarm		moisture_protection_alarm;
 	struct alarm		chg_termination_alarm;
@@ -495,6 +576,10 @@ struct smb_charger {
 	int			sec_chg_selected;
 	int			cp_reason;
 	int			cp_topo;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	bool			cc_pin_open;
+	bool			usb_connect_hot;
+#endif
 
 	/* pd */
 	int			voltage_min_uv;
@@ -595,6 +680,11 @@ struct smb_charger {
 	bool			qc3p5_detected;
 	int			qc3p5_detected_mw;
 	bool			disable_suspend_on_collapse;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int			somc_system_temp_level;
+	int			somc_system_temp_level_max;
+	int			screen_state;
+#endif
 
 	/* workaround flag */
 	int		real_charger_type;
@@ -624,6 +714,69 @@ struct smb_charger {
 	bool			flash_init_done;
 	bool			flash_active;
 	u32			irq_status;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	/* battery data */
+	int			usb_present;
+	int			usb_online;
+	int			usb_voltage;
+	int			usb_current;
+	int			batt_present;
+	int			batt_temp;
+	int			batt_status;
+	int			batt_current;
+	int			batt_voltage;
+	int			batt_soc;
+
+	/* vbus */
+	bool		vbus_flag;
+
+	/* jeita/step */
+	int			jeita_condition;
+	bool			jeita_rb_warm_hi_vbatt_en;
+	int			step_fcc_ua;
+	int			step_fv_ua;
+	int			step_jeita_iterm;
+	bool			profile_fv_rb_en;
+	/*Waterproof detection*/
+	struct pinctrl *serial_pinctrl;
+	struct pinctrl_state *serial_gpio_suspend;
+	/* smart charge */
+	bool			smart_charge_enabled;
+	bool			smart_charge_suspended;
+	struct delayed_work	smart_charge_wdog_work;
+	struct mutex		smart_charge_lock;
+
+	/* limited range charge */
+	bool			lrc_enabled;
+	int			lrc_socmax;
+	int			lrc_socmin;
+	int			lrc_status;
+	bool			lrc_fake_capacity;
+	int			lrc_hysterisis;
+		/* low batt shutdown */
+	int			low_batt_shutdown_enabled;
+
+	/* fake charging */
+	struct delayed_work	timed_fake_chg_work;
+	unsigned long		timed_fake_chg_expire;
+
+	/* cc reconnecting */
+	bool			cc_reconnection_running;
+	struct work_struct	cc_reconnection_work;
+	struct completion	cc_reconnected;
+
+	/* misc */
+	int			bootup_shutdown_status;
+	int			indication_control;
+	bool			charger_type_determined;
+	struct delayed_work	aicl_update_work;
+	ktime_t			aicl_update_time;
+	/* usb removal work */
+	struct delayed_work	usb_remove_work;
+	struct input_dev	*unplug_key;
+	struct wakeup_source	*unplug_wakelock;
+#endif
 
 	/* wireless */
 	int			dcin_uv_count;
@@ -677,6 +830,13 @@ irqreturn_t smb5_typec_or_rid_detection_change_irq_handler(int irq, void *data);
 irqreturn_t smb5_temp_change_irq_handler(int irq, void *data);
 irqreturn_t smb5_usbin_ov_irq_handler(int irq, void *data);
 irqreturn_t smb5_sdam_sts_change_irq_handler(int irq, void *data);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+irqreturn_t somc_aicl_irq_handler(int irq, void *data);
+int smblib_get_prop_real_temp(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_charging_enabled(struct smb_charger *chg,
+				union power_supply_propval *val);
+#endif
 int smblib_get_prop_input_suspend(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_batt_present(struct smb_charger *chg,
@@ -776,6 +936,12 @@ int smblib_set_prop_thermal_overheat(struct smb_charger *chg,
 int smblib_get_skin_temp_status(struct smb_charger *chg);
 int smblib_get_prop_vph_voltage_now(struct smb_charger *chg,
 				int *val);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int smblib_set_prop_charging_enabled(struct smb_charger *chg,
+				const union power_supply_propval *val);
+int smblib_set_prop_typec_power_role_for_wdet(struct smb_charger *chg,
+				const union power_supply_propval *val);
+#endif
 int smb5_set_prop_comp_clamp_level(struct smb_charger *chg,
 				int val);
 int smblib_set_prop_pd_current_max(struct smb_charger *chg,
@@ -834,6 +1000,24 @@ int smblib_get_irq_status(struct smb_charger *chg,
 				int *val);
 int smblib_get_qc3_main_icl_offset(struct smb_charger *chg, int *offset_ua);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int smblib_somc_smart_set_suspend(struct smb_charger *chg);
+const char *smblib_somc_get_apsd_result_name(struct smb_charger *chg);
+int smblib_somc_get_cv_status(struct smb_charger *chg, int *status);
+const char *smblib_somc_get_battery_charger_status(struct smb_charger *chg);
+int smblib_somc_lrc_get_capacity(struct smb_charger *chg,
+			int capacity);
+void smblib_somc_lrc_check(struct smb_charger *chg);
+void smblib_somc_handle_jeita_step_fcc(struct smb_charger *chg, int val);
+void smblib_somc_handle_jeita_step_fv(struct smb_charger *chg, int val);
+void smblib_somc_handle_profile_fv(struct smb_charger *chg, int val);
+void smblib_somc_handle_profile_fv_rb(struct smb_charger *chg, bool en);
+void smblib_somc_set_prop_jeita_condition(struct smb_charger *chg,
+					const union power_supply_propval *val);
+void smblib_somc_set_prop_iterm(struct smb_charger *chg, int val);
+int smblib_somc_set_prop_indication_control(struct smb_charger *chg, int val);
+#endif
+
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
 int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val);
@@ -847,4 +1031,9 @@ int smblib_get_prop_dc_voltage_now(struct smb_charger *chg,
 				union power_supply_propval *val);
 
 void smblib_moisture_detection_enable(struct smb_charger *chg, int pval);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int somc_apply_thermal_mitigation(
+					struct smb_charger *chg);
+#endif
 #endif /* __SMB5_CHARGER_H */

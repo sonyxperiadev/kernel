@@ -266,6 +266,85 @@ int smb5_iio_get_prop(struct smb_charger *chg, int channel, int *val)
 	case PSY_IIO_TYPEC_ACCESSORY_MODE:
 		rc = smblib_get_usb_prop_typec_accessory_mode(chg, val);
 		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	case PSY_IIO_CHARGER_ENABLED:
+		rc = smblib_get_prop_charging_enabled(chg, &pval);
+		if (!rc)
+			*val = pval.intval;
+		break;
+	case PSY_IIO_LRC_ENABLE:
+		*val = chg->lrc_enabled;
+		break;
+	case PSY_IIO_LRC_SOCMAX:
+		*val = chg->lrc_socmax;
+		break;
+	case PSY_IIO_LRC_SOCMIN:
+		*val = chg->lrc_socmin;
+		break;
+	case PSY_IIO_LRC_NOT_STARTUP:
+		*val = chg->lrc_fake_capacity;
+		break;
+	case PSY_IIO_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
+		*val = chg->low_batt_shutdown_enabled;
+		break;
+	case PSY_IIO_BOOTUP_SHUTDOWN_PHASE:
+		*val = chg->bootup_shutdown_status;
+		break;
+	case PSY_IIO_LEGACY_CABLE_STATUS:
+		*val = chg->typec_legacy;
+		break;
+	case PSY_IIO_CHARGER_TYPE_DETERMINED:
+		*val = chg->charger_type_determined;
+		break;
+	case PSY_IIO_CHG_PWR_FCC:
+		*val = get_client_vote(chg->fcc_votable,
+							SOMC_CHG_PWR_VOTER);
+		break;
+	case PSY_IIO_CHG_PWR_ICL:
+		*val = get_client_vote(chg->usb_icl_votable,
+							SOMC_CHG_PWR_VOTER);
+		break;
+	case PSY_IIO_CHG_PWR_INDICATION_CONTROL:
+		*val = chg->indication_control;
+		break;
+	case PSY_IIO_SMART_CHARGING_ACTIVATION:
+		*val = chg->smart_charge_enabled;
+		break;
+	case PSY_IIO_SMART_CHARGING_INTERRUPTION:
+	case PSY_IIO_SMART_CHARGING_STATUS:
+		*val = chg->smart_charge_suspended;
+		break;
+	case PSY_IIO_JEITA_STEP_FCC:
+		*val = chg->step_fcc_ua;
+		break;
+	case PSY_IIO_JEITA_STEP_FV:
+		*val = chg->step_fv_ua;
+		break;
+	case PSY_IIO_JEITA_STEP_ITERM:
+		*val = chg->step_jeita_iterm;
+		break;
+	case PSY_IIO_JEITA_CONDITION:
+		*val = chg->jeita_condition;
+		break;
+	case PSY_IIO_PROFILE_FV_RB_EN:
+		*val = chg->profile_fv_rb_en;
+		break;
+	case PSY_IIO_TYPEC_POWER_ROLE_FOR_WDET:
+		rc = smblib_get_prop_typec_power_role(chg, val);
+		break;
+	case PSY_IIO_CC_RECONNECTION_RUNNING:
+		*val = chg->cc_reconnection_running;
+		break;
+	case PSY_IIO_SYSTEM_TEMP_LEVEL:
+		*val = chg->somc_system_temp_level;
+		break;
+	case PSY_IIO_SYSTEM_TEMP_LEVEL_MAX:
+		*val = chg->somc_system_temp_level_max;
+		break;
+	case PSY_IIO_CV_STATUS:
+		rc = smblib_somc_get_cv_status(chg, val);
+		break;
+#endif
 	default:
 		pr_err("get prop %d is not supported\n", channel);
 		rc = -EINVAL;
@@ -490,6 +569,92 @@ int smb5_iio_set_prop(struct smb_charger *chg, int channel, int val)
 	case PSY_IIO_FCC_STEPPER_ENABLE:
 		chg->fcc_stepper_enable = val;
 		break;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	case PSY_IIO_CHARGER_ENABLED:
+		pval.intval = val;
+		rc = smblib_set_prop_charging_enabled(chg, &pval);
+		break;
+	case PSY_IIO_LRC_ENABLE:
+		chg->lrc_enabled = val;
+		smblib_somc_lrc_check(chg);
+		break;
+	case PSY_IIO_LRC_SOCMAX:
+		chg->lrc_socmax = (int)val;
+		break;
+	case PSY_IIO_LRC_SOCMIN:
+		chg->lrc_socmin = (int)val;
+		break;
+	case PSY_IIO_LRC_NOT_STARTUP:
+		chg->lrc_fake_capacity = (int)val;
+		if (chg->lrc_fake_capacity)
+			chg->lrc_hysterisis = 1;
+		break;
+	case PSY_IIO_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
+		chg->low_batt_shutdown_enabled = val;
+		break;
+	case PSY_IIO_BOOTUP_SHUTDOWN_PHASE:
+		chg->bootup_shutdown_status = val;
+		break;
+	case PSY_IIO_CHG_PWR_FCC:
+		if (val > 0) {
+			vote(chg->fcc_votable, SOMC_CHG_PWR_VOTER,
+							true, val);
+			vote(chg->chg_disable_votable, SOMC_CHG_PWR_VOTER,
+								false, 0);
+		} else {
+			vote(chg->chg_disable_votable, SOMC_CHG_PWR_VOTER,
+								true, 0);
+			vote(chg->fcc_votable, SOMC_CHG_PWR_VOTER,
+								true, 0);
+		}
+		break;
+	case PSY_IIO_CHG_PWR_ICL:
+		vote(chg->usb_icl_votable, SOMC_CHG_PWR_VOTER,
+								true, val);
+		break;
+	case PSY_IIO_CHG_PWR_INDICATION_CONTROL:
+		rc = smblib_somc_set_prop_indication_control(chg, val);
+		break;
+	case PSY_IIO_SMART_CHARGING_ACTIVATION:
+		if (val) {
+			pr_debug("Smart Charging was activated.\n");
+			chg->smart_charge_enabled = true;
+		}
+		break;
+	case PSY_IIO_SMART_CHARGING_INTERRUPTION:
+		if (chg->smart_charge_enabled) {
+			chg->smart_charge_suspended = (bool)val;
+			rc = smblib_somc_smart_set_suspend(chg);
+			power_supply_changed(chg->batt_psy);
+		}
+		break;
+	case PSY_IIO_JEITA_STEP_FCC:
+		smblib_somc_handle_jeita_step_fcc(chg, val);
+		break;
+	case PSY_IIO_JEITA_STEP_FV:
+		smblib_somc_handle_jeita_step_fv(chg, val);
+		break;
+	case PSY_IIO_JEITA_STEP_ITERM:
+		smblib_somc_set_prop_iterm(chg, val);
+		break;
+	case PSY_IIO_JEITA_CONDITION:
+		pval.intval = val;
+		smblib_somc_set_prop_jeita_condition(chg, &pval);
+		break;
+	case PSY_IIO_PROFILE_FV_RB_EN:
+		smblib_somc_handle_profile_fv_rb(chg, val);
+		break;
+	case PSY_IIO_TYPEC_POWER_ROLE_FOR_WDET:
+		pval.intval = val;
+		rc = smblib_set_prop_typec_power_role_for_wdet(chg, &pval);
+		break;
+	case PSY_IIO_SYSTEM_TEMP_LEVEL:
+		if (val < 0 || val > chg->somc_system_temp_level_max)
+			return -EINVAL;
+		chg->somc_system_temp_level = val;
+		rc = somc_apply_thermal_mitigation(chg);
+		break;
+#endif
 	default:
 		pr_err("get prop %d is not supported\n", channel);
 		rc = -EINVAL;
