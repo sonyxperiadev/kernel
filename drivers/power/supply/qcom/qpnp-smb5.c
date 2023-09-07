@@ -218,6 +218,10 @@ struct smb_dt_props {
 	int			term_current_src;
 	int			term_current_thresh_hi_ma;
 	int			term_current_thresh_lo_ma;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	int			somc_product_max_icl_ua;
+	u32			somc_jeita_hard_thresholds[2];
+#endif
 };
 
 struct smb5 {
@@ -229,7 +233,11 @@ struct smb5 {
 	struct iio_chan_spec	*iio_chan_ids;
 };
 
-static int __debug_mask;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static int __debug_mask = PR_SOMC;
+#else
+static int __debug_mask = 0xff;
+#endif
 
 static ssize_t pd_disabled_show(struct device *dev, struct device_attribute
 				*attr, char *buf)
@@ -421,6 +429,10 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 {
 	int rc = 0, byte_len;
 	struct smb_charger *chg = &chip->chg;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	u32 therm_mitig_params[NUM_THERM_MITIG_STEPS];
+	int i;
+#endif
 
 	of_property_read_u32(node, "qcom,sec-charger-config",
 					&chip->dt.sec_charger_config);
@@ -598,8 +610,236 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 	if (chg->chg_param.qc4_max_icl_ua <= 0)
 		chg->chg_param.qc4_max_icl_ua = MICRO_4PA;
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = of_property_read_u32(node, "somc,product-max-icl-ua",
+					&chip->dt.somc_product_max_icl_ua);
+	if (rc < 0)
+		chip->dt.somc_product_max_icl_ua = -EINVAL;
+
+	rc = of_property_read_u32_array(node, "somc,jeita-hard-thresholds",
+					chip->dt.somc_jeita_hard_thresholds, 2);
+	if (rc < 0) {
+		chip->dt.somc_jeita_hard_thresholds[0] = -EINVAL;
+		chip->dt.somc_jeita_hard_thresholds[1] = -EINVAL;
+	}
+	if (of_find_property(
+			node, "somc,thermal-fcc-ua", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-fcc-ua",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-fcc-ma rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[0].fcc_ma =
+							therm_mitig_params[i];
+		}
+		chg->somc_system_temp_level_max = MAX_THERM_LEVEL;
+		if (of_find_property(
+			node, "somc,thermal-usb-icl-ua", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-usb-icl-ua",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-usb-icl-ma rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[0].usb_icl_ma =
+							therm_mitig_params[i];
+		}
+
+		if (of_find_property(
+			node, "somc,thermal-charging-indication", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-charging-indication",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-charging-indication rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[0].
+						charging_indication =
+							therm_mitig_params[i];
+		}
+
+		if (of_find_property(
+			node, "somc,thermal-fcc-sleep-ua", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-fcc-sleep-ua",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-fcc-ma rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[1].fcc_ma =
+							therm_mitig_params[i];
+		}
+
+		if (of_find_property(
+			node, "somc,thermal-usb-icl-sleep-ua", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-usb-icl-sleep-ua",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-usb-icl-ma rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[1].usb_icl_ma =
+							therm_mitig_params[i];
+		}
+
+		if (of_find_property(
+			node, "somc,thermal-charging-indication-sleep",
+								&byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-charging-indication-sleep",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-charging-indication rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].cond[1].
+						charging_indication =
+							therm_mitig_params[i];
+		}
+
+		if (of_find_property(
+			node, "somc,thermal-usb-cc-open", &byte_len) &&
+			(byte_len / sizeof(u32) == NUM_THERM_MITIG_STEPS)) {
+			rc = of_property_read_u32_array(node,
+				"somc,thermal-usb-cc-open",
+				therm_mitig_params, NUM_THERM_MITIG_STEPS);
+			if (rc < 0) {
+				pr_err("Couldn't read thermal-usb-cc-open rc = %d\n",
+									rc);
+				return rc;
+			}
+			for (i = 0; i < NUM_THERM_MITIG_STEPS; i++)
+				chg->therm_mitig[i].usb_cc_open =
+							therm_mitig_params[i];
+		}
+#endif
+
 	return 0;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int somc_cc_control_command(struct smb_charger *chg,int enable)
+{
+	int rc = 0;
+	u8 cc_open_status = 0xf;
+	u8 cc_open_default = 0x0;
+	u8 val ;
+	if(enable){
+		rc = smblib_write(chg,TYPE_C_CC_RD_CURRSRC_CONTROL, cc_open_status);
+	}else{
+		rc =  smblib_read(chg, TYPE_C_CC_RD_CURRSRC_CONTROL, &val);
+			if (rc < 0)
+				pr_err("Couldn't read TYPE_C_CC_RD_CURRSRC_CONTROL rc=%d\n", rc);
+
+			if (val != cc_open_default) {
+				rc = smblib_write(chg,TYPE_C_CC_RD_CURRSRC_CONTROL, cc_open_default);
+				if (rc < 0)
+					pr_err("Couldn't set cc pin default  rc=%d\n", rc);
+			}
+	}
+	pr_info(" %s : CC Command = (%s), rc = %d\n", __func__,
+			enable ? "Open" : "Restore", rc);
+	return rc;
+}
+
+int somc_apply_thermal_mitigation(
+					struct smb_charger *chg)
+{
+	struct somc_thermal_mitigation *current_therm_mitig =
+			&chg->therm_mitig[chg->somc_system_temp_level];
+	int cond_idx;
+	int rc = 0;
+
+
+	if (chg->screen_state == 1)
+		cond_idx = 0;
+	else
+		cond_idx = 1;
+
+	rc |= vote(chg->fcc_votable, THERMAL_VOTER, true,
+				current_therm_mitig->cond[cond_idx].fcc_ma);
+
+	rc |= vote(chg->usb_icl_votable, THERMAL_VOTER, true,
+				current_therm_mitig->cond[cond_idx].usb_icl_ma);
+
+	switch (current_therm_mitig->cond[cond_idx].charging_indication) {
+	case CHG_IND_DEFAULT:
+		rc |= vote(chg->fake_chg_votable, THERMAL_VOTER,
+								false, 0);
+		rc |= vote(chg->fake_chg_disallow_votable, THERMAL_VOTER,
+								false, 0);
+		break;
+	case CHG_IND_FAKE_CHARGING:
+		rc |= vote(chg->fake_chg_votable, THERMAL_VOTER,
+								true, 0);
+		rc |= vote(chg->fake_chg_disallow_votable, THERMAL_VOTER,
+								false, 0);
+		break;
+	case CHG_IND_FAKE_CHARGING_DISALLOW:
+		rc |= vote(chg->fake_chg_votable, THERMAL_VOTER,
+								false, 0);
+		rc |= vote(chg->fake_chg_disallow_votable, THERMAL_VOTER,
+								true, 0);
+		break;
+	default:
+		break;
+	}
+
+	if (rc < 0)
+		pr_err("Couldn't vote for thermal mitigation values, rc=%d\n",
+									rc);
+
+	somc_cc_control_command(chg,current_therm_mitig->usb_cc_open);
+
+	if (chg->batt_psy)
+		power_supply_changed(chg->batt_psy);
+
+	return rc;
+}
+
+static int smb5_parse_gpio(struct smb5 *chip, struct device_node *node)
+{
+	struct smb_charger *chg = &chip->chg;
+
+	chg->serial_pinctrl = devm_pinctrl_get(chg->dev);
+	if (IS_ERR_OR_NULL(chg->serial_pinctrl)) {
+		pr_err("serial_pinctrl is NULL!\n");
+		return 0;
+	}
+
+	chg->serial_gpio_suspend =
+		pinctrl_lookup_state(chg->serial_pinctrl, "sleep");
+	if (IS_ERR_OR_NULL(chg->serial_gpio_suspend)) {
+		pr_err("No suspend config specified!\n");
+		return 0;
+	}
+	return 0;
+}
+#endif
 
 static int smb5_parse_dt_adc_channels(struct smb_charger *chg)
 {
@@ -793,6 +1033,12 @@ static int smb5_parse_dt(struct smb5 *chip)
 	rc = smb5_parse_sdam(chip, node);
 	if (rc < 0)
 		return rc;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smb5_parse_gpio(chip, node);
+	if (rc < 0)
+		return rc;
+#endif
 
 	return 0;
 }
@@ -1336,8 +1582,12 @@ static int smb5_batt_set_prop(struct power_supply *psy,
 		rc = smblib_set_prop_batt_capacity(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		smblib_somc_handle_profile_fv(chg, val->intval);
+#else
 		chg->batt_profile_fv_uv = val->intval;
 		vote(chg->fv_votable, BATT_PROFILE_VOTER, true, val->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
 		chg->batt_profile_fcc_ua = val->intval;
@@ -1393,6 +1643,53 @@ static int smb5_init_batt_psy(struct smb5 *chip)
 
 	return rc;
 }
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+/***********************************
+ * BATT EXTENSION PSY REGISTRATION *
+ ***********************************/
+
+static enum power_supply_property smb5_batt_ext_props[] = {
+	POWER_SUPPLY_PROP_TYPE,
+};
+
+static int smb5_batt_ext_get_prop(struct power_supply *psy,
+		enum power_supply_property psp,
+		union power_supply_propval *val)
+{
+
+	if (psp == POWER_SUPPLY_PROP_TYPE)
+		val->intval = POWER_SUPPLY_TYPE_UNKNOWN;
+
+	return 0;
+}
+
+static const struct power_supply_desc batt_ext_psy_desc = {
+	.name			= "battery_ext",
+	.type			= POWER_SUPPLY_TYPE_UNKNOWN,
+	.properties		= smb5_batt_ext_props,
+	.num_properties	= ARRAY_SIZE(smb5_batt_ext_props),
+	.get_property	= smb5_batt_ext_get_prop,
+};
+
+static int smb5_init_batt_ext_psy(struct smb5 *chip)
+{
+	struct power_supply_config batt_ext_cfg = {};
+	struct smb_charger *chg = &chip->chg;
+
+	batt_ext_cfg.drv_data = chip;
+	batt_ext_cfg.of_node = chg->dev->of_node;
+	chg->batt_ext_psy = devm_power_supply_register(chg->dev,
+				&batt_ext_psy_desc,
+				&batt_ext_cfg);
+	if (IS_ERR(chg->batt_ext_psy)) {
+		pr_err("Couldn't register battery extension power supply\n");
+		return PTR_ERR(chg->batt_ext_psy);
+	}
+
+	return 0;
+}
+#endif
 
 /******************************
  * VBUS REGULATOR REGISTRATION *
@@ -1484,10 +1781,17 @@ static int smb5_init_vconn_regulator(struct smb5 *chip)
 /***************************
  * HARDWARE INITIALIZATION *
  ***************************/
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define DELAY_ENABLE_TYPEC_MS 250
+#endif
 static int smb5_configure_typec(struct smb_charger *chg)
 {
 	int rc, val;
 	u8 value = 0;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	u8 apsd_stat, apst_result;
+#endif
 
 	rc = smblib_read(chg, LEGACY_CABLE_STATUS_REG, &value);
 	if (rc < 0) {
@@ -1502,6 +1806,58 @@ static int smb5_configure_typec(struct smb_charger *chg)
 	 */
 
 	if (value & TYPEC_LEGACY_CABLE_STATUS_BIT) {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		rc = smblib_read(chg, APSD_STATUS_REG, &apsd_stat);
+		if (rc < 0) {
+			dev_err(chg->dev,
+					"Couldn't read APSD_STATUS rc=%d\n", rc);
+			return rc;
+		}
+		if (apsd_stat & APSD_DTC_STATUS_DONE_BIT) {
+			rc = smblib_read(chg, APSD_RESULT_STATUS_REG,
+					&apst_result);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't read APSD_RESULT_STATUS rc=%d\n", rc);
+				return rc;
+			}
+			apst_result &= APSD_RESULT_STATUS_MASK;
+		} else {
+			apst_result = 0x00;
+		}
+
+		if (apst_result & DCP_CHARGER_BIT) {
+			dev_info(chg->dev,
+				"Legacy DCP is detected, try CC reconnection\n");
+
+			rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				TYPEC_DISABLE_CMD_BIT);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't disable TYPEC rc=%d\n", rc);
+				return rc;
+			}
+
+			/* delay before enabling typeC */
+			msleep(DELAY_ENABLE_TYPEC_MS);
+
+			rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				EN_SNK_ONLY_BIT);
+			if (rc < 0) {
+				dev_err(chg->dev,
+					"Couldn't enable TYPEC rc=%d\n", rc);
+				return rc;
+			}
+		}
+		rc = smblib_get_prop_typec_power_role(chg, &val);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't get TYPEC POWER ROLE rc=%d\n", rc);
+			return rc;
+		}
+#else
 		val = QTI_POWER_SUPPLY_TYPEC_PR_NONE;
 		rc = smblib_set_prop_typec_power_role(chg, val);
 		if (rc < 0) {
@@ -1518,6 +1874,7 @@ static int smb5_configure_typec(struct smb_charger *chg)
 			dev_err(chg->dev, "Couldn't enable TYPEC rc=%d\n", rc);
 			return rc;
 		}
+#endif
 	}
 
 	smblib_apsd_enable(chg, true);
@@ -1531,8 +1888,13 @@ static int smb5_configure_typec(struct smb_charger *chg)
 	}
 
 	if (!(value & SNK_DAM_MASK)) {
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
+					BC1P2_START_ON_CC_BIT, BC1P2_START_ON_CC_BIT);
+#else
 		rc = smblib_masked_write(chg, TYPE_C_CFG_REG,
 					BC1P2_START_ON_CC_BIT, 0);
+#endif
 		if (rc < 0) {
 			dev_err(chg->dev, "failed to write TYPE_C_CFG_REG rc=%d\n",
 					rc);
@@ -1601,13 +1963,46 @@ static int smb5_configure_typec(struct smb_charger *chg)
 		rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG,
 				USBIN_IN_COLLAPSE_GF_SEL_MASK |
 				USBIN_AICL_STEP_TIMING_SEL_MASK,
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+				11);
+#else
 				0);
+#endif
 		if (rc < 0) {
 			dev_err(chg->dev,
 				"Couldn't set USBIN_LOAD_CFG_REG rc=%d\n", rc);
 			return rc;
 		}
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG,
+		USBIN_IN_COLLAPSE_GF_SEL_MASK | USBIN_AICL_STEP_TIMING_SEL_MASK,
+		USBIN_AICL_STEP_TIMING_SEL_30MS);
+	if (rc < 0)
+		dev_err(chg->dev,
+			"Couldn't set USBIN_LOAD_CFG_REG rc=%d\n",
+			rc);
+
+	rc = smblib_masked_write(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG,
+					USBIN_5V_AICL_THRESHOLD_CFG_MASK,
+					USBIN_5V_AICL_THRESHOLD_4P0V);
+	if (rc < 0)
+		dev_err(chg->dev,
+			"Couldn't set USBIN_5V_AICL_THRESHOLD_CFG_REG rc=%d\n",
+			rc);
+	smblib_get_charge_param(chg, &chg->param.aicl_5v_threshold,
+				&chg->default_aicl_5v_threshold_mv);
+	chg->aicl_5v_threshold_mv = chg->default_aicl_5v_threshold_mv;
+
+	rc = smblib_masked_write(chg, USBIN_CONT_AICL_THRESHOLD_CFG_REG,
+					USBIN_CONT_AICL_THRESHOLD_CFG_MASK,
+					USBIN_CONT_AICL_THRESHOLD_4P0V);
+	if (rc < 0)
+		dev_err(chg->dev,
+			"Couldn't set USBIN_CONT_AICL_THRESHOLD_CFG_REG rc=%d\n",
+			rc);
+#endif
 
 	/* Set CC threshold to 1.6 V in source mode */
 	rc = smblib_masked_write(chg, TYPE_C_EXIT_STATE_CFG_REG,
@@ -2041,9 +2436,11 @@ static int smb5_init_hw(struct smb5 *chip)
 
 	smblib_get_charge_param(chg, &chg->param.usb_icl,
 				&chg->default_icl_ua);
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	smblib_get_charge_param(chg, &chg->param.aicl_5v_threshold,
 				&chg->default_aicl_5v_threshold_mv);
 	chg->aicl_5v_threshold_mv = chg->default_aicl_5v_threshold_mv;
+#endif
 	smblib_get_charge_param(chg, &chg->param.aicl_cont_threshold,
 				&chg->default_aicl_cont_threshold_mv);
 	chg->aicl_cont_threshold_mv = chg->default_aicl_cont_threshold_mv;
@@ -2135,6 +2532,13 @@ static int smb5_init_hw(struct smb5 *chip)
 	vote(chg->usb_icl_votable, HW_LIMIT_VOTER,
 			chg->hw_max_icl_ua > 0, chg->hw_max_icl_ua);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true, 0);
+	vote(chg->usb_icl_votable, SOMC_PRODUCT_VOTER,
+					chip->dt.somc_product_max_icl_ua > 0,
+					chip->dt.somc_product_max_icl_ua);
+#endif
+
 	/* Initialize DC peripheral configurations */
 	rc = smb5_init_dc_peripheral(chg);
 	if (rc < 0)
@@ -2182,6 +2586,22 @@ static int smb5_init_hw(struct smb5 *chip)
 		return rc;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	/* disable watchdog timer */
+	rc = smblib_write(chg, WD_CFG_REG, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't wdog cfg rc=%d\n", rc);
+		return rc;
+	}
+
+	/* just in case, allow charging when bite watchdog timer expires */
+	rc = smblib_masked_write(chg, SNARL_BARK_BITE_WD_CFG_REG,
+			BITE_WDOG_DISABLE_CHARGING_CFG_BIT, 0);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't enable wdog charging rc=%d\n", rc);
+		return rc;
+	}
+#else
 	val = (ilog2(chip->dt.wd_bark_time / 16) << BARK_WDOG_TIMEOUT_SHIFT)
 			& BARK_WDOG_TIMEOUT_MASK;
 	val |= (BITE_WDOG_TIMEOUT_8S | BITE_WDOG_DISABLE_CHARGING_CFG_BIT);
@@ -2208,6 +2628,7 @@ static int smb5_init_hw(struct smb5 *chip)
 		pr_err("Couldn't configue WD config rc=%d\n", rc);
 		return rc;
 	}
+#endif
 
 	/* set termination current threshold values */
 	rc = smb5_configure_iterm_thresholds(chip);
@@ -2272,6 +2693,43 @@ static int smb5_init_hw(struct smb5 *chip)
 		dev_err(chg->dev, "Couldn't set hw jeita rc=%d\n", rc);
 		return rc;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smblib_masked_write(chg, JEITA_EN_CFG_REG, JEITA_EN_HARDLIMIT,
+							JEITA_EN_HARDLIMIT);
+	if (rc < 0) {
+		dev_err(chg->dev, "Couldn't configure jeita_en_hadrlimit rc=%d\n",
+				rc);
+		return rc;
+	}
+
+	if (chip->dt.somc_jeita_hard_thresholds[0] != -EINVAL &&
+		chip->dt.somc_jeita_hard_thresholds[1] != -EINVAL) {
+		u32 temp;
+
+		temp = chip->dt.somc_jeita_hard_thresholds[1] & 0xFFFF;
+		temp = ((temp & 0xFF00) >> 8) | ((temp & 0xFF) << 8);
+		rc = smblib_batch_write(chg,
+					CHGR_JEITA_THOT_THRESHOLD_MSB_REG,
+					(u8 *)&temp, 2);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't write Jeita thot threshold rc=%d\n",
+									rc);
+			return rc;
+		}
+
+		temp = chip->dt.somc_jeita_hard_thresholds[0] & 0xFFFF;
+		temp = ((temp & 0xFF00) >> 8) | ((temp & 0xFF) << 8);
+		rc = smblib_batch_write(chg,
+					CHGR_JEITA_TCOLD_THRESHOLD_MSB_REG,
+					(u8 *)&temp, 2);
+		if (rc < 0) {
+			dev_err(chg->dev, "Couldn't write Jeita tcold threshold rc=%d\n",
+									rc);
+			return rc;
+		}
+	}
+#endif
 
 	rc = smblib_masked_write(chg, DCDC_ENG_SDCDC_CFG5_REG,
 			ENG_SDCDC_BAT_HPWR_MASK, BOOST_MODE_THRESH_3P6_V);
@@ -2408,6 +2866,9 @@ static struct smb_irq_info smb5_irqs[] = {
 	},
 	[OTG_OC_DISABLE_SW_IRQ] = {
 		.name		= "otg-oc-disable-sw",
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		.handler	= smb5_default_irq_handler,
+#endif
 	},
 	[OTG_OC_HICCUP_IRQ] = {
 		.name		= "otg-oc-hiccup",
@@ -2422,7 +2883,11 @@ static struct smb_irq_info smb5_irqs[] = {
 	},
 	[INPUT_CURRENT_LIMITING_IRQ] = {
 		.name		= "input-current-limiting",
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		.handler	= somc_aicl_irq_handler,
+#else
 		.handler	= smb5_default_irq_handler,
+#endif
 	},
 	[CONCURRENT_MODE_DISABLE_IRQ] = {
 		.name		= "concurrent-mode-disable",
@@ -2577,7 +3042,11 @@ static struct smb_irq_info smb5_irqs[] = {
 	},
 	[AICL_DONE_IRQ] = {
 		.name		= "aicl-done",
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+		.handler	= somc_aicl_irq_handler,
+#else
 		.handler	= smb5_default_irq_handler,
+#endif
 	},
 	[SMB_EN_IRQ] = {
 		.name		= "smb-en",
@@ -3011,6 +3480,456 @@ int smb5_extcon_init(struct smb_charger *chg)
 	return rc;
 }
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+/*****************************
+ * somc sysfs implementation *
+ *****************************/
+enum smb5_somc_sysfs {
+	ATTR_USB_ICL_VOTER = 0,
+	ATTR_USB_ICL_VOTER_EFFECTIVE,
+	ATTR_FCC_VOTER,
+	ATTR_FCC_VOTER_EFFECTIVE,
+	ATTR_CHG_DISABLE_VOTER,
+	ATTR_FV_VOTER,
+	ATTR_FV_VOTER_EFFECTIVE,
+	ATTR_FAKE_CHG_VOTER,
+	ATTR_FAKE_CHG_DISALLOW_VOTER,
+	ATTR_APSD_RESULT,
+	ATTR_BATTERY_CHARGER_STATUS,
+	ATTR_PD_HARD_RESET,
+	ATTR_REG_BATTERY_CHARGER_STATUS_1,
+	ATTR_REG_BATTERY_CHARGER_STATUS_2,
+	ATTR_REG_BATTERY_CHARGER_STATUS_3,
+	ATTR_REG_BATTERY_CHARGER_STATUS_4,
+	ATTR_REG_CHGR_INT_RT_STS,
+	ATTR_REG_FAST_CHARGE_CURRENT_CFG,
+	ATTR_REG_FLOAT_VOLTAGE_CFG,
+	ATTR_REG_ICL_MAX_STATUS,
+	ATTR_REG_ICL_STATUS,
+	ATTR_REG_AICL_ICL_STATUS,
+	ATTR_REG_AICL_STATUS,
+	ATTR_REG_POWER_PATH_STATUS,
+	ATTR_REG_DCDC_INT_RT_STS,
+	ATTR_REG_BATIF_INT_RT_STS,
+	ATTR_REG_USBIN_INPUT_STATUS,
+	ATTR_REG_APSD_STATUS,
+	ATTR_REG_APSD_RESULT_STATUS,
+	ATTR_REG_USB_INT_RT_STS,
+	ATTR_REG_USB_CMD_IL,
+	ATTR_REG_TYPE_C_SNK_STATUS,
+	ATTR_REG_TYPE_C_SNK_DEBUG_ACCESS_STATUS,
+	ATTR_REG_TYPE_C_SRC_STATUS,
+	ATTR_REG_TYPE_C_STATE_MACHINE_STATUS,
+	ATTR_REG_TYPE_C_MISC_STATUS,
+	ATTR_REG_TYPE_C_TRY_SNK_SRC_STATUS,
+	ATTR_REG_TYPE_C_LEGACY_CABLE_STATUS,
+	ATTR_REG_TYPEC_INT_RT_STS,
+	ATTR_REG_USBIN_CURRENT_LIMIT_CFG,
+	ATTR_REG_MISC_INT_RT_STS,
+	ATTR_REG_USBIN_5V_AICL_THRESHOLD_CFG,
+};
+
+static ssize_t smb5_somc_param_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf);
+static struct device_attribute smb5_somc_attrs[] = {
+	__ATTR(somc_usb_icl_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_usb_icl_voter_effective,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fcc_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fcc_voter_effective, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_chg_disable_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fv_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fv_voter_effective, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fake_chg_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_fake_chg_disallow_voter, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_apsd_result, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_batt_chg_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_pd_hard_reset, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_batt_chg_status1,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_batt_chg_status2, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_batt_chg_status3,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_batt_chg_status4,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_chgr_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_fast_chg_current_cfg,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_float_voltage_cfg, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_icl_max_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_icl_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_aicl_icl_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_aicl_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_power_path_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_dcdc_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_batif_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usbin_input_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_apsd_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_apsd_result_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usb_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usb_cmd_il, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_snk_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_snk_debug_access_status,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_src_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_state_machine_status,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_misc_status, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_try_snk_src_status,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_type_c_legacy_cable_status,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_typec_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usbin_current_limit_cfg,
+				0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_misc_int_rt_sts, 0444, smb5_somc_param_show, NULL),
+	__ATTR(somc_reg_usbin_5v_aicl_threshold_cfg,
+				0444, smb5_somc_param_show, NULL),
+};
+
+static ssize_t smb5_somc_param_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct smb5 *chip = dev_get_drvdata(dev);
+	struct smb_charger *chg = &chip->chg;
+	ssize_t size = 0;
+	const ptrdiff_t off = attr - smb5_somc_attrs;
+	u8 reg;
+	int ret;
+
+	switch (off) {
+	case ATTR_USB_ICL_VOTER:
+		size = somc_output_voter_param(chg->usb_icl_votable, buf,
+								PAGE_SIZE);
+		break;
+	case ATTR_USB_ICL_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				get_effective_result(chg->usb_icl_votable));
+		break;
+	case ATTR_FCC_VOTER:
+		size = somc_output_voter_param(chg->fcc_votable, buf,
+								PAGE_SIZE);
+		break;
+	case ATTR_FCC_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					get_effective_result(chg->fcc_votable));
+		break;
+	case ATTR_CHG_DISABLE_VOTER:
+		size = somc_output_voter_param(chg->chg_disable_votable,
+								buf, PAGE_SIZE);
+		break;
+	case ATTR_FV_VOTER:
+		size = somc_output_voter_param(chg->fv_votable, buf, PAGE_SIZE);
+		break;
+	case ATTR_FV_VOTER_EFFECTIVE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+					get_effective_result(chg->fv_votable));
+		break;
+	case ATTR_FAKE_CHG_VOTER:
+		size = somc_output_voter_param(chg->fake_chg_votable,
+								buf, PAGE_SIZE);
+		break;
+	case ATTR_FAKE_CHG_DISALLOW_VOTER:
+		size = somc_output_voter_param(chg->fake_chg_disallow_votable,
+								buf, PAGE_SIZE);
+		break;
+	case ATTR_APSD_RESULT:
+		size = scnprintf(buf, PAGE_SIZE, "%s\n",
+					smblib_somc_get_apsd_result_name(chg));
+		break;
+	case ATTR_BATTERY_CHARGER_STATUS:
+		size = scnprintf(buf, PAGE_SIZE, "%s\n",
+				smblib_somc_get_battery_charger_status(chg));
+		break;
+	case ATTR_PD_HARD_RESET:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chg->pd_hard_reset);
+		break;
+	case ATTR_REG_BATTERY_CHARGER_STATUS_1:
+		ret = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read BATTERY_CHARGER_STATUS_1_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_BATTERY_CHARGER_STATUS_2:
+		ret = smblib_read(chg, BATTERY_CHARGER_STATUS_2_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read BATTERY_CHARGER_STATUS_2_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_BATTERY_CHARGER_STATUS_3:
+		ret = smblib_read(chg, BATTERY_CHARGER_STATUS_3_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read BATTERY_CHARGER_STATUS_3_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_BATTERY_CHARGER_STATUS_4:
+		ret = smblib_read(chg, BATTERY_CHARGER_STATUS_4_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read BATTERY_CHARGER_STATUS_4_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_CHGR_INT_RT_STS:
+		ret = smblib_read(chg, CHGR_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read CHGR_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_FAST_CHARGE_CURRENT_CFG:
+		ret = smblib_read(chg, CHGR_FAST_CHARGE_CURRENT_CFG_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read CHGR_FAST_CHARGE_CURRENT_CFG_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_FLOAT_VOLTAGE_CFG:
+		ret = smblib_read(chg, CHGR_FLOAT_VOLTAGE_CFG_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read CHGR_FLOAT_VOLTAGE_CFG_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_ICL_MAX_STATUS:
+		ret = smblib_read(chg, ICL_MAX_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read ICL_MAX_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_ICL_STATUS:
+		ret = smblib_read(chg, ICL_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read ICL_STATUS_REG: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_AICL_ICL_STATUS:
+		ret = smblib_read(chg, AICL_ICL_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read AICL_ICL_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_AICL_STATUS:
+		ret = smblib_read(chg, AICL_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read AICL_STATUS_REG: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_POWER_PATH_STATUS:
+		ret = smblib_read(chg, POWER_PATH_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read POWER_PATH_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_DCDC_INT_RT_STS:
+		ret = smblib_read(chg, DCDC_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read DCDC_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_BATIF_INT_RT_STS:
+		ret = smblib_read(chg, BATIF_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read BATIF_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USBIN_INPUT_STATUS:
+		ret = smblib_read(chg, USBIN_INPUT_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read USBIN_INPUT_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_APSD_STATUS:
+		ret = smblib_read(chg, APSD_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read APSD_STATUS_REG: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_APSD_RESULT_STATUS:
+		ret = smblib_read(chg, APSD_RESULT_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read APSD_RESULT_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USB_INT_RT_STS:
+		ret = smblib_read(chg, USB_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read USB_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USB_CMD_IL:
+		ret = smblib_read(chg, USBIN_CMD_IL_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read USBIN_CMD_IL_REG: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_SNK_STATUS:
+		ret = smblib_read(chg, TYPE_C_SNK_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read TYPE_C_SNK_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_SNK_DEBUG_ACCESS_STATUS:
+		ret = smblib_read(chg, TYPE_C_SNK_DEBUG_ACCESS_STATUS_REG,
+									&reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read TYPE_C_SNK_DEBUG_ACCESS_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_SRC_STATUS:
+		ret = smblib_read(chg, TYPE_C_SRC_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read TYPE_C_SRC_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_STATE_MACHINE_STATUS:
+		ret = smblib_read(chg, TYPE_C_STATE_MACHINE_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read TYPE_C_STATE_MACHINE_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_MISC_STATUS:
+		ret = smblib_read(chg, TYPE_C_MISC_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read TYPE_C_MISC_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_TRY_SNK_SRC_STATUS:
+		ret = smblib_read(chg, TYPE_C_TRY_SNK_SRC_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read TYPE_C_TRY_SNK_SRC_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPE_C_LEGACY_CABLE_STATUS:
+		ret = smblib_read(chg, LEGACY_CABLE_STATUS_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read LEGACY_CABLE_STATUS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_TYPEC_INT_RT_STS:
+		ret = smblib_read(chg, TYPEC_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read TYPEC_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USBIN_CURRENT_LIMIT_CFG:
+		ret = smblib_read(chg, USBIN_CURRENT_LIMIT_CFG_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read USBIN_CURRENT_LIMIT_CFG_REG: %d\n",
+				ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_MISC_INT_RT_STS:
+		ret = smblib_read(chg, MISC_INT_RT_STS_REG, &reg);
+		if (ret)
+			dev_err(dev, "Can't read MISC_INT_RT_STS_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_REG_USBIN_5V_AICL_THRESHOLD_CFG:
+		ret = smblib_read(chg, USBIN_5V_AICL_THRESHOLD_CFG_REG, &reg);
+		if (ret)
+			dev_err(dev,
+				"Can't read USBIN_5V_AICL_THRESHOLD_CFG_REG: %d\n",
+									ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
+					reg & USBIN_5V_AICL_THRESHOLD_CFG_MASK);
+		break;
+	default:
+		size = 0;
+		break;
+	}
+	return size;
+}
+
+static int smb5_somc_create_sysfs_entries(struct device *dev)
+{
+	int i;
+	int rc = 0;
+
+	for (i = 0; i < ARRAY_SIZE(smb5_somc_attrs); i++) {
+		rc = device_create_file(dev, &smb5_somc_attrs[i]);
+		if (rc < 0) {
+			dev_err(dev, "device_create_file failed rc = %d\n", rc);
+			goto revert;
+		}
+	}
+	return 0;
+revert:
+	for (i = i - 1; i >= 0; i--)
+		device_remove_file(dev, &smb5_somc_attrs[i]);
+	return rc;
+}
+
+static void smb5_somc_remove_sysfs_entries(struct device *dev)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(smb5_somc_attrs); i++)
+		device_remove_file(dev, &smb5_somc_attrs[i]);
+}
+#endif
+
 static int smb5_probe(struct platform_device *pdev)
 {
 	struct smb5 *chip;
@@ -3048,6 +3967,10 @@ static int smb5_probe(struct platform_device *pdev)
 	chg->die_health = -EINVAL;
 	chg->connector_health = -EINVAL;
 	chg->otg_present = false;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	chg->cc_pin_open = false;
+	chg->usb_connect_hot = false;
+#endif
 	chg->main_fcc_max = -EINVAL;
 	mutex_init(&chg->adc_lock);
 
@@ -3164,6 +4087,14 @@ static int smb5_probe(struct platform_device *pdev)
 		goto cleanup;
 	}
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smb5_init_batt_ext_psy(chip);
+	if (rc < 0) {
+		pr_err("Couldn't initialize batt ext psy rc=%d\n", rc);
+		goto cleanup;
+	}
+#endif
+
 	rc = smb5_determine_initial_status(chip);
 	if (rc < 0) {
 		pr_err("Couldn't determine initial status rc=%d\n",
@@ -3184,6 +4115,14 @@ static int smb5_probe(struct platform_device *pdev)
 	}
 
 	smb5_create_debugfs(chip);
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	rc = smb5_somc_create_sysfs_entries(chg->dev);
+	if (rc < 0) {
+		pr_err("Couldn't create sysfs entries rc=%d\n", rc);
+		goto free_irq;
+	}
+#endif
 
 	rc = sysfs_create_groups(&chg->dev->kobj, smb5_groups);
 	if (rc < 0) {
@@ -3216,6 +4155,10 @@ static int smb5_remove(struct platform_device *pdev)
 {
 	struct smb5 *chip = platform_get_drvdata(pdev);
 	struct smb_charger *chg = &chip->chg;
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	smb5_somc_remove_sysfs_entries(chg->dev);
+#endif
 
 	/* force enable APSD */
 	smblib_masked_write(chg, USBIN_OPTIONS_1_CFG_REG,
