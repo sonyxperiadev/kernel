@@ -1,5 +1,4 @@
 #include "blair-murray-common.dtsi"
-#include "blair-murray-camera.dtsi"
 
 &soc {
 };

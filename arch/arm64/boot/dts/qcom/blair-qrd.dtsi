@@ -534,4 +534,4 @@
 	};
 };
 
-//#include "blair-camera-sensor-qrd.dtsi"
+#include "blair-camera-sensor-qrd.dtsi"
