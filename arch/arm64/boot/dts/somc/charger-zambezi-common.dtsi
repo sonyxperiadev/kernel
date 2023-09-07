@@ -46,23 +46,23 @@
 		      <&pm7250b_charger PSY_IIO_INPUT_CURRENT_LIMITED>,
 		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
 		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
-		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>;/*,
+		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>,
 		      <&pm7250b_charger PSY_IIO_JEITA_STEP_FCC>,
 		      <&pm7250b_charger PSY_IIO_JEITA_STEP_FV>,
 		      <&pm7250b_charger PSY_IIO_JEITA_STEP_ITERM>,
 		      <&pm7250b_charger PSY_IIO_JEITA_CONDITION>,
-		      <&pm7250b_charger PSY_IIO_CV_STATUS>;*/
+		      <&pm7250b_charger PSY_IIO_CV_STATUS>;
 	io-channel-names = "batt-therm",
 			   "batt-id",
 			   "input_current_limited",
 			   "recharge_soc",
 			   "force_recharge",
-			   "charge_done";/*,
+			   "charge_done",
 			   "jeita_step_fcc",
 			   "jeita_step_fv",
 			   "jeita_step_iterm",
 			   "jeita_condition",
-			   "cv_status";*/
+			   "cv_status";
 	qcom,qg-iterm-ma = <561>;
  	qcom,hold-soc-while-full;
  	qcom,linearize-soc;
