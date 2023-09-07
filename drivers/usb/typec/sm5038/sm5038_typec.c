@@ -30,11 +30,9 @@
 #include <linux/debugfs.h>
 #endif
 
-/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
-#if defined(CONFIG_SERIAL_MSM_GENI) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 extern int msm_geni_serial_gpio_suspend(bool state);
 #endif
-/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
 
 static usbpd_phy_ops_type sm5038_ops;
 static struct sm5038_phydrv_data *static_pdic_data;
@@ -443,16 +441,16 @@ static void sm5038_process_cc_water_det(void *data, int state)
 		pdic_data->is_water_detect = false;
 	}
 	pr_info("%s, [pull down]water state : %d\n", __func__, pdic_data->is_water_detect);
-	/*PDX225 code for QN5965F-837  at 2021/11/17 start*/
-	#if defined(CONFIG_SERIAL_MSM_GENI) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	msm_geni_serial_gpio_suspend(pdic_data->is_water_detect);
-	#endif
+#endif
+
 	#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	if(pdic_data->is_water_detect) {
 		sm5038_serial_gpio_pull_down(pdic_data);
 	}
 	#endif
-	/*PDX225 code for QN5965F-837  at 2021/11/17 end*/
 
 	if (pdic_data->psy_usbpd)
 		power_supply_changed(pdic_data->psy_usbpd);

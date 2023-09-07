@@ -234,7 +234,7 @@ struct msm_geni_serial_port {
 	bool pm_auto_suspend_disable;
 	atomic_t is_clock_off;
 	enum uart_error_code uart_error;
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	bool gpio_suspend_state;
 #endif
 };
@@ -2885,7 +2885,7 @@ static int msm_geni_console_setup(struct console *co, char *options)
 
 	uport = &dev_port->uport;
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	if (dev_port->gpio_suspend_state == true)
 		return -ENXIO;
 #endif
@@ -3022,7 +3022,7 @@ static void msm_geni_serial_cons_pm(struct uart_port *uport,
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	if (msm_port->gpio_suspend_state == true)
 		return;
 #endif
@@ -3042,7 +3042,7 @@ static void msm_geni_serial_hs_pm(struct uart_port *uport,
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	if (msm_port->gpio_suspend_state == true)
 		return;
 #endif
@@ -3159,7 +3159,7 @@ exit_ver_info:
 	return ret;
 }
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 int msm_geni_serial_gpio_suspend(bool state)
 {
 	int ret = 0;
@@ -3289,8 +3289,8 @@ static int msm_geni_serial_get_irq_pinctrl(struct platform_device *pdev,
 		}
 	}
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
-	dev_port->serial_rsc.geni_gpio_suspend=
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
+	dev_port->serial_rsc.geni_gpio_suspend =
 		pinctrl_lookup_state(dev_port->serial_rsc.geni_pinctrl,
 						PINCTRL_SLEEP);
 	if (IS_ERR_OR_NULL(dev_port->serial_rsc.geni_gpio_suspend)) {
@@ -3559,7 +3559,7 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 	device_create_file(uport->dev, &dev_attr_loopback);
 	device_create_file(uport->dev, &dev_attr_xfer_mode);
 	device_create_file(uport->dev, &dev_attr_ver_info);
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	device_create_file(uport->dev, &dev_attr_geni_gpio_suspend);
 #endif
 	msm_geni_serial_debug_init(uport, is_console);
@@ -3723,7 +3723,7 @@ static int msm_geni_serial_runtime_resume(struct device *dev)
 	struct msm_geni_serial_port *port = platform_get_drvdata(pdev);
 	int ret = 0;
 
-#if defined(CONFIG_ARCH_SONY_MURRAY)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
 	if (port->gpio_suspend_state == true)
 		return ret;
 #endif
