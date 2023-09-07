@@ -249,7 +249,7 @@
  * You should rename fw to "focaltech_ts_fw_tianma", and push it into
  * etc/firmware or by customers
  */
-#define FTS_MODULE_NAME                        "gvo"
+#define FTS_MODULE_NAME                        ""
 #define FTS_MODULE2_NAME                       ""
 #define FTS_MODULE3_NAME                       ""
 
