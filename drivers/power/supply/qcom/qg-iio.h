@@ -101,6 +101,22 @@ static const struct qg_iio_channels qg_iio_psy_channels[] = {
 	QG_CHAN_ACT("scale_mode_en", PSY_IIO_SCALE_MODE_EN)
 	QG_CHAN_INDEX("batt_age_level", PSY_IIO_BATT_AGE_LEVEL)
 	QG_CHAN_ACT("fg_type", PSY_IIO_FG_TYPE)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	QG_CHAN_TEMP("real_temp", PSY_IIO_REAL_TEMP)
+	QG_CHAN_TEMP("aux_temp", PSY_IIO_AUX_TEMP)
+	QG_CHAN_ENERGY("charge_full_raw", PSY_IIO_CHARGE_FULL_RAW)
+	QG_CHAN_ENERGY("learning_counter", PSY_IIO_LEARNING_COUNTER)
+	QG_CHAN_ENERGY("learning_trial_counter", PSY_IIO_LEARNING_TRIAL_COUNTER)
+	QG_CHAN_INDEX("batt_aging_level", PSY_IIO_BATT_AGING_LEVEL)
+	QG_CHAN_ENERGY("real_nom_cap", PSY_IIO_REAL_NOM_CAP)
+	QG_CHAN_ENERGY("battery_raw_soc", PSY_IIO_BATTERY_RAW_SOC)
+	QG_CHAN_ENERGY("full_counter", PSY_IIO_FULL_COUNTER)
+	QG_CHAN_ENERGY("recharge_counter", PSY_IIO_RECHARGE_COUNTER)
+	QG_CHAN_INDEX("step_phase", PSY_IIO_STEP_PHASE)
+	QG_CHAN_INDEX("step_jeita_zone", PSY_IIO_STEP_JEITA_ZONE)
+	QG_CHAN_CUR("step_fcc", PSY_IIO_STEP_FCC)
+	QG_CHAN_VOLT("step_fv", PSY_IIO_STEP_FV)
+#endif
 };
 
 enum qg_ext_iio_channels {
@@ -110,6 +126,13 @@ enum qg_ext_iio_channels {
 	CHARGE_DONE,
 	PARALLEL_CHARGING_ENABLED,
 	CP_CHARGING_ENABLED,
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	JEITA_STEP_FCC,
+	JEITA_STEP_FV,
+	JEITA_STEP_ITERM,
+	JEITA_CONDITION,
+	CV_STATUS,
+#endif
 };
 
 static const char * const qg_ext_iio_chan_name[] = {
@@ -119,6 +142,13 @@ static const char * const qg_ext_iio_chan_name[] = {
 	[CHARGE_DONE]			= "charge_done",
 	[PARALLEL_CHARGING_ENABLED]	= "parallel_charging_enabled",
 	[CP_CHARGING_ENABLED]		= "cp_charging_enabled",
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	[JEITA_STEP_FCC]		= "jeita_step_fcc",
+	[JEITA_STEP_FV]			= "jeita_step_fv",
+	[JEITA_STEP_ITERM]		= "jeita_step_iterm",
+	[JEITA_CONDITION]		= "jeita_condition",
+	[CV_STATUS] = "cv_status",
+#endif
 };
 
 #endif
