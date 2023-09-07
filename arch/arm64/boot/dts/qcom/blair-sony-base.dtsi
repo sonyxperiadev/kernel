@@ -14,15 +14,6 @@
  * way from the devicetree overlay but must be removed from the base DTS
  */
 
-/ {
-	aliases {
-		i2c0 = &qupv3_se7_i2c;
-		i2c1 = &qupv3_se8_i2c;
-		i2c2 = &qupv3_se10_i2c;
-		i2c3 = &qupv3_se0_i2c;
-	};
-};
-
 &reserved_memory {
 	/delete-node/ ramoops;
 };
