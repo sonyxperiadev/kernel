@@ -44,6 +44,8 @@
 		compatible = "nxp,sn1x0-spi";
 		reg = <0x00>;
 		spi-max-frequency = <20000000>;
+		/* I2C device name: "nxp,sn1x0-i2c" */
+		nxp,nfcc = "nxp,sn1x0-i2c";
 		nxp,cs = <&tlmm 59 GPIO_ACTIVE_HIGH>;
 	};
 };

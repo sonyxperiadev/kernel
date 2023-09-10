@@ -47,7 +47,6 @@
 				<0x2 0xc0000000 0x1 0x40000000>;
 		granule = <512>;
 		mboxes = <&qmp_aop 0>;
-		status = "disabled";
 	};
 
 	aliases {
@@ -463,7 +462,7 @@
 		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 		reusable;
 		alignment = <0x0 0x400000>;
-		size = <0x0 0x3C00000>;
+		size = <0x0 0x1400000>;
 	};
 
 	qseecom_ta_mem: qseecom_ta_region {
@@ -566,39 +565,6 @@
 		reusable;
 		alignment = <0x0 0x400000>;
 		size = <0x0 0x6400000>;
-	};
-
-	debug_region: debug_region@ffb00000 {
-		compatible = "removed-dma-pool", "qcom,debug_memory";
-		no-map;
-		reg = <0 0xffb00000 0 0xc0000>;
-		label = "debug_mem";
-	};
-
-	last_log_region: last_log_region@ffbc0000 {
-		compatible = "removed-dma-pool", "qcom,last_log_memory";
-		no-map;
-		reg = <0 0xffbc0000 0 0x40000>;
-		label = "last_log";
-		phandle = "log";
-	};
-
-	ramoops: ramoops@ffc00000 {
-		compatible = "removed-dma-pool", "ramoops";
-		no-map;
-		reg = <0 0xffc00000 0 0x00100000>;
-		record-size = <0x1000>;
-		console-size = <0x40000>;
-		ftrace-size = <0x0>;
-		msg-size = <0x20000 0x20000>;
-		ecc-size = <16>;
-	};
-
-	cmdline_region: cmdline_region@ffd00000 {
-		compatible = "removed-dma-pool", "cmdline_region";
-		no-map;
-		reg = <0 0xffd00000 0 0x1000>;
-		label = "cmdline_region";
 	};
 };
 
@@ -2263,7 +2229,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_TZ
-				      IRQ_TYPE_EDGE_RISING>;
+				      IRQ_TYPE_LEVEL_HIGH>;
 			label = "spss";
 		};
 	};
@@ -4410,7 +4376,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_GLINK_QMP
-				      IRQ_TYPE_EDGE_RISING>;
+				      IRQ_TYPE_LEVEL_HIGH>;
 
 			reg = <0x1885008 0x8>,
 			      <0x1885010 0x4>;
@@ -4687,6 +4653,7 @@
 		qcom,use-64-bit-dma-mask;
 		qcom,ipa-endp-delay-wa;
 		qcom,lan-rx-napi;
+		qcom,lan-rx-ring-size = <224>;
 		qcom,tx-napi;
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
@@ -4698,6 +4665,7 @@
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
+		qcom,register-collection-on-crash;
 		clock-names = "core_clk";
 		clocks = <&clock_rpmh RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -4729,7 +4697,7 @@
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 			"TURBO";
 		qcom,throughput-threshold = <600 2500 5000>;
-		qcom,scaling-exceptions = <>;
+		qcom,scaling-exceptions = "wdi", "100", "600", "1200";
 
 		/* smp2p information */
 		qcom,smp2p_map_ipa_1_out {
@@ -5292,6 +5260,9 @@
 		qcom,spcom-soc2sp-rmb-sp-ssr-bit = <0>;
 		qcom,boot-enabled;
 		status = "ok";
+
+		vreg_sp-supply = <&spss_vreg>;
+		gpio_sp-supply = <&spss_gpio_vreg>;
 	};
 
 	spss_utils: qcom,spss_utils {
@@ -5417,6 +5388,7 @@
 		reg-names = "smmu_iova_ipa", "tcs_cmd";
 		wlan-en-gpio = <&tlmm 64 0>;
 		qcom,bt-en-gpio = <&tlmm 65 0>;
+		qcom,sw-ctrl-gpio = <&tlmm 153 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;
 		pinctrl-1 = <&cnss_wlan_en_sleep>;
@@ -5427,17 +5399,18 @@
 		qcom,tcs_offset_int_pow_amp_vreg = <0x4D0>;
 		use-pm-domain;
 		cnss-enable-self-recovery;
+		qcom,same-dt-multi-dev;
 
 		vdd-wlan-aon-supply = <&S2E>;
-		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
+		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 1>;
 		vdd-wlan-dig-supply = <&S11B>;
-		qcom,vdd-wlan-dig-config = <950000 952000 0 0 1>;
+		qcom,vdd-wlan-dig-config = <1012000 1012000 0 0 1>;
 		vdd-wlan-io-supply = <&S10B>;
 		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 1>;
 		vdd-wlan-rfa1-supply = <&S1C>;
-		qcom,vdd-wlan-rfa1-config = <1880000 1880000 0 0 1>;
+		qcom,vdd-wlan-rfa1-config = <1900000 1952000 0 0 1>;
 		vdd-wlan-rfa2-supply = <&S12B>;
-		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
+		qcom,vdd-wlan-rfa2-config = <1350000 1360000 0 0 1>;
 		wlan-ant-switch-supply = <&L7E>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
 
@@ -5591,7 +5564,7 @@
 		};
 	};
 
-	pmic_glink: qcom,pmic_glink {
+	qcom,pmic_glink {
 		compatible = "qcom,pmic-glink";
 		qcom,pmic-glink-channel = "PMIC_RTR_ADSP_APPS";
 		qcom,subsys-name = "adsp";
@@ -5616,7 +5589,7 @@
 		};
 	};
 
-	pmic_glink_log: qcom,pmic_glink_log {
+	qcom,pmic_glink_log {
 		compatible = "qcom,pmic-glink";
 		qcom,pmic-glink-channel = "PMIC_LOGS_ADSP_APPS";
 
@@ -5688,10 +5661,10 @@
 		qcom,bt-vdd-rfa2-supply = <&S12B>;
 		qcom,bt-vdd-asd-supply = <&L7E>;
 
-		qcom,bt-vdd-aon-config = <950000 950000 0 1>;
-		qcom,bt-vdd-dig-config = <950000 950000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
-		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
+		qcom,bt-vdd-aon-config = <1012000 1012000 0 1>;
+		qcom,bt-vdd-dig-config = <1012000 1012000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1900000 1952000 0 1>;
+		qcom,bt-vdd-rfa2-config = <1350000 1360000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
 	};
 
@@ -5729,50 +5702,6 @@
 		gpu_speed_bin: gpu_speed_bin@17b {
 				reg = <0x17b 0x1>;
 				bits = <5 3>;
-		};
-	};
-
-	restart-reason {
-		compatible = "qcom,restart-reason";
-		unknown {
-			cmd = "unknown";
-			reg-val = <0x00 0x77665501>;
-		};
-
-		recovery {
-			cmd = "recovery";
-			reg-val = <0x01 0x77665500>;
-			reboot-cmd;
-		};
-
-		bootloader {
-			cmd = "bootloader";
-			reg-val = <0x02 0x77665500>;
-			reboot-cmd;
-		};
-
-		rtc {
-			cmd = "rtc";
-			reg-val = <0x03 0x77665500>;
-			reboot-cmd;
-		};
-
-		dm-verity-device-corrupted {
-			cmd = "dm-verity device corrupted";
-			reg-val = <0x04 0x77665508>;
-			reboot-cmd;
-		};
-
-		dm-verity-enforcing {
-			cmd = "dm-verity enforcing";
-			reg-val = <0x05 0x77665509>;
-			reboot-cmd;
-		};
-
-		keys-clear {
-			cmd = "keys clear";
-			reg-val = <0x06 0x7766550A>;
-			reboot-cmd;
 		};
 	};
 };
@@ -5845,6 +5774,15 @@
 
 &qupv3_se13_i2c {
 	status = "ok";
+	nq@64 {
+		compatible = "rtc6226";
+		reg = <0x64>;
+		fmint-gpio = <&tlmm 50 0>;
+		vdd-supply = <&L7E>;
+		rtc6226,vdd-supply-voltage = <2800000 2800000>;
+		vio-supply = <&S10B>;
+		rtc6226,vio-supply-voltage = <1800000 1800000 >;
+	};
 };
 
 #include "lahaina-camera.dtsi"

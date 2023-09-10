@@ -112,7 +112,7 @@
 		dai_mi2s1_tx: qcom,msm-dai-q6-mi2s-sec-tx {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <3>;
-			qcom,msm-mi2s-lines = <2>;
+			qcom,msm-mi2s-lines = <0>;
 		};
 
 		dai_mi2s2_rx: qcom,msm-dai-q6-mi2s-tert-rx {

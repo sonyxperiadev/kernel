@@ -229,6 +229,8 @@
 		pmk8350_sdam_23: sdam@8600 {
 			compatible = "qcom,spmi-sdam";
 			reg = <0x8600>;
+			#address-cells = <1>;
+			#size-cells = <1>;
 		};
 
 		pmk8350_sdam_46: sdam@9d00 {

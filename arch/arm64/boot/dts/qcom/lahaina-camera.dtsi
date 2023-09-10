@@ -1798,6 +1798,7 @@
 		ubwc-ipe-write-cfg = <0x161ef 0x1620f>;
 		ubwc-bps-fetch-cfg = <0x707b 0x7083>;
 		ubwc-bps-write-cfg = <0x161ef 0x1620f>;
+		qos-val = <0x00000A0A>;
 		status = "ok";
 	};
 
@@ -1880,10 +1881,11 @@
 
 	cam_jpeg_enc: qcom,jpegenc {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_enc";
-		reg-names = "jpege_hw";
-		reg = <0xac53000 0x4000>;
-		reg-cam-base = <0x53000>;
+		compatible = "qcom,cam_jpeg_enc_580";
+		reg-names = "jpege_hw","cam_camnoc";
+		reg = <0xac53000 0x4000>,
+			<0x0ac42000 0x8000>;
+		reg-cam-base = <0x53000 0x42000>;
 		interrupt-names = "jpeg";
 		interrupts = <GIC_SPI 474 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1898,15 +1900,19 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegenc_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <25 26>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 
 	cam_jpeg_dma: qcom,jpegdma {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_dma";
-		reg-names = "jpegdma_hw";
-		reg = <0xac57000 0x4000>;
-		reg-cam-base = <0x57000>;
+		compatible = "qcom,cam_jpeg_dma_580";
+		reg-names = "jpegdma_hw", "cam_camnoc";
+		reg = <0xac57000 0x4000>,
+			<0x0ac42000 0x8000>;
+		reg-cam-base = <0x57000 0x42000>;
 		interrupt-names = "jpegdma";
 		interrupts = <GIC_SPI 475 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1921,6 +1927,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegdma_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <24 27>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 };

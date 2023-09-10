@@ -85,7 +85,9 @@
 
 &qupv3_se15_i2c {
 	status = "ok";
-
+	qcom,clk-freq-out = <100000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
 	lt9611: lt,lt9611@2b {
 		compatible = "lt,lt9611uxc";
 		reg = <0x2b>;

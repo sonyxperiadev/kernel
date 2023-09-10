@@ -177,8 +177,6 @@
 		qcom,wsa-swr-gpios = <&wsa_swr_gpios>;
 		qcom,wsa-bcl-pmic-params = /bits/ 8 <0x00 0x03 0x48>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
-		interrupt-controller;
-		#interrupt-cells = <3>;
 		swr0: wsa_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
@@ -191,6 +189,7 @@
 			qcom,swrm-hctl-reg = <0x032a90b0>;
 			qcom,mipi-sdw-block-packing-mode = <0>;
 			swrm-io-base = <0x3250000 0x0>;
+			interrupt-parent = <&intc>;
 			interrupts = <GIC_SPI 170 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "swr_master_irq";
 			qcom,swr-num-ports = <8>;
@@ -380,9 +379,9 @@
 	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;
 	qcom,cps_wsa_vbatt_temp_reg_addr = <0x0003429 0x0003422>;
 	qcom,cps_threshold_levels = <148 168>;
-	qcom,cps_normal_values = <0x8E 0x8F 0x8F>;
-	qcom,cps_lower1_values = <0x10 0xD0 0xD0>;
-	qcom,cps_lower2_values = <0x0F 0x0F 0x18>;
+	qcom,cps_normal_values = <0x8E003049 0x1000304A 0x0F003472>;
+	qcom,cps_lower1_values = <0x8F003049 0xD000304A 0x0F003472>;
+	qcom,cps_lower2_values = <0x8F003049 0xD000304A 0x18003472>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
 };

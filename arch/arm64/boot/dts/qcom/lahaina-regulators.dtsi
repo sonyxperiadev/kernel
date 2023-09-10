@@ -134,7 +134,7 @@
 			regulator-name = "pm8350_s11";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <752000>;
-			regulator-max-microvolt = <1000000>;
+			regulator-max-microvolt = <1012000>;
 			qcom,init-voltage = <952000>;
 		};
 	};
@@ -827,7 +827,7 @@
 			regulator-name = "pmr735a_s2";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <500000>;
-			regulator-max-microvolt = <976000>;
+			regulator-max-microvolt = <1020000>;
 			qcom,init-voltage = <852000>;
 		};
 	};
@@ -967,6 +967,24 @@
 			regulator-max-microvolt = <2800000>;
 			qcom,init-voltage = <2800000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+
+	rpmh-regulator-vregsp {
+		compatible = "qcom,rpmh-xob-regulator";
+		qcom,resource-name = "vreg.sp";
+		spss_vreg: regulator-spss-vreg {
+			regulator-name = "spss_vreg";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+		};
+	};
+
+	rpmh-regulator-gpiosp {
+		compatible = "qcom,rpmh-xob-regulator";
+		qcom,resource-name = "gpio.sp";
+		spss_gpio_vreg: regulator-spss-gpio-vreg {
+			regulator-name = "spss_gpio_vreg";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 		};
 	};
 };

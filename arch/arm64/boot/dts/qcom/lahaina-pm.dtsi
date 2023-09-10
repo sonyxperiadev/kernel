@@ -130,6 +130,11 @@
 		reg = <0xb221200 0x60>;
 	};
 
+	subsystem-sleep-stats {
+		compatible = "qcom,subsystem-sleep-stats";
+		reg = <0xc3f0000 0x400>;
+	};
+
 	soc-sleep-stats@c3f0000 {
 		compatible = "qcom,rpmh-sleep-stats";
 		reg = <0xc3f0000 0x400>;
@@ -139,6 +144,7 @@
 		compatible = "qcom,ddr-stats";
 		reg = <0xc300000 0x1000>, <0xc3f001c 0x4>;
 		reg-names = "phys_addr_base", "offset_addr";
+		mboxes = <&qmp_aop 0>;
 	};
 
 	sys-pm-vx@c320000 {

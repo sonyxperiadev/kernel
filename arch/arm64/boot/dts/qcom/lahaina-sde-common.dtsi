@@ -37,6 +37,7 @@
 
 		qcom,sde-mixer-cwb-pref = "none", "none", "cwb",
 					      "cwb", "cwb", "cwb";
+		qcom,sde-mixer-cwb-mask = <0x0 0x0 0x5 0xa 0x11 0x22>;
 
 		qcom,sde-dspp-top-off = <0x1300>;
 		qcom,sde-dspp-top-size = <0x80>;

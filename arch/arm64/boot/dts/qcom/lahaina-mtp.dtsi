@@ -52,6 +52,68 @@
 	};
 };
 
+&qupv3_se4_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	status = "ok";
+	qcom,i2c-touch-active = "st,fts";
+
+	st_fts@49 {
+		compatible = "st,fts";
+		reg = <0x49>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <23 0x2008>;
+		vdd-supply = <&L8C>;
+		avdd-supply = <&L3C>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		st,irq-gpio = <&tlmm 23 0x2008>;
+		st,reset-gpio = <&tlmm 22 0x00>;
+		st,x-flip = <1>;
+		st,y-flip = <1>;
+		st,regulator_dvdd = "vdd";
+		st,regulator_avdd = "avdd";
+		st,trusted-touch-mode = "vm_mode";
+		st,touch-environment = "pvm";
+		st,trusted-touch-spi-irq = <566>;
+		st,trusted-touch-io-bases = <0xF114000 0xF115000 0xF116000 0xF117000 0x990000 0x00910000>;
+		st,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
+		panel = <&dsi_sw43404_amoled_cmd &dsi_sw43404_amoled_video
+			 &dsi_sw43404_amoled_fhd_plus_cmd>;
+	};
+
+	focaltech@38 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <23 0x2008>;
+		focaltech,reset-gpio = <&tlmm 22 0x00>;
+		focaltech,irq-gpio = <&tlmm 23 0x2008>;
+		focaltech,max-touch-number = <5>;
+		focaltech,display-coords = <0 0 1080 2340>;
+
+		vdd-supply = <&L3C>;
+		vcc_i2c-supply = <&L8C>;
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend","pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		panel = <&dsi_r66451_amoled_cmd
+			 &dsi_r66451_amoled_60hz_cmd
+			 &dsi_r66451_amoled_video &dsi_r66451_amoled_144hz_cmd>;
+
+		focaltech,trusted-touch-mode = "vm_mode";
+		focaltech,touch-environment = "pvm";
+		focaltech,trusted-touch-spi-irq = <566>;
+		focaltech,trusted-touch-io-bases = <0xF114000 0xF115000 0xF116000 0xF117000 0x990000 0x00910000>;
+		focaltech,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
+	};
+};
+
 &sdhc_2 {
 	vdd-supply = <&pm8350c_l9>;
 	qcom,vdd-voltage-level = <2950000 2960000>;
@@ -162,3 +224,28 @@
 &wil6210 {
 	status = "ok";
 };
+
+&qupv3_se15_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <1000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	nq@28 {
+		compatible = "qcom,sn-nci";
+		reg = <0x28>;
+		qcom,sn-irq = <&tlmm 87 0x00>;
+		qcom,sn-ven = <&tlmm 62 0x00>;
+		qcom,sn-firm = <&tlmm 86 0x00>;
+		qcom,sn-clkreq = <&tlmm 63 0x00>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <87 0>;
+		interrupt-names = "nfc_irq";
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active
+				&nfc_clk_req_active &nfc_fwdl_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend
+				&nfc_clk_req_suspend &nfc_fwdl_suspend>;
+	};
+};
+
+//#include "lahaina-camera-sensor-mtp.dtsi"

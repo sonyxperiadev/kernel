@@ -36,6 +36,16 @@
 
 	pm8350b-bcl-lvl0 {
 		cooling-maps {
+			vbat_modem_l3 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+
+			vbat_gpu0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&msm_gpu 2 2>;
+			};
+
 			vbat_cpu4 {
 				trip = <&b_bcl_lvl0>;
 				cooling-device = <&cpu4_isolate 1 1>;
@@ -44,11 +54,6 @@
 			vbat_cpu5 {
 				trip = <&b_bcl_lvl0>;
 				cooling-device = <&cpu5_isolate 1 1>;
-			};
-
-			vbat_gpu0 {
-				trip = <&b_bcl_lvl0>;
-				cooling-device = <&msm_gpu 2 2>;
 			};
 
 			vbat_cdsp0 {
@@ -60,6 +65,11 @@
 
 	pm8350b-bcl-lvl1 {
 		cooling-maps {
+			vbat_gpu1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&msm_gpu 4 4>;
+			};
+
 			vbat_cpu6 {
 				trip = <&b_bcl_lvl1>;
 				cooling-device = <&cpu6_isolate 1 1>;
@@ -68,11 +78,6 @@
 			vbat_cpu7 {
 				trip = <&b_bcl_lvl1>;
 				cooling-device = <&cpu7_isolate 1 1>;
-			};
-
-			vbat_gpu1 {
-				trip = <&b_bcl_lvl1>;
-				cooling-device = <&msm_gpu 4 4>;
 			};
 
 			vbat_cdsp1 {
@@ -101,6 +106,16 @@
 	pm8350c-bcl-lvl0 {
 		disable-thermal-zone;
 		cooling-maps {
+			vph_modem_l3 {
+				trip = <&c_bcl_lvl0>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+
+			vph_gpu0 {
+				trip = <&c_bcl_lvl0>;
+				cooling-device = <&msm_gpu 2 2>;
+			};
+
 			vph_cpu4 {
 				trip = <&c_bcl_lvl0>;
 				cooling-device = <&cpu4_isolate 1 1>;
@@ -109,11 +124,6 @@
 			vph_cpu5 {
 				trip = <&c_bcl_lvl0>;
 				cooling-device = <&cpu5_isolate 1 1>;
-			};
-
-			vph_gpu0 {
-				trip = <&c_bcl_lvl0>;
-				cooling-device = <&msm_gpu 2 2>;
 			};
 
 			vph_cdsp0 {
@@ -126,6 +136,11 @@
 	pm8350c-bcl-lvl1 {
 		disable-thermal-zone;
 		cooling-maps {
+			vph_gpu1 {
+				trip = <&c_bcl_lvl1>;
+				cooling-device = <&msm_gpu 4 4>;
+			};
+
 			vph_cpu6 {
 				trip = <&c_bcl_lvl1>;
 				cooling-device = <&cpu6_isolate 1 1>;
@@ -134,11 +149,6 @@
 			vph_cpu7 {
 				trip = <&c_bcl_lvl1>;
 				cooling-device = <&cpu7_isolate 1 1>;
-			};
-
-			vph_gpu1 {
-				trip = <&c_bcl_lvl1>;
-				cooling-device = <&msm_gpu 4 4>;
 			};
 
 			vph_cdsp1 {

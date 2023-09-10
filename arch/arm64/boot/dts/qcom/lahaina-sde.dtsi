@@ -265,7 +265,7 @@
 
 &mdss_dsi_phy0 {
 	vdda-0p9-supply = <&L5B>;
-	/*qcom,dsi-pll-ssc-en; For disable SSC feature */
+	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 	memory-region = <&dfps_data_memory>;
 
@@ -273,6 +273,6 @@
 
 &mdss_dsi_phy1 {
 	vdda-0p9-supply = <&L5B>;
-	/*qcom,dsi-pll-ssc-en; For disable SSC feature */
+	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 };
