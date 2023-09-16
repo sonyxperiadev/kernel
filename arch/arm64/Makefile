@@ -145,9 +145,15 @@ endif
 
 # Default target when executing plain make
 boot		:= arch/arm64/boot
-KBUILD_IMAGE	:= $(boot)/$(KBUILD_TARGET)
 
-all:	$(KBUILD_TARGET)
+ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
+# Warning! Uncompressed kernel + appended DTB + DTBO WILL NOT WORK!
+KBUILD_IMAGE   := $(KBUILD_TARGET)-dtb
+else
+KBUILD_IMAGE   := $(KBUILD_TARGET)
+endif
+
+all:	$(KBUILD_IMAGE)
 
 Image: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
@@ -157,6 +163,9 @@ Image.%: Image
 
 zinstall install:
 	$(Q)$(MAKE) $(build)=$(boot) $@
+
+$(KBUILD_TARGET)-dtb: vmlinux scripts dtbs
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 PHONY += vdso_install
 vdso_install:
