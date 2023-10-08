@@ -11,6 +11,13 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	debug_region: debug_region@ffb00000 {
+		compatible = "removed-dma-pool", "qcom,debug_memory";
+		no-map;
+		reg = <0 0xffb00000 0 0xc0000>;
+		label = "debug_mem";
+	};
+
 	ramoops: ramoops@ffc00000 {
 		compatible = "removed-dma-pool", "ramoops";
 		no-map;
