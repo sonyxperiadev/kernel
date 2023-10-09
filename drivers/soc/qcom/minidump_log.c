@@ -116,7 +116,7 @@ static bool minidump_ftrace_dump = true;
 static bool md_in_oops_handler;
 static atomic_t md_handle_done;
 static struct seq_buf *md_runq_seq_buf;
-static md_align_offset;
+static int md_align_offset;
 
 /* CPU context information */
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_CPU_CONTEXT
