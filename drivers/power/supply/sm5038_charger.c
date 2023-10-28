@@ -4814,7 +4814,7 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	struct sm5038_dev *sm5038 = dev_get_drvdata(pdev->dev.parent);
 	struct sm5038_platform_data *pdata = dev_get_platdata(sm5038->dev);
 	struct sm5038_charger_data *charger;
-	struct power_supply_config psy_cfg = {};
+	struct power_supply_config *psy_cfg;
 	int ret = 0;
 
 	pr_info("sm5038-charger: %s: probe start\n", __func__);
@@ -4822,6 +4822,10 @@ int sm5038_charger_probe(struct platform_device *pdev)
 
 	charger = kzalloc(sizeof(*charger), GFP_KERNEL);
 	if (!charger)
+		return -ENOMEM;
+
+	psy_cfg = kzalloc(sizeof(*psy_cfg), GFP_KERNEL);
+	if (!psy_cfg)
 		return -ENOMEM;
 
 	charger->pdata = devm_kzalloc(&pdev->dev, sizeof(*(charger->pdata)),
@@ -4929,17 +4933,17 @@ int sm5038_charger_probe(struct platform_device *pdev)
 #endif
 
 	INIT_DELAYED_WORK(&charger->wa_sw_ovp_work, sm5038_sw_ovp_work);
-	psy_cfg.drv_data = charger;
-	psy_cfg.supplied_to = sm5038_supplied_to;
-	psy_cfg.num_supplicants = ARRAY_SIZE(sm5038_supplied_to);
+	psy_cfg->drv_data = charger;
+	psy_cfg->supplied_to = sm5038_supplied_to;
+	psy_cfg->num_supplicants = ARRAY_SIZE(sm5038_supplied_to);
 
-	charger->psy_chg = devm_power_supply_register(&pdev->dev, &sm5038_charger_power_supply_desc, &psy_cfg);
+	charger->psy_chg = devm_power_supply_register(&pdev->dev, &sm5038_charger_power_supply_desc, psy_cfg);
 	if (!charger->psy_chg) {
 		pr_err("sm5038-charger: %s: failed to power supply charger register", __func__);
 		goto err_power_supply_register;
 	}
 
-	charger->psy_otg = power_supply_register(&pdev->dev, &otg_power_supply_desc, &psy_cfg);
+	charger->psy_otg = power_supply_register(&pdev->dev, &otg_power_supply_desc, psy_cfg);
 	if (!charger->psy_otg) {
 		pr_err("sm5038-charger: %s: failed to power supply otg register ", __func__);
 		goto err_power_supply_register_otg;
@@ -5119,6 +5123,7 @@ err_create_votables:
 err_parse_dt:
 err_parse_dt_nomem:
 	mutex_destroy(&charger->charger_mutex);
+	kfree(psy_cfg);
 	kfree(charger);
 
 	return ret;
