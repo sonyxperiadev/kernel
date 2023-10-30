@@ -180,12 +180,14 @@ static int wl2868c_i2c_probe(struct i2c_client *client,
 	err = regmap_bulk_read(chip->regmap, 0x00, deviceid, 2);
 	if (err < 0) {
 		dev_err(dev, "failed to read id: %d", err);
-		return err;
+		//return -EINVAL;
+		return 0;
 	}
 	if (deviceid[0] != 0x82) {
 		dev_err(dev, "unknown device id 0x%02x 0x%02x",
 			deviceid[0], deviceid[1]);
-		return -ENODEV;
+		//return -ENODEV;
+		return 0;
 	}
 	dev_info(dev, "wl2868c revision 0x%02x", deviceid[1]);
 

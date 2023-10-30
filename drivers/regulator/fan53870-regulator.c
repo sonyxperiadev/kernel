@@ -284,12 +284,14 @@ static int fan53870_regulator_probe(struct i2c_client *client,
 	ret = regmap_read(regmap, FAN53870_REG_PRODUCT_ID, &val);
 	if (ret < 0) {
 		pr_err("failed to get product ID\n");
-		return -EINVAL;
+		//return -EINVAL;
+		return 0;
 	}
 
 	if (val != FAN53870_CHIP_ID) {
 		pr_err("regulator is not FAN53870\n");
-		return -ENODEV;
+		//return -ENODEV;
+		return 0;
 	}
 
 	ret = fan53870_parse_regulator(regmap, dev);
