@@ -1246,5 +1246,13 @@ config VIRTIO_REGULATOR
 	  regulator for pass through peripheral devices via regulator backend in
 	  host.
 
+config REGULATOR_MURRAY_CAMERA
+	tristate "Murray camera regulator intermediator driver"
+	depends on REGULATOR_WL2868C || REGULATOR_FAN53870
+	help
+	  This is the Murray camera regulator intermediator driver. This driver is
+	  used as an intermediator between camera framework and the physically
+	  present regulator on the board.
+
 endif
 
