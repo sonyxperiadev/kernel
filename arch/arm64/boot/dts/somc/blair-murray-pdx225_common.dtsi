@@ -1,5 +1,6 @@
 #include "blair-murray-common.dtsi"
 #include "blair-murray-camera.dtsi"
+#include "blair-fingerprint.dtsi"
 
 &soc {
 };
