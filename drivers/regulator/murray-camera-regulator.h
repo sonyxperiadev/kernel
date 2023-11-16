@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: GPL-2.0
+/**
+ * murray-camera-regulator.h - Murray camera regulator driver
+ * Copyright (C) 2023 Pavel Dubrova <pashadubrova@gmail.com>
+ */
+
+#ifndef __MURRAY_CAMERA_REGULATOR_H__
+#define __MURRAY_CAMERA_REGULATOR_H__
+
+enum regulator_chip_id {
+	REGULATOR_WL2868C = 0,
+	REGULATOR_ET5907,
+	REGULATOR_FAN53870,
+	REGULATOR_MAX,
+};
+
+enum regulator_ldo_id {
+	CAMERA_LDO1 = 0,
+	CAMERA_LDO2,
+	CAMERA_LDO3,
+	CAMERA_LDO4,
+	CAMERA_LDO5,
+	CAMERA_LDO6,
+	CAMERA_LDO7,
+	CAMERA_LDO_MAX,
+};
+
+struct regulator_chip_info {
+	char *name;
+	unsigned short i2c_addr;
+	unsigned short rev_id;
+};
+
+struct wl2868c_chip {
+	struct device		*dev;
+	struct regmap		*regmap;
+	struct regulator_dev	*rdev[CAMERA_LDO_MAX];
+	struct regulator_desc	rdesc[CAMERA_LDO_MAX];
+	int			chip_id;
+	int			rstn_gpio;
+};
+
+struct wl2868c_regulator_data {
+	char	*name;
+	char	*supply_name;
+	int	min_uV;
+	int	max_uV;
+	int	default_uV;
+	int	base_mV;
+	int	step_mV;
+	int	en_time;
+	int	ldo_reg;
+};
+
+/* WL2868C registers */
+#define WL2868C_REG_CHIP_ID		0x00
+#define WL2868C_REG_REVISION_ID		0x01
+#define WL2868C_REG_DISCHARGE		0x02
+#define WL2868C_REG_LDO1		0x03
+#define WL2868C_REG_LDO2		0x04
+#define WL2868C_REG_LDO3		0x05
+#define WL2868C_REG_LDO4		0x06
+#define WL2868C_REG_LDO5		0x07
+#define WL2868C_REG_LDO6		0x08
+#define WL2868C_REG_LDO7		0x09
+#define WL2868C_REG_LDO12_SEQ		0x0a
+#define WL2868C_REG_LDO34_SEQ		0x0b
+#define WL2868C_REG_LDO56_SEQ		0x0c
+#define WL2868C_REG_LDO7_SEQ		0x0d
+#define WL2868C_REG_LDO_ENABLE		0x0e
+#define WL2868C_REG_SEQUENCING		0x0f
+#define WL2868C_REG_LDO1_STATUS		0x10
+#define WL2868C_REG_LDO1_OCP_CTL	0x11
+#define WL2868C_REG_LDO2_STATUS		0x12
+#define WL2868C_REG_LDO2_OCP_CTL	0x13
+#define WL2868C_REG_LDO3_STATUS		0x14
+#define WL2868C_REG_LDO3_OCP_CTL	0x15
+#define WL2868C_REG_LDO4_STATUS		0x16
+#define WL2868C_REG_LDO4_OCP_CTL	0x17
+#define WL2868C_REG_LDO5_STATUS		0x18
+#define WL2868C_REG_LDO5_OCP_CTL	0x19
+#define WL2868C_REG_LDO6_STATUS		0x1a
+#define WL2868C_REG_LDO6_OCP_CTL	0x1b
+#define WL2868C_REG_LDO7_STATUS		0x1c
+#define WL2868C_REG_LDO7_OCP_CTL	0x1d
+#define WL2868C_REG_I2C_ADDR		0x1e
+#define WL2868C_REG_RESERVED_0		0x1f
+#define WL2868C_REG_INT_LATCHED_CLR	0x20
+#define WL2868C_REG_INT_EN_SET		0x21
+#define WL2868C_REG_INT_LATCHED_STS	0x22
+#define WL2868C_REG_INT_PENDING_STS	0x23
+#define WL2868C_REG_UVLO_CTL		0x24
+#define WL2868C_REG_RESERVED_1		0x25
+
+/* ET5907 registers */
+#define ET5907_REG_CHIP_ID		0x00
+#define ET5907_REG_REVISION_ID		0x01
+#define ET5907_REG_LDO_ILIMIT		0x02
+#define ET5907_REG_LDO_ENABLE		0x03
+#define ET5907_REG_LDO1			0x04
+#define ET5907_REG_LDO2			0x05
+#define ET5907_REG_LDO3			0x06
+#define ET5907_REG_LDO4			0x07
+#define ET5907_REG_LDO5			0x08
+#define ET5907_REG_LDO6			0x09
+#define ET5907_REG_LDO7			0x0a
+#define ET5907_REG_LDO12_SEQ		0x0b
+#define ET5907_REG_LDO34_SEQ		0x0c
+#define ET5907_REG_LDO56_SEQ		0x0d
+#define ET5907_REG_LDO7_SEQ		0x0e
+#define ET5907_REG_SEQUENCING		0x0f
+#define ET5907_REG_DISCHARGE		0x10
+#define ET5907_REG_RESET		0x11
+#define ET5907_REG_I2C_ADDR		0x12
+#define ET5907_REG_RESERVED_0		0x13
+#define ET5907_REG_RESERVED_1		0x14
+#define ET5907_REG_UVP_INT		0x15
+#define ET5907_REG_OCP_INT		0x16
+#define ET5907_REG_TSD_UVLO_INT		0x17
+#define ET5907_REG_UVP_STAU		0x18
+#define ET5907_REG_OCP_STAU		0x19
+#define ET5907_REG_TSD_UVLO_STAU	0x1a
+#define ET5907_REG_SUSD_STAU		0x1b
+#define ET5907_REG_UVP_INTMA		0x1c
+#define ET5907_REG_OCP_INTMA		0x1d
+#define ET5907_REG_TSD_UVLO_INTMA	0x1e
+
+/* FAN53870 registers */
+#define FAN53870_REG_CHIP_ID		0x00
+#define FAN53870_REG_REVISION_ID	0x01
+#define FAN53870_REG_IOUT		0x02
+#define FAN53870_REG_LDO_ENABLE		0x03
+#define FAN53870_REG_LDO1		0x04
+#define FAN53870_REG_LDO2		0x05
+#define FAN53870_REG_LDO3		0x06
+#define FAN53870_REG_LDO4		0x07
+#define FAN53870_REG_LDO5		0x08
+#define FAN53870_REG_LDO6		0x09
+#define FAN53870_REG_LDO7		0x0a
+#define FAN53870_REG_LDO12_SEQ		0x0b
+#define FAN53870_REG_LDO34_SEQ		0x0c
+#define FAN53870_REG_LDO56_SEQ		0x0d
+#define FAN53870_REG_LDO7_SEQ		0x0e
+#define FAN53870_REG_SEQUENCING		0x0f
+#define FAN53870_REG_DISCHARGE		0x10
+#define FAN53870_REG_RESET		0x11
+#define FAN53870_REG_I2C_ADDR		0x12
+#define FAN53870_REG_LDO_COMP0		0x13
+#define FAN53870_REG_LDO_COMP1		0x14
+#define FAN53870_REG_INTERRUPT1		0x15
+#define FAN53870_REG_INTERRUPT2		0x16
+#define FAN53870_REG_INTERRUPT3		0x17
+#define FAN53870_REG_STATUS1		0x18
+#define FAN53870_REG_STATUS2		0x19
+#define FAN53870_REG_STATUS3		0x1a
+#define FAN53870_REG_STATUS4		0x1b
+#define FAN53870_REG_MINT1		0x1c
+#define FAN53870_REG_MINT2		0x1d
+#define FAN53870_REG_MINT3		0x1e
+
+#endif

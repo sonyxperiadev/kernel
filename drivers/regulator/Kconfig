@@ -1247,12 +1247,12 @@ config VIRTIO_REGULATOR
 	  host.
 
 config REGULATOR_MURRAY_CAMERA
-	tristate "Murray camera regulator intermediator driver"
-	depends on REGULATOR_WL2868C || REGULATOR_FAN53870
+	tristate "Murray camera regulator driver"
+	depends on I2C
+	select REGMAP_I2C
 	help
-	  This is the Murray camera regulator intermediator driver. This driver is
-	  used as an intermediator between camera framework and the physically
-	  present regulator on the board.
+	  This is the Murray camera regulator driver. This universal driver
+	  supports WL2868C, FAN53870 and ET5907 7-Channel LDO PMIC simultaneously.
 
 endif
 
