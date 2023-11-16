@@ -78,4 +78,5 @@
 #include "somc-sagami-display-pdx214.dtsi"
 #include "charger-sagami-common.dtsi"
 #include "charger-sagami-pdx214.dtsi"
+#include "sec_touchscreen_pdx214.dtsi"
 #include "usb-dp-sagami-pdx214.dtsi"

@@ -1,4 +1,4 @@
-/* arch/arm64/boot/dts/vendor/somc/sec_touchscreen.dtsi
+/* arch/arm64/boot/dts/vendor/somc/sec_touchscreen_pdx214.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "ok";
+
 	touchscreen@48 {
 		compatible = "sec,sec_ts";
 		reg = <0x48>;

@@ -4140,10 +4140,9 @@
 };
 
 &ibb_vreg {
-       qcom,ibb-single-phase;
+	qcom,ibb-single-phase;
 };
 
-#include "sec_touchscreen.dtsi"
 #include "somc-sagami-nfc.dtsi"
 
 &cam_cci0 {
