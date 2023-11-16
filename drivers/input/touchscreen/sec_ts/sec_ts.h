@@ -763,8 +763,11 @@ struct sec_ts_plat_data {
 	const char *firmware_name;
 	const char *model_name;
 	const char *project_name;
-	const char *regulator_dvdd;
-	const char *regulator_avdd;
+	const char *dvdd_name;
+	const char *avdd_name;
+
+	struct regulator *regulator_dvdd;
+	struct regulator *regulator_avdd;
 
 	u32 panel_revision;
 	u8 core_version_of_ic[4];
