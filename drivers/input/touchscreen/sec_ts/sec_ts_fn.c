@@ -3332,7 +3332,7 @@ static void touch_enable_irq(void *device_data)
 		sec_ts_set_irq(ts, false);
 		input_dbg(true, &ts->client->dev, "irq disabled\n");
 	} else {
-		if (sec_ts_get_power_status(ts) || ts->power_status == SEC_TS_STATE_POWER_OFF) {
+		if (!sec_ts_get_power_status(ts) || ts->power_status == SEC_TS_STATE_POWER_OFF) {
 			input_info(true, &ts->client->dev, "cannot irq, panel power off\n");
 			goto NG;
 		}
