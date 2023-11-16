@@ -1,6 +1,32 @@
 #include <dt-bindings/clock/qcom,gcc-blair.h>
 #include <dt-bindings/msm/msm-camera.h>
 
+/*
+ * LDO mapping
+ *
+ * +-------------------+--------+---------+
+ * |   Camera Sensor   | Supply |   LDO   |
+ * +-------------------+--------+---------+
+ * | IMX486 (BackMain) |  VANA  |  AVDD1  |
+ * |                   |  VDIG  |  DVDD2  |
+ * |                   |  VIO   |  VDDIO  |
+ * |                   |  VAF   |  VDDAF  |
+ * +-------------------+--------+---------+
+ * | HI846 (FrontMain) |  VANA  |  AVDD1  |
+ * |                   |  VDIG  |  DVDD1  |
+ * |                   |  VIO   |  VDDIO  |
+ * +-------------------+--------+---------+
+ * | HI846 (BackWide)  |  VANA  |  AVDD2  |
+ * |                   |  VDIG  |  DVDD1  |
+ * |                   |  VIO   |  VDDIO  |
+ * +-------------------+--------+---------+
+ * | HI847 (BackTele)  |  VANA  |  VDDOIS |
+ * |                   |  VDIG  |  DVDD1  |
+ * |                   |  VIO   |  VDDIO  |
+ * |                   |  VAF   |  VDDAF  |
+ * +-------------------+--------+---------+
+ */
+
 &qupv3_se10_i2c {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -12,103 +38,32 @@
 		rstn-gpio = <&tlmm 58 0>;
 
 		regulators {
-			wl2868c_ldo1: ldo1 {
-				regulator-name = "cam-dvdd1";
-				regulator-min-microvolt = <800000>;
-				regulator-max-microvolt = <1504000>;
+			cam_dvdd1: ldo1 {
+				regulator-name = "camera-ldo1";
 			};
 
-			wl2868c_ldo2: ldo2 {
-				regulator-name = "cam-dvdd2";
-				regulator-min-microvolt = <800000>;
-				regulator-max-microvolt = <1504000>;
+			cam_dvdd2: ldo2 {
+				regulator-name = "camera-ldo2";
 			};
 
-			wl2868c_ldo3: ldo3 {
-				regulator-name = "cam-avdd1";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
+			cam_avdd1: ldo3 {
+				regulator-name = "camera-ldo3";
 			};
 
-			wl2868c_ldo4: ldo4 {
-				regulator-name = "cam-avdd2";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
+			cam_avdd2: ldo4 {
+				regulator-name = "camera-ldo4";
 			};
 
-			wl2868c_ldo5: ldo5 {
-				regulator-name = "cam-vddaf";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
+			cam_vddaf: ldo5 {
+				regulator-name = "camera-ldo5";
 			};
 
-			wl2868c_ldo6: ldo6 {
-				regulator-name = "cam-vddois";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
+			cam_vddois: ldo6 {
+				regulator-name = "camera-ldo6";
 			};
 
-			wl2868c_ldo7: ldo7 {
-				regulator-name = "cam-vddio";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
-				//regulator-max-microvolt = <3544000>;
-			};
-		};
-	};
-
-	fan53870: fan53870@35 {
-		compatible = "onsemi,fan53870";
-		reg = <0x35>;
-
-		regulators {
-			// dvdd1
-			fan53870_l1: ldo1 {
-				regulator-name = "fan53870-ldo1";
-				regulator-min-microvolt = <800000>;
-				regulator-max-microvolt = <1504000>;
-			};
-
-			// dvdd2
-			fan53870_l2: ldo2 {
-				regulator-name = "fan53870-ldo2";
-				regulator-min-microvolt = <800000>;
-				regulator-max-microvolt = <1504000>;
-			};
-
-			// avdd1
-			fan53870_l3: ldo3 {
-				regulator-name = "fan53870-ldo3";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
-			};
-
-			// avdd2
-			fan53870_l4: ldo4 {
-				regulator-name = "fan53870-ldo4";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
-			};
-
-			// vddaf
-			fan53870_l5: ldo5 {
-				regulator-name = "fan53870-ldo5";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
-			};
-
-			// vddois
-			fan53870_l6: ldo6 {
-				regulator-name = "fan53870-ldo6";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
-			};
-
-			// vddio
-			fan53870_l7: ldo7 {
-				regulator-name = "fan53870-ldo7";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3412000>;
+			cam_vddio: ldo7 {
+				regulator-name = "camera-ldo7";
 			};
 		};
 	};
@@ -127,62 +82,6 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		status = "ok";
-	};
-
-	cam_dvdd1: cam-dvdd1 {
-		compatible = "murray,camera-regulator";
-		regulator-name = "dvdd1";
-
-		wl2868c-supply = <&wl2868c_ldo1>;
-		fan53870-supply = <&fan53870_l1>;
-	};
-
-	cam_dvdd2: cam-dvdd2 {
-		compatible = "murray,camera-regulator";
-		regulator-name = "dvdd2";
-
-		wl2868c-supply = <&wl2868c_ldo2>;
-		fan53870-supply = <&fan53870_l2>;
-	};
-
-	cam_avdd1: cam-avdd1 {
-		compatible = "murray,camera-regulator";
-		regulator-name = "avdd1";
-
-		wl2868c-supply = <&wl2868c_ldo3>;
-		fan53870-supply = <&fan53870_l3>;
-	};
-
-	cam_avdd2: cam-avdd2 {
-		compatible = "murray,camera-regulator";
-		regulator-name = "avdd2";
-
-		wl2868c-supply = <&wl2868c_ldo4>;
-		fan53870-supply = <&fan53870_l4>;
-	};
-
-	cam_vddaf: cam-vddaf {
-		compatible = "murray,camera-regulator";
-		regulator-name = "vddaf";
-
-		wl2868c-supply = <&wl2868c_ldo5>;
-		fan53870-supply = <&fan53870_l5>;
-	};
-
-	cam_vddois: cam-vddois {
-		compatible = "murray,camera-regulator";
-		regulator-name = "vddois";
-
-		wl2868c-supply = <&wl2868c_ldo6>;
-		fan53870-supply = <&fan53870_l6>;
-	};
-
-	cam_vddio: cam-vddio {
-		compatible = "murray,camera-regulator";
-		regulator-name = "vddio";
-
-		wl2868c-supply = <&wl2868c_ldo7>;
-		fan53870-supply = <&fan53870_l7>;
 	};
 };
 
@@ -216,36 +115,32 @@
 	eeprom_wide: qcom,eeprom@0 {
 		cell-index = <0>;
 		compatible = "qcom,eeprom";
-		cam_vio-supply = <&cam_vddio>;
+		cci-master = <0>;
 		cam_vana-supply = <&cam_avdd1>;
+		cam_vdig-supply = <&cam_dvdd2>;
+		cam_vio-supply = <&cam_vddio>;
 		cam_vaf-supply = <&cam_vddaf>;
-		cam_vdig-supply = <&cam_dvdd1>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vaf", "cam_vdig";
+		cam_clk-supply = <&gcc_camss_top_gdsc>;
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_vaf", "cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1600000 2800000 2800000 1000000>;
-		rgltr-max-voltage = <1600000 2800000 2800000 1000000>;
-		rgltr-load-current = <0 0 0 0>;
+		rgltr-min-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-max-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-load-current = <0 0 0 0 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk0_active
-				&cam_sensor_rear0_reset_active>;
-		pinctrl-1 = <&cam_sensor_mclk0_suspend
-				&cam_sensor_rear0_reset_suspend>;
-		gpios = <&tlmm 29 0>,
-			<&tlmm 34 0>;
+		pinctrl-0 = <&cam_sensor_mclk0_active &cam_sensor_rear0_reset_active>;
+		pinctrl-1 = <&cam_sensor_mclk0_suspend &cam_sensor_rear0_reset_suspend>;
+		gpios = <&tlmm 29 0>, <&tlmm 34 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
-		gpio-req-tbl-label = "CAMIF_MCLK0",
-					"CAM_RESET0";
-		sensor-mode = <0>;
-		cci-master = <0>;
-		status = "ok";
+		gpio-req-tbl-label = "CAMIF_MCLK0", "CAM_RESET0";
 		clocks = <&gcc GCC_CAMSS_MCLK0_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
 		clock-rates = <19200000>;
+		status = "ok";
 	};
 
 	qcom,cam-sensor@0 {
@@ -263,12 +158,14 @@
 		cam_vana-supply = <&cam_avdd1>;
 		cam_vdig-supply = <&cam_dvdd2>;
 		cam_vio-supply = <&cam_vddio>;
+		cam_vaf-supply = <&cam_vddaf>;
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
-		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_vaf", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <2800000 1200000 1800000 0>;
-		rgltr-max-voltage = <2800000 1200000 1800000 0>;
-		rgltr-load-current = <0 0 0 0>;
+		pwm-switch;
+		rgltr-min-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-max-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-load-current = <0 0 0 0 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active &cam_sensor_rear0_reset_active>;
@@ -281,7 +178,7 @@
 		clocks = <&gcc GCC_CAMSS_MCLK0_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
-		clock-rates = <24000000>;
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 
@@ -290,12 +187,29 @@
 		cell-index = <2>;
 		compatible = "qcom,eeprom";
 		cci-master = <1>;
+		cam_vana-supply = <&cam_avdd2>;
+		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
-		regulator-names = "cam_vio";
+		cam_clk-supply = <&gcc_camss_top_gdsc>;
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000>;
-		rgltr-max-voltage = <1800000>;
-		rgltr-load-current = <0>;
+		pwm-switch;
+		rgltr-min-voltage = <2800000 1200000 1800000 0>;
+		rgltr-max-voltage = <2800000 1200000 1800000 0>;
+		rgltr-load-current = <0 0 0 0>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk1_active &cam_sensor_rear1_reset_active>;
+		pinctrl-1 = <&cam_sensor_mclk1_suspend &cam_sensor_rear1_reset_suspend>;
+		gpios = <&tlmm 30 0>, <&tlmm 35 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK1", "CAM_RESET1";
+		clocks = <&gcc GCC_CAMSS_MCLK1_CLK>;
+		clock-names = "cam_clk";
+		clock-cntl-level = "turbo";
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 
@@ -315,6 +229,7 @@
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
 		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
+		pwm-switch;
 		rgltr-min-voltage = <2800000 1200000 1800000 0>;
 		rgltr-max-voltage = <2800000 1200000 1800000 0>;
 		rgltr-load-current = <0 0 0 0>;
@@ -330,7 +245,7 @@
 		clocks = <&gcc GCC_CAMSS_MCLK1_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
-		clock-rates = <24000000>;
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 };
@@ -357,7 +272,8 @@
 		cam_vana-supply = <&cam_avdd1>;
 		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
-		regulator-names = "cam_vana", "cam_vdig", "cam_vio";
+		cam_clk-supply = <&gcc_camss_top_gdsc>;
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
 		rgltr-min-voltage = <2800000 1200000 1800000 0>;
@@ -372,12 +288,11 @@
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
 		gpio-req-tbl-label = "CAMIF_MCLK3", "CAM_RESET3";
-		status = "ok";
 		clocks = <&gcc GCC_CAMSS_MCLK3_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
 		clock-rates = <19200000>;
-		sensor-mode = <1>;
+		status = "ok";
 	};
 
 	qcom,cam-sensor@1 {
@@ -395,6 +310,7 @@
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
 		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
 		rgltr-cntrl-support;
+		pwm-switch;
 		rgltr-min-voltage = <2800000 1200000 1800000 0>;
 		rgltr-max-voltage = <2800000 1200000 1800000 0>;
 		rgltr-load-current = <0 0 0 0>;
@@ -407,16 +323,11 @@
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
 		gpio-req-tbl-label = "CAMIF_MCLK3", "CAM_RESET3";
-		//clocks = <&gcc GCC_CAMSS_MCLK3_CLK>;
-		//clock-names = "cam_clk";
-		//clock-cntl-level = "turbo";
-		clock-rates = <24000000>;
-		status = "ok";
-		sensor-mode = <1>;
 		clocks = <&gcc GCC_CAMSS_MCLK3_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
-		//clock-rates = <19200000>;
+		clock-rates = <19200000>;
+		status = "ok";
 	};
 
 	// tele camera
@@ -437,12 +348,30 @@
 		cell-index = <3>;
 		compatible = "qcom,eeprom";
 		cci-master = <0>;
+		cam_vana-supply = <&cam_vddois>;
+		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
-		regulator-names = "cam_vio";
+		cam_vaf-supply = <&cam_vddaf>;
+		cam_clk-supply = <&gcc_camss_top_gdsc>;
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_vaf", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000>;
-		rgltr-max-voltage = <1800000>;
-		rgltr-load-current = <0>;
+		pwm-switch;
+		rgltr-min-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-max-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-load-current = <0 0 0 0 0>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk2_active &cam_sensor_rear2_reset_active>;
+		pinctrl-1 = <&cam_sensor_mclk2_suspend &cam_sensor_rear2_reset_suspend>;
+		gpios = <&tlmm 31 0>, <&tlmm 36 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET2";
+		clocks = <&gcc GCC_CAMSS_MCLK2_CLK>;
+		clock-names = "cam_clk";
+		clock-cntl-level = "turbo";
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 
@@ -460,12 +389,14 @@
 		cam_vana-supply = <&cam_vddois>;
 		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
+		cam_vaf-supply = <&cam_vddaf>;
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
-		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_clk";
+		regulator-names = "cam_vana", "cam_vdig", "cam_vio", "cam_vaf", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <2800000 1200000 1800000 0>;
-		rgltr-max-voltage = <2800000 1200000 1800000 0>;
-		rgltr-load-current = <0 0 0 0>;
+		pwm-switch;
+		rgltr-min-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-max-voltage = <2800000 1200000 1800000 2800000 0>;
+		rgltr-load-current = <0 0 0 0 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active &cam_sensor_rear2_reset_active>;
@@ -478,7 +409,7 @@
 		clocks = <&gcc GCC_CAMSS_MCLK2_CLK>;
 		clock-names = "cam_clk";
 		clock-cntl-level = "turbo";
-		clock-rates = <24000000>;
+		clock-rates = <19200000>;
 		status = "ok";
 	};
 };
@@ -626,4 +557,4 @@
 			drive-strength = <3>;
 		};
 	};
-}; 
+};
