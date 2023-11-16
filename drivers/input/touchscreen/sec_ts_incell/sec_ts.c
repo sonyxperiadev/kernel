@@ -2948,87 +2948,50 @@ int drm_notifier_callback(struct notifier_block *self, unsigned long event, void
 {
 	struct drm_panel_notifier *evdata = data;
 	struct sec_ts_data *ts = container_of(self, struct sec_ts_data, drm_notif);
-	struct timespec64 time;
 	int blank;
 
+	if (!evdata || !evdata->data || !ts)
+		return 0;
+
+	blank = *(int *)evdata->data;
+
 	mutex_lock(&ts->aod_mutex);
-	if (evdata && evdata->data && ts) {
-		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
-			blank = *(int *)evdata->data;
-			input_info(true, &ts->client->dev, "Before: %s\n",
-				(blank == DRM_PANEL_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_PANEL_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_PANEL_BLANK_POWERDOWN:
-				if (!ts->after_work.done) {
-					input_info(true, &ts->client->dev, "not already sleep out\n");
-					mutex_unlock(&ts->aod_mutex);
-					return 0;
-				}
-
-				ktime_get_boottime_ts64(&time);
-				input_info(true, &ts->client->dev, "start@%ld.%06ld\n",
-					time.tv_sec, time.tv_nsec);
-				sec_ts_suspend(ts);
-				ktime_get_boottime_ts64(&time);
-				input_info(true, &ts->client->dev, "end@%ld.%06ld\n",
-					time.tv_sec, time.tv_nsec);
-				break;
-			case DRM_PANEL_BLANK_UNBLANK:
-				break;
-			default:
-				break;
+	if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
+		if (blank == DRM_PANEL_BLANK_POWERDOWN) {
+			if (!ts->after_work.done) {
+				input_info(true, &ts->client->dev, "not already sleep out\n");
+				goto end;
 			}
-		} else if (event == DRM_PANEL_EVENT_BLANK) {
-			blank = *(int *)evdata->data;
-			input_info(true, &ts->client->dev, "After: %s\n",
-				(blank == DRM_PANEL_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_PANEL_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_PANEL_BLANK_POWERDOWN:
-				break;
-			case DRM_PANEL_BLANK_UNBLANK:
-				if (!ts->after_work.done && !ts->after_work.err) {
-					input_info(true, &ts->client->dev, "not already sleep out\n");
-					mutex_unlock(&ts->aod_mutex);
-					return 0;
-				}
-				if (is_first_ts_kickstart) {
-					input_info(true, &ts->client->dev,
-						   "First TS kickstart, wait "
-						   "for worker sleep-out\n");
-					mutex_unlock(&ts->aod_mutex);
-					return 0;
-				}
-
-				if (ts->after_work.done || ts->after_work.err) {
-					ktime_get_boottime_ts64(&time);
-					input_info(true, &ts->client->dev, "start@%ld.%06ld\n",
-						time.tv_sec, time.tv_nsec);
-
-					sec_ts_resume(ts);
-					ktime_get_boottime_ts64(&time);
-					input_info(true, &ts->client->dev, "end@%ld.%06ld\n",
-						time.tv_sec, time.tv_nsec);
-				}
-				break;
-			default:
-				break;
-			}
-
-			if (ts->aod_pending) {
+			sec_ts_suspend(ts);
+		}
+	} else if (event == DRM_PANEL_EVENT_BLANK) {
+		if (blank == DRM_PANEL_BLANK_UNBLANK) {
+			if (!ts->after_work.done && !ts->after_work.err) {
+				input_info(true, &ts->client->dev, "not already sleep out\n");
+				goto end;
+			} else if (is_first_ts_kickstart) {
 				input_info(true, &ts->client->dev,
-					"Applying aod_pending_lowpower_mode: %d\n",
-					ts->aod_pending_lowpower_mode);
-				ts->aod_pending = false;
-				ts->lowpower_mode = ts->aod_pending_lowpower_mode;
-				sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
+					   "First TS kickstart, wait "
+					   "for worker sleep-out\n");
+				goto end;
+			} else if (ts->after_work.done || ts->after_work.err) {
+				sec_ts_resume(ts);
 			}
 		}
+
+		if (ts->aod_pending) {
+			input_info(true, &ts->client->dev,
+				"Applying aod_pending_lowpower_mode: %d\n",
+				ts->aod_pending_lowpower_mode);
+			ts->aod_pending = false;
+			ts->lowpower_mode = ts->aod_pending_lowpower_mode;
+			sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
+		}
 	}
+
+end:
 	mutex_unlock(&ts->aod_mutex);
+
 	return 0;
 }
 
