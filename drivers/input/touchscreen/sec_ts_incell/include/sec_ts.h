@@ -893,7 +893,7 @@ struct sec_ts_plat_data {
 	u8 config_version_of_bin[4];
 	u8 img_version_of_ic[4];
 	u8 img_version_of_bin[4];
-	u32 expected_device_id[3];
+	u8 expected_device_id[3];
 
 	struct pinctrl *pinctrl;
 
