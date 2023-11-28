@@ -1,7 +1,0 @@
-#include "lahaina-qrd-common.dtsi"
-
-&usb1 {
-	dwc3@a800000 {
-		dr_mode = "host";
-	};
-};

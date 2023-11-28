@@ -1,4 +1,0 @@
-#include "waipio-nagara-pdx223_common.dtsi"
-
-&soc {
-};
