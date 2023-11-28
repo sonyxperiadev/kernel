@@ -2311,6 +2311,8 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 		    msecs_to_jiffies(SEC_TS_FW_UPDATE_DELAY_MS_AFTER_PROBE));
 #endif
 
+	schedule_delayed_work(&ts->after_work.start, 0);
+
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
 	dump_callbacks.inform_dump = dump_tsp_log;
 	INIT_DELAYED_WORK(&ts->ghost_check, sec_ts_check_rawdata);
