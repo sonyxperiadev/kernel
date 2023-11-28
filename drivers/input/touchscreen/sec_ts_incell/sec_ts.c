@@ -33,6 +33,7 @@ static void sec_ts_reset_work(struct work_struct *work);
 #ifdef USE_SELF_TEST_WORK
 static void sec_ts_read_info_work(struct work_struct *work);
 #endif
+static void sec_ts_fw_update_work(struct work_struct *work);
 static void sec_ts_after_init_work(struct work_struct *work);
 #ifdef USE_OPEN_CLOSE
 static int sec_ts_input_open(struct input_dev *dev);
@@ -2028,14 +2029,6 @@ static int sec_ts_after_init(struct sec_ts_data *ts)
 	else
 		force_update = false;
 
-#ifdef SEC_TS_FW_UPDATE_ON_PROBE
-	ret = sec_ts_firmware_update_on_probe(ts, force_update);
-	if (ret < 0)
-		input_err(true, &ts->client->dev, "%s: fail firmware update on probe\n", __func__);
-#else
-	input_info(true, &ts->client->dev, "%s: fw update on probe disabled!\n", __func__);
-#endif
-
 	ret = sec_ts_read_information(ts);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev, "%s: fail to read information 0x%x\n", __func__, ret);
@@ -2158,6 +2151,23 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	INIT_DELAYED_WORK(&ts->after_work.start, sec_ts_after_init_work);
 	if (ts->plat_data->watchdog.supported)
 		INIT_DELAYED_WORK(&ts->work_watchdog, sec_ts_watchdog_func);
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	INIT_WORK(&ts->fw_update_work, sec_ts_fw_update_work);
+#else
+	input_info(true, &ts->client->dev, "%s: fw update on probe disabled!\n",
+		   __func__);
+	ts->fw_update_wq = alloc_workqueue("sec_ts-fw-update-queue",
+					    WQ_UNBOUND | WQ_HIGHPRI |
+					    WQ_CPU_INTENSIVE, 1);
+	if (!ts->fw_update_wq) {
+		input_err(true, &ts->client->dev,
+			  "%s: Can't alloc fw update work thread\n",
+			  __func__);
+		ret = -ENOMEM;
+		goto error_alloc_fw_update_wq;
+	}
+	INIT_DELAYED_WORK(&ts->fw_update_work, sec_ts_fw_update_work);
+#endif
 
 	i2c_set_clientdata(client, ts);
 
@@ -2293,6 +2303,14 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 
 	device_init_wakeup(&client->dev, true);
 
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	schedule_work(&ts->fw_update_work);
+	flush_work(&ts->fw_update_work);
+#else
+	queue_delayed_work(ts->fw_update_wq, &ts->fw_update_work,
+		    msecs_to_jiffies(SEC_TS_FW_UPDATE_DELAY_MS_AFTER_PROBE));
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_DUMP_MODE)
 	dump_callbacks.inform_dump = dump_tsp_log;
 	INIT_DELAYED_WORK(&ts->ghost_check, sec_ts_check_rawdata);
@@ -2340,6 +2358,11 @@ err_allocate_input_dev_side:
 err_allocate_input_dev_pad:
 	if (ts->input_dev)
 		input_free_device(ts->input_dev);
+#ifndef SEC_TS_FW_UPDATE_ON_PROBE
+	if (ts->fw_update_wq)
+		destroy_workqueue(ts->fw_update_wq);
+error_alloc_fw_update_wq:
+#endif
 err_allocate_input_dev:
 	kfree(ts);
 
@@ -2662,6 +2685,29 @@ static void sec_ts_read_info_work(struct work_struct *work)
 }
 #endif
 
+static void sec_ts_fw_update_work(struct work_struct *work)
+{
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	struct sec_ts_data *ts = container_of(work, struct sec_ts_data,
+					      fw_update_work);
+#else
+	struct delayed_work *fw_update_work = container_of(work,
+					struct delayed_work, work);
+	struct sec_ts_data *ts = container_of(fw_update_work,
+					struct sec_ts_data, fw_update_work);
+#endif
+	int ret;
+
+	input_info(true, &ts->client->dev,
+		   "%s: Beginning firmware update after probe.\n", __func__);
+
+	ret = sec_ts_firmware_update_on_probe(ts, false);
+	if (ret < 0)
+		input_info(true, &ts->client->dev,
+			   "%s: firmware update was unsuccessful.\n",
+			   __func__);
+}
+
 #define SEC_TS_RETRY_SESSION_COUNT 30
 static void sec_ts_after_init_work(struct work_struct *work)
 {
@@ -2887,6 +2933,13 @@ static int sec_ts_remove(struct i2c_client *client)
 	struct sec_ts_data *ts = i2c_get_clientdata(client);
 
 	input_info(true, &ts->client->dev, "%s\n", __func__);
+
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	cancel_work_sync(&ts->fw_update_work);
+#else
+	cancel_delayed_work_sync(&ts->fw_update_work);
+	destroy_workqueue(ts->fw_update_wq);
+#endif
 
 #ifdef USE_SELF_TEST_WORK
 	cancel_delayed_work_sync(&ts->work_read_info);
