@@ -38,11 +38,12 @@
 #include <linux/vmalloc.h>
 #include <linux/workqueue.h>
 #include <linux/incell.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
+#include <drm/drm_panel.h>
 
 #ifdef CONFIG_INPUT_BOOSTER
 #include <linux/input/input_booster.h>
 #endif
-#include <linux/drm_notify.h>
 
 #include "sec_cmd.h"
 
@@ -802,7 +803,7 @@ struct sec_ts_data {
 	struct timespec64 time_released[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 	struct device virtdev;
 	struct class *sec_class;
-	struct notifier_block drm_notif;
+	void *notifier_cookie;			/* touch notifier for panel events */
 	long time_longest;
 
 	u8 lowpower_mode;
