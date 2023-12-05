@@ -1,4 +1,3 @@
-#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 &soc {
