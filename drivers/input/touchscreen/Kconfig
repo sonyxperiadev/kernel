@@ -1366,4 +1366,6 @@ config TOUCHSCREEN_ZINITIX
 	  To compile this driver as a module, choose M here: the
 	  module will be called zinitix.
 
+source "drivers/input/touchscreen/sec_ts_incell/Kconfig"
+
 endif
