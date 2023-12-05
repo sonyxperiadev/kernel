@@ -173,3 +173,5 @@
 };
 
 #include "waipio-v2-gpu.dtsi"
+#include "waipio-v2-mmrm.dtsi"
+#include "waipio-v2-mmrm-test.dtsi"

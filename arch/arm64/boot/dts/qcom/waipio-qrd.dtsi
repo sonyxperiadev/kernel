@@ -3,6 +3,9 @@
 
 #include "waipio-pmic-overlay.dtsi"
 #include "waipio-thermal-overlay.dtsi"
+#include "waipio-audio-qrd.dtsi"
+#include "waipio-sde-display-qrd.dtsi"
+//#include "waipio-camera-sensor-qrd.dtsi"
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-waipio";
