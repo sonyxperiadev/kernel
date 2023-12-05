@@ -1,5 +1,5 @@
 #include <dt-bindings/clock/qcom,camcc-waipio.h>
-#include <dt-bindings/msm-camera.h>
+#include <dt-bindings/msm/msm-camera.h>
 
 &soc {
 	led_flash_triple_rear: qcom,camera-flash@1 {
