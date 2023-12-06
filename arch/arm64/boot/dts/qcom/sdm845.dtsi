@@ -4129,6 +4129,8 @@
 		reg = <0x17d78800 0x1000>,
 			<0x17d43000 0x1000>;
 		#thermal-sensor-cells = <0>;
+		qcom,plat-mitigation-disable;
+		qcom,legacy-lmh-enable;
 	};
 
 	lmh_dcvs1: qcom,limits-dcvs@17d70800 {
@@ -4138,8 +4140,8 @@
 		reg = <0x17d70800 0x1000>,
 			<0x17d45800 0x1000>;
 		#thermal-sensor-cells = <0>;
-		isens_vref-supply = <&pm8998_l1_ao>;
-		isens-vref-settings = <880000 880000 20000>;
+		qcom,plat-mitigation-disable;
+		qcom,legacy-lmh-enable;
 	};
 
 	wil6210: qcom,wil6210 {
