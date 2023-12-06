@@ -174,3 +174,8 @@
 #include "somc-charger-nagara-common.dtsi"
 #include "somc-charger-nagara-pdx223.dtsi"
 #include "somc-usb-dp-nagara-pdx223.dtsi"
+#include "somc-nagara-display.dtsi"
+#include "somc-nagara-display-pdx223.dtsi"
+#include "somc-nagara-audio-common.dtsi"
+#include "somc-nagara-audio-pdx223.dtsi"
+#include "waipio-camera-sensor-nagara-pdx223.dtsi"
