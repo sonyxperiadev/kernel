@@ -138,7 +138,7 @@
 	};
 
 	cpufreq_hw: qcom,cpufreq-hw {
-		compatible = "qcom,cpufreq-hw-epss";
+		compatible = "qcom,cpufreq-epss";
 		reg = <0x17d91000 0x1000>,
 		      <0x17d92000 0x1000>,
 		      <0x17d93000 0x1000>,
