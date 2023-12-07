@@ -9,7 +9,7 @@
 	qcom,pmic-id-size = <10>;
 };
 
-&apps_rsc {
+&apps_rsc_drv2 {
 	rpmh-regulator-ldoi2 {
 		compatible = "qcom,rpmh-vrm-regulator";
 		qcom,resource-name = "ldoi2";
