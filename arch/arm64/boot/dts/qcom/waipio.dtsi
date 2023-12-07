@@ -2377,35 +2377,40 @@
 		compatible = "qcom,rpmh-rsc";
 		reg = <0x17a00000 0x10000>,
 		      <0x17a10000 0x10000>,
-		      <0x17a20000 0x10000>,
-		      <0x17a30000 0x10000>;
-		reg-names = "drv-0", "drv-1", "drv-2", "drv-3";
+		      <0x17a20000 0x10000>;
+		reg-names = "drv-0", "drv-1", "drv-2";
+		qcom,drv-count = <3>;
 		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
-			     /* No interrupt into GIC for DRV3 */
-		qcom,tcs-offset = <0xd00>;
-		qcom,drv-id = <2>;
-		qcom,tcs-config = <ACTIVE_TCS    3>,
+		power-domains = <&CLUSTER_PD>;
+
+		apps_rsc_drv2: drv@2 {
+			qcom,drv-id = <2>;
+			qcom,tcs-offset = <0xd00>;
+
+			channel@0 {
+				qcom,tcs-config = <ACTIVE_TCS    3>,
 				  <SLEEP_TCS     2>,
 				  <WAKE_TCS      2>,
 				  <CONTROL_TCS   0>, /* PDC wakeup values will be written from TZ */
 				  <FAST_PATH_TCS 1>;
-		power-domains = <&CLUSTER_PD>;
+			};
 
-		apps_bcm_voter: bcm_voter {
-			compatible = "qcom,bcm-voter";
-		};
+			apps_bcm_voter: bcm_voter {
+				compatible = "qcom,bcm-voter";
+			};
 
-		clock_rpmh: qcom,rpmhclk {
-			compatible = "qcom,waipio-rpmh-clk";
-			#clock-cells = <1>;
-		};
+			clock_rpmh: qcom,rpmhclk {
+				compatible = "qcom,waipio-rpmh-clk";
+				#clock-cells = <1>;
+			};
 
-		dcvs_fp: qcom,dcvs-fp {
-			compatible = "qcom,dcvs-fp";
-			qcom,ddr-bcm-name = "MC3";
-			qcom,llcc-bcm-name = "SH5";
+			dcvs_fp: qcom,dcvs-fp {
+				compatible = "qcom,dcvs-fp";
+				qcom,ddr-bcm-name = "MC3";
+				qcom,llcc-bcm-name = "SH5";
+			};
 		};
 	};
 
@@ -2414,19 +2419,26 @@
 		compatible = "qcom,rpmh-rsc";
 		reg = <0xaf20000 0x10000>;
 		reg-names = "drv-0";
+		qcom,drv-count = <1>;
 		interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clock_dispcc DISP_CC_MDSS_RSCC_AHB_CLK>;
-		qcom,tcs-offset = <0x1c00>;
-		qcom,drv-id = <0>;
-		qcom,tcs-config = <ACTIVE_TCS    0>,
-				  <SLEEP_TCS     1>,
-				  <WAKE_TCS      1>,
-				  <CONTROL_TCS   0>,
-				  <FAST_PATH_TCS 0>;
 
-		disp_bcm_voter: bcm_voter {
-			compatible = "qcom,bcm-voter";
-			qcom,tcs-wait = <QCOM_ICC_TAG_AMC>;
+		disp_rsc_drv0: drv@0 {
+			qcom,drv-id = <0>;
+			qcom,tcs-offset = <0x1c00>;
+
+			channel@0 {
+				qcom,tcs-config = <ACTIVE_TCS    0>,
+						<SLEEP_TCS     1>,
+						<WAKE_TCS      1>,
+						<CONTROL_TCS   0>,
+						<FAST_PATH_TCS 0>;
+			};
+
+			disp_bcm_voter: bcm_voter {
+				compatible = "qcom,bcm-voter";
+				qcom,tcs-wait = <QCOM_ICC_TAG_AMC>;
+			};
 		};
 	};
 

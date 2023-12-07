@@ -224,7 +224,7 @@
 };
 
 /* Regulator config */
-&apps_rsc {
+&apps_rsc_drv2 {
 	rpmh-regulator-ldoi1 {
 		compatible = "qcom,rpmh-vrm-regulator";
 		qcom,resource-name = "ldoi1";
