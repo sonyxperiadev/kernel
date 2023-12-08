@@ -42,7 +42,7 @@ static size_t print_caller(u32 id, char *buf, size_t buf_sz)
 }
 #else
 #define PREFIX_MAX            32
-#define print_caller(id, buf) 0
+#define print_caller(id, buf, buf_sz) 0
 #endif
 
 static size_t info_print_prefix(const struct printk_info *info, char *buf,
