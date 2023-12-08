@@ -21,7 +21,9 @@ static u32 simplefb_x, simplefb_y;
 static u64 fb_base;
 static void *simplefb_fb;
 
+#ifndef CONFIG_EFI
 struct screen_info screen_info;
+#endif
 
 static int __init simplefb_earlycon_remap_fb(void)
 {
