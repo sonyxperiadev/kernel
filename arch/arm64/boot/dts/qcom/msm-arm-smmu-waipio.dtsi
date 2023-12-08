@@ -71,6 +71,7 @@
 				<0x3de6200 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x0 0x400>;
+			qcom,iova-width = <49>;
 		};
 
 		gfx_1_tbu: gfx_1_tbu@3ded000 {
@@ -79,6 +80,7 @@
 				<0x3de6208 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x400 0x400>;
+			qcom,iova-width = <49>;
 		};
 	};
 
@@ -254,6 +256,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x0 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <36>;
 		};
 
 		anoc_2_tbu: anoc_2_tbu@151d5000 {
@@ -263,6 +266,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x400 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <36>;
 		};
 
 		cam_0_tbu: cam_0_tbu@151d9000 {
@@ -272,6 +276,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x800 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		cam_1_tbu: cam_1_tbu@151dd000 {
@@ -281,6 +286,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0xc00 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		compute_1_tbu: compute_1_tbu@151e1000 {
@@ -290,6 +296,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1000 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		compute_0_tbu: compute_0_tbu@151e5000 {
@@ -299,6 +306,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1400 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		lpass_tbu: lpass_tbu@151e9000 {
@@ -308,6 +316,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1800 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		pcie_tbu: pcie_tbu@151ed000 {
@@ -318,6 +327,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1c00 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <36>;
 		};
 
 		sf_0_tbu: sf_0_tbu@151f1000 {
@@ -327,6 +337,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2000 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		sf_1_tbu: sf_1_tbu@151f5000 {
@@ -336,6 +347,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2400 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		mdp_0_tbu: mdp_0_tbu@151f9000 {
@@ -345,6 +357,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2800 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 
 		mdp_1_tbu: mdp_1_tbu@151fd000 {
@@ -354,6 +367,7 @@
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2c00 0x400>;
 			qcom,micro-idle;
+			qcom,iova-width = <32>;
 		};
 	};
 
