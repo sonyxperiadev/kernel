@@ -56,6 +56,7 @@
 			<&clock_gcc GCC_USB3_PRIM_PHY_PIPE_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK_SRC>,
+			<&sde_dp 0>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_INTF_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK_SRC>,
 			<&sde_dp 1>,
@@ -63,10 +64,10 @@
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL1_CLK>;
 		clock-names = "core_aux_clk", "rpmh_cxo_clk", "core_usb_ref_clk_src",
-			"core_usb_pipe_clk", "link_clk", "link_clk_src", "link_iface_clk",
-			"pixel_clk_rcg", "pixel_parent", "pixel1_clk_rcg",
-			"strm0_pixel_clk", "strm1_pixel_clk";
-		clock-mmrm = <0 0 0 0 0 DISP_CC_MDSS_DPTX0_LINK_CLK_SRC 0 0 0 0 0 0>;
+			"core_usb_pipe_clk", "link_clk", "link_clk_src", "link_parent",
+			"link_iface_clk", "pixel_clk_rcg", "pixel_parent",
+			"pixel1_clk_rcg", "strm0_pixel_clk", "strm1_pixel_clk";
+		clock-mmrm = <0 0 0 0 0 DISP_CC_MDSS_DPTX0_LINK_CLK_SRC 0 0 0 0 0 0 0>;
 
 		qcom,pll-revision = "5nm-v1";
 		qcom,phy-version = <0x420>;
