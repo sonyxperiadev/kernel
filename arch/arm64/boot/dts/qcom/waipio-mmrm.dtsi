@@ -3,6 +3,9 @@
 		compatible = "qcom,msm-mmrm", "qcom,waipio-mmrm";
 		status = "okay";
 
+		/* MMRM clock threshold */
+		mmrm-peak-threshold = <9000>;
+
 		/* MM Rail info */
 		mm-rail-corners = "lowsvs", "svs", "svsl1", "nom", "turbo";
 		mm-rail-fact-volt = <36439 41157 44827 49152 54526>;
