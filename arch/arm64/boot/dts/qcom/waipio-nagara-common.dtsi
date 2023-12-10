@@ -3713,5 +3713,4 @@
 	status = "disabled";
 };
 
-#include "sec_touchscreen.dtsi"
 #include "somc-nagara-nfc.dtsi"
