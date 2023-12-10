@@ -1,0 +1,227 @@
+&soc {
+	dsi_panel_oled_ts_pwr_supply: dsi_panel_oled_ts_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <200000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vci";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <2000>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <0>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "vddr";
+			qcom,supply-min-voltage = <1600000>;
+			qcom,supply-max-voltage = <1600000>;
+			qcom,supply-enable-load = <600000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@3 {
+			reg = <3>;
+			qcom,supply-name = "ts_io";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+
+		qcom,panel-supply-entry@4 {
+			reg = <4>;
+			qcom,supply-name = "ts_vddh";
+			qcom,supply-min-voltage = <3300000>;
+			qcom,supply-max-voltage = <3300000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+};
+
+&tlmm {
+	somc_sde_dsi_active: somc_sde_dsi_active {
+		mux {
+			pins = "gpio133";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio133";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_sde_dsi_suspend: somc_sde_dsi_suspend {
+		mux {
+			pins = "gpio133";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio133";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_ts_int_active: somc_ts_int_active {
+		mux {
+			pin = "gpio25";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio25";
+			driver-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
+	somc_ts_int_suspend: somc_ts_int_suspend {
+		mux {
+			pin = "gpio25";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio25";
+			driver-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+&sde_dsi {
+	compatible = "somc,dsi-display";
+	label = "primary";
+
+	qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+
+	clocks = <&mdss_dsi_phy0 0>,
+		 <&mdss_dsi_phy0 1>,
+		 <&mdss_dsi_phy1 2>,
+		 <&mdss_dsi_phy1 3>,
+		 <&dispcc DISP_CC_MDSS_MDP_CLK>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+		      "pll_byte_clk1", "pll_dsi_clk1",
+		      "mdp_core_clk";
+
+	pinctrl-names = "panel_active", "panel_suspend",
+			"somc_ts_int_active", "somc_ts_int_suspend";
+	pinctrl-0 = <&somc_sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&somc_sde_dsi_suspend &sde_te_suspend>;
+	pinctrl-2 = <&somc_ts_int_active>;
+	pinctrl-3 = <&somc_ts_int_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 86 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&L12B>;
+	vci-supply = <&L13B>;
+	ts_io-supply = <&L4B>;
+	ts_vddh-supply = <&L14B>;
+	vddr-supply= <&L3D>;
+	/delete-property/vdd-supply;
+	/delete-property/avdd-supply;
+
+	qcom,mdp = <&mdss_mdp>;
+};
+
+&display_panel_avdd_default {
+	status = "disabled";
+};
+
+&sde_dsi1 {
+	status = "disabled";
+};
+
+&mdss_mdp {
+	connectors = <&sde_rscc &sde_wb1 &sde_wb2 &sde_dp &sde_dsi>;
+};
+
+&dsi_vtdr6130_amoled_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_qsync_wqhd_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_cmd_cphy {
+	status = "disabled";
+};
+
+&dsi_dual_nt35597_truly_cmd {
+	status = "disabled";
+};
+
+&dsi_nt35695b_truly_fhd_sl_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_10b_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_sec_hd_cmd {
+	status = "disabled";
+};
+
+&mdss_dsi_phy0 {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+};
+
+&mdss_dsi_phy1 {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&sde_dp {
+	qcom,aux-en-gpio = <&tlmm 50 0>;
+	qcom,aux-sel-gpio = <&tlmm 51 0>;
+	qcom,dp-gpio-aux-switch;
+};
