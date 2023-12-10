@@ -5,6 +5,8 @@
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
+#include "kalama-yodo-thermal.dtsi"
+
 &soc {
 
 	somc_pinctrl: somc_pinctrl {
@@ -3362,5 +3364,3 @@
 	qcom,led-mask = <9>; /* Channels 1 & 4 */
 	qcom,symmetry-en;
 };
-
-#include "sec_touchscreen.dtsi"
