@@ -1,0 +1,120 @@
+/* arch/arm64/boot/dts/qcom/kalama-yodo-pdx234_common.dtsi */
+
+#include "kalama-yodo-common.dtsi"
+
+&soc {
+};
+
+#include "somc-charger-yodo-common.dtsi"
+#include "somc-charger-yodo-pdx234.dtsi"
+#include "lxs_touchscreen_pdx234.dtsi"
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_73 &sm_gpio_100 &sm_gpio_110 &sm_gpio_111
+		     &sm_gpio_116 &sm_gpio_207>;
+};
+
+/* GPIO_73 : VREG_TELEC_AVDD_1P3_EN */
+&sm_gpio_73 {
+	mux {
+		pins = "gpio73";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio73";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_100 : CAM_MCLK0 */
+&sm_gpio_100 {
+	mux {
+		pins = "gpio100";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio100";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_110 : CCI_I2C0_SDA */
+&sm_gpio_110 {
+	mux {
+		pins = "gpio110";
+		function = "cci_i2c_sda0";
+	};
+
+	config {
+		pins = "gpio110";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_111 : CCI_I2C0_SCL */
+&sm_gpio_111 {
+	mux {
+		pins = "gpio111";
+		function = "cci_i2c_scl0";
+	};
+
+	config {
+		pins = "gpio111";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_116 : CAM0_RESET_N */
+&sm_gpio_116 {
+	mux {
+		pins = "gpio116";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio116";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_198 : OIS_TELE_I2C_SDA */
+/* Don't set here */
+
+/* GPIO_199 : OIS_TELE_I2C_SCL */
+/* Don't set here */
+
+/* GPIO_207 : OIS_ENABLE_TELE */
+&sm_gpio_207 {
+	mux {
+		pins = "gpio207";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio207";
+		drive-strength = <2>;
+		bias-pull-down;
+		input-enable;
+	};
+};
