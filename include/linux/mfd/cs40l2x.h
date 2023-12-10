@@ -22,10 +22,10 @@
 #include <linux/mutex.h>
 #include <linux/completion.h>
 #include <linux/firmware.h>
-#include "../platform_data/cs40l2x.h"
+#include <linux/platform_data/cs40l2x.h>
 #include <linux/input.h>
 
-#include "cs40l25-wavetable.h"
+#include <linux/mfd/cs40l25-wavetable.h>
 
 #define CS40L2X_FIRSTREG			0x00000000
 #define CS40L2X_LASTREG				0x03804FE8
@@ -655,7 +655,7 @@
 #define CS40L2X_DSP_TIMEOUT_COUNT		10 /* 1 count = 10 ms */
 #define CS40L2X_ACK_TIMEOUT_COUNT		10 /* 1 count = 1 ms */
 #define CS40L2X_OTP_TIMEOUT_COUNT		10 /* 1 count = 10 ms */
-#define CS40L2X_BASIC_TIMEOUT_COUNT		10 /* 1 count = 5 ms */
+#define CS40L2X_BASIC_TIMEOUT_COUNT		200 /* 1 count = 5 ms */
 
 #define CS40L2X_NUM_OTP_MAPS			3
 #define CS40L2X_NUM_OTP_WORDS			32
@@ -904,6 +904,12 @@
 	CS40L2X_PWLE_MAX_SEGS *\
 	CS40L2X_PWLE_MAX_SEG_BYTES) +\
 	CS40L2X_PWLE_NON_SEG_BYTES)
+#define CS40L2X_PWLE_MAX_SEG_STRING			67
+#define CS40L2X_PWLE_MAX_NON_SEG_STRING		28
+#define CS40L2X_PWLE_STRING_MAX ((\
+	CS40L2X_PWLE_MAX_SEGS *\
+	CS40L2X_PWLE_MAX_SEG_STRING) +\
+	CS40L2X_PWLE_MAX_NON_SEG_STRING)
 #define CS40L2X_PWLE_SEG_LEN_MAX		11
 #define CS40L2X_PWLE_MAX_RP_VAL			255
 #define CS40L2X_PWLE_MAX_WT_VAL			1023
@@ -1003,6 +1009,7 @@ struct cs40l2x_wseq_pair {
 struct cs40l2x_fw_desc {
 	unsigned int id;
 	unsigned int min_rev;
+	unsigned int halo_state_started;
 	unsigned int halo_state_run;
 	unsigned int num_coeff_files;
 	const char * const *coeff_files;
@@ -1060,7 +1067,7 @@ struct cs40l2x_private {
 	bool xm_append;
 	char wt_file[CS40L2X_WT_FILE_NAME_LEN_MAX];
 	char wt_date[CS40L2X_WT_FILE_DATE_LEN_MAX];
-	char pwle_str[CS40L2X_PWLE_TOTAL_VALS];
+	char pwle_str[CS40L2X_PWLE_STRING_MAX];
 	bool vibe_init_success;
 	bool vibe_state;
 	bool safe_save_state;

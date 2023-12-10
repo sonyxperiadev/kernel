@@ -28,8 +28,8 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include "../../include/linux/platform_data/cs40l2x.h"
-#include "../../include/linux/mfd/cs40l2x.h"
+#include <linux/platform_data/cs40l2x.h>
+#include <linux/mfd/cs40l2x.h>
 #include <linux/uaccess.h>
 
 #ifdef CONFIG_ANDROID_TIMED_OUTPUT
@@ -368,8 +368,8 @@ static int cs40l2x_read_wavetable(struct cs40l2x_private *cs40l2x, void *buf,
 
 		if (entry->type == WT_TYPE_TERMINATOR) {
 			table->nwaves = i;
-			table->bytes = max(dspmem_chunk_bytes(&ch),
-					   (int)((void *)max - buf));
+			table->bytes = max_t(int, dspmem_chunk_bytes(&ch),
+					   (void *)max - buf);
 
 			return table->bytes;
 		}
@@ -412,10 +412,8 @@ static int cs40l2x_get_wlength(struct cs40l2x_private *cs40l2x, int index)
 	case WT_TYPE_V6_PCM_F0_REDC:
 	case WT_TYPE_V6_PCM_F0_REDC_VAR:
 	case WT_TYPE_V6_PWLE:
-		break;
 	case WT_TYPE_V6_COMPOSITE:
-		dev_err(cs40l2x->dev, "Nested composites not allowed\n");
-		return -EINVAL;
+		break;
 	default:
 		dev_err(cs40l2x->dev, "Can't size waveform: %x\n", entry->type);
 		return -EINVAL;
@@ -712,9 +710,21 @@ static int cs40l2x_add_wt_slots(struct cs40l2x_private *cs40l2x,
 static int cs40l2x_convert_and_save_comp_data(struct cs40l2x_private *cs40l2x,
 					      bool over_write)
 {
+	struct wt_type10_comp *comp = &cs40l2x->pbq_comp;
+	struct wt_entry *entry;
 	unsigned int comp_size;
 	char *raw_composite_data;
-	int ret = 0;
+	int i, ret = 0;
+
+	/* Check for composite waveform */
+	for (i = 0; i < comp->nsections; i++) {
+		entry = cs40l2x_get_wave(cs40l2x, comp->sections[i].index);
+		if (entry->type == WT_TYPE_V6_COMPOSITE) {
+			dev_err(cs40l2x->dev,
+				"Nested composite waveforms can't be saved\n");
+				return -EINVAL;
+		}
+	}
 
 	raw_composite_data = kzalloc(CS40L2X_SINGLE_PACKED_MAX, GFP_KERNEL);
 	if (!raw_composite_data)
@@ -730,7 +740,8 @@ static int cs40l2x_convert_and_save_comp_data(struct cs40l2x_private *cs40l2x,
 
 	if (comp_size > (cs40l2x->comp_bytes / CS40L2X_WT_NUM_VIRT_SLOTS)) {
 		dev_err(cs40l2x->dev, "Waveform size exceeds available space\n");
-		return -ENOSPC;
+		ret = -ENOSPC;
+		goto err_free;
 	}
 
 	if (over_write)
@@ -826,7 +837,7 @@ static ssize_t cs40l2x_cp_trigger_index_impl(struct cs40l2x_private *cs40l2x,
 		gpio_rise = true;
 		gpio_index = CS40L2X_GPIO_RISE;
 		gpio_slot = cs40l2x->virtual_gpio1_rise_slot;
-		/* Intentional fall through */
+		fallthrough;
 	case CS40L2X_INDEX_GP1F_OVWR:
 		if (cs40l2x->last_type_entered ==
 			CS40L2X_WT_TYPE_10_COMP_FILE) {
@@ -879,7 +890,7 @@ static ssize_t cs40l2x_cp_trigger_index_impl(struct cs40l2x_private *cs40l2x,
 			ret = -EPERM;
 			break;
 		}
-		/* intentionally fall through */
+		fallthrough;
 	case CS40L2X_INDEX_DIAG:
 		if (cs40l2x->fw_desc->id == cs40l2x->fw_id_remap)
 			ret = cs40l2x_firmware_swap(cs40l2x,
@@ -1263,13 +1274,14 @@ static ssize_t cs40l2x_cp_trigger_queue_store(struct device *dev,
 			goto err_mutex;
 	}
 
-	if (comp->repeat == WT_REPEAT_LOOP_MARKER) {
-		comp->wlength = WT_WAVELEN_INDEFINITE;
-	} else {
-		comp->wlength *= comp->repeat + 1;
-		clamp_t(unsigned int, comp->wlength, 0, WT_WAVELEN_MAX);
-	}
-	comp->wlength |= WT_WAVELEN_CALCULATED;
+	comp->wlength *= comp->repeat + 1;
+	clamp_t(unsigned int, comp->wlength, 0, WT_WAVELEN_MAX);
+
+	if (comp->wlength)
+		comp->wlength |= WT_WAVELEN_CALCULATED;
+
+	if (comp->repeat == WT_REPEAT_LOOP_MARKER)
+		comp->wlength |= WT_WAVELEN_INDEFINITE;
 
 	cs40l2x->last_type_entered = CS40L2X_WT_TYPE_10_COMP_FILE;
 	cs40l2x->queue_stored = true;
@@ -1294,15 +1306,16 @@ static int cs40l2x_save_packed_pwle_data(struct cs40l2x_private *cs40l2x,
 	char *zero_pad_data;
 	int ret;
 
-	zero_pad_data = kzalloc(CS40L2X_PWLE_BYTES_MAX, GFP_KERNEL);
+	zero_pad_data = kzalloc(CS40L2X_PWLE_STRING_MAX, GFP_KERNEL);
 	if (!zero_pad_data)
 		return -ENOMEM;
 
 	ret = cs40l2x_write_pwle(cs40l2x, zero_pad_data,
-				 CS40L2X_PWLE_BYTES_MAX, pwle);
+				 CS40L2X_PWLE_STRING_MAX, pwle);
 
 	if (ret > (cs40l2x->comp_bytes / CS40L2X_WT_NUM_VIRT_SLOTS)) {
 		dev_err(cs40l2x->dev, "PWLE size exceeds available space\n");
+		kfree(zero_pad_data);
 		return -ENOSPC;
 	}
 
@@ -1410,7 +1423,7 @@ static int cs40l2x_pwle_time_entry(struct cs40l2x_private *cs40l2x, char *token,
 
 	section->time = val / (100 / 4);
 
-	if (val == CS40L2X_PWLE_INDEF_TIME_VAL)
+	if (section->time == CS40L2X_PWLE_INDEF_TIME_VAL)
 		*indef = true;
 	else
 		pwle->wlength += section->time;
@@ -1455,10 +1468,12 @@ static int cs40l2x_pwle_frequency_entry(struct cs40l2x_private *cs40l2x,
 		return ret;
 	}
 
-	if (cs40l2x->ext_freq_min_fw)
+	if (cs40l2x->ext_freq_min_fw) {
 		section->frequency = (val / (1000 / 4));
-	else
+		section->flags |= WT_T12_FLAG_EXT_FREQ;
+	} else {
 		section->frequency = (val / (1000 / 8)) - 400;
+	}
 
 	return ret;
 }
@@ -1504,8 +1519,12 @@ static ssize_t cs40l2x_pwle_store(struct device *dev,
 	bool a = false, v = false;
 	int ret;
 
+	if (count > CS40L2X_PWLE_STRING_MAX - 1) {
+		dev_err(dev, "PWLE string too large\n");
+		return -E2BIG;
+	}
 
-	pwle_str = kzalloc(count, GFP_KERNEL);
+	pwle_str = kzalloc(count+1, GFP_KERNEL);
 	if (!pwle_str)
 		return -ENOMEM;
 
@@ -1529,7 +1548,9 @@ static ssize_t cs40l2x_pwle_store(struct device *dev,
 
 	section = pwle->sections;
 
-	strlcpy(pwle_str, buf, count);
+	ret = strscpy(pwle_str, buf, count+1);
+	if (ret == -E2BIG)
+		goto err_exit;
 
 	cur = pwle_str;
 
@@ -1542,6 +1563,13 @@ static ssize_t cs40l2x_pwle_store(struct device *dev,
 		}
 
 		type = strsep(&token, ":");
+		if (!type || !token) {
+			dev_err(cs40l2x->dev,
+				"Malformed PWLE. : not found\n");
+			ret = -EINVAL;
+			goto err_exit;
+		}
+
 		token = strim(token);
 
 		if (type[0] == 'S') {
@@ -1720,7 +1748,10 @@ static ssize_t cs40l2x_pwle_store(struct device *dev,
 
 	pwle->nsections = num_segs;
 
-	strlcpy(cs40l2x->pwle_str, buf, count);
+	ret = strscpy(cs40l2x->pwle_str, buf, CS40L2X_PWLE_STRING_MAX);
+	if (ret == -E2BIG)
+		goto err_exit;
+
 	cs40l2x->pwle_str_size = count;
 
 	pwle->wlength *= pwle->repeat + 1;
@@ -1730,10 +1761,11 @@ static ssize_t cs40l2x_pwle_store(struct device *dev,
 	/* Convert from 1/4mS's to samples at 8kHz for waveform length */
 	pwle->wlength *= 2;
 
+	if (pwle->wlength)
+		pwle->wlength |= WT_WAVELEN_CALCULATED;
+
 	if (indef)
 		pwle->wlength |= WT_WAVELEN_INDEFINITE;
-
-	pwle->wlength |= WT_WAVELEN_CALCULATED;
 
 	ret = cs40l2x_save_packed_pwle_data(cs40l2x, pwle, feature, save_pwle);
 	if (ret) {
@@ -6414,12 +6446,6 @@ static void cs40l2x_vibe_mode_worker(struct work_struct *work)
 			goto err_exit;
 
 		ret = cs40l2x_ack_write(cs40l2x, CS40L2X_MBOX_USER_CONTROL,
-					CS40L2X_USER_CTRL_REINIT_A2H,
-					CS40L2X_USER_CTRL_SUCCESS);
-		if (ret)
-			goto err_exit;
-
-		ret = cs40l2x_ack_write(cs40l2x, CS40L2X_MBOX_USER_CONTROL,
 					CS40L2X_A2H_I2S_START,
 					CS40L2X_USER_CTRL_SUCCESS);
 		if (ret)
@@ -6554,9 +6580,11 @@ static int cs40l2x_pbq_play(struct cs40l2x_private *cs40l2x,
 
 	ret = cs40l2x_ack_write(cs40l2x, CS40L2X_MBOX_TRIGGERINDEX,
 				section->index, CS40L2X_MBOX_TRIGGERRESET);
-	if (ret)
+	if (ret) {
+		cs40l2x_set_state(cs40l2x, CS40L2X_VIBE_STATE_STOPPED);
+		dev_err(cs40l2x->dev, "Cannot set PBQ index %d\n", section->index);
 		return ret;
-
+	}
 	cs40l2x->pbq_state = CS40L2X_PBQ_STATE_PLAYING;
 
 	if (cs40l2x->event_control & CS40L2X_EVENT_END_ENABLED)
@@ -7139,7 +7167,7 @@ static void cs40l2x_vibe_start_worker(struct work_struct *work)
 			if (ret)
 				goto err_mutex;
 		}
-	/* intentional fall through */
+	fallthrough;
 	case CS40L2X_INDEX_VIBE:
 	case CS40L2X_INDEX_CONT_MIN ... CS40L2X_INDEX_CONT_MAX:
 	case CS40L2X_INDEX_QEST:
@@ -7282,6 +7310,9 @@ static void cs40l2x_vibe_start_worker(struct work_struct *work)
 		ret = cs40l2x_ack_write(cs40l2x, CS40L2X_MBOX_TRIGGERINDEX,
 				cs40l2x->cp_trailer_index,
 				CS40L2X_MBOX_TRIGGERRESET);
+		if (ret)
+			dev_err(dev, "Cannot set %d index to mailbox\n",
+				cs40l2x->cp_trailer_index);
 		break;
 
 	case CS40L2X_INDEX_PBQ:
@@ -7421,7 +7452,7 @@ static void cs40l2x_vibe_stop_worker(struct work_struct *work)
 				cs40l2x->peak_gpio1_enable);
 		if (ret)
 			dev_err(dev, "Failed to restore GPIO1 configuration\n");
-		/* intentionally fall through */
+		fallthrough;
 
 	case CS40L2X_INDEX_VIBE:
 	case CS40L2X_INDEX_CONT_MIN ... CS40L2X_INDEX_CONT_MAX:
@@ -8268,7 +8299,8 @@ static int cs40l2x_dsp_start(struct cs40l2x_private *cs40l2x)
 		return ret;
 	}
 
-	if (dsp_timeout == 0 || dsp_scratch != 0) {
+	if ((dsp_timeout == 0 && dsp_status != cs40l2x->fw_desc->halo_state_started) ||
+		dsp_scratch != 0) {
 		dev_err(dev, "Timed out with DSP status, scratch = %u, %u\n",
 				dsp_status, dsp_scratch);
 		return -ETIME;
@@ -8795,15 +8827,15 @@ int cs40l2x_coeff_file_parse(struct cs40l2x_private *cs40l2x,
 		if (!strncmp(cs40l2x->wt_file,
 				CS40L2X_WT_FILE_NAME_MISSING,
 				CS40L2X_WT_FILE_NAME_LEN_MAX))
-			strlcpy(cs40l2x->wt_file,
+			strscpy(cs40l2x->wt_file,
 					CS40L2X_WT_FILE_NAME_DEFAULT,
 					CS40L2X_WT_FILE_NAME_LEN_MAX);
 
 		if (*wt_date != '\0')
-			strlcpy(cs40l2x->wt_date, wt_date,
+			strscpy(cs40l2x->wt_date, wt_date,
 					CS40L2X_WT_FILE_DATE_LEN_MAX);
 		else
-			strlcpy(cs40l2x->wt_date,
+			strscpy(cs40l2x->wt_date,
 					CS40L2X_WT_FILE_DATE_MISSING,
 					CS40L2X_WT_FILE_DATE_LEN_MAX);
 
@@ -9115,7 +9147,7 @@ static void cs40l2x_firmware_load(const struct firmware *fw, void *context)
 				CS40L2X_CLAB_CONFIG_FILE_NAME,
 				CS40L2X_WT_FILE_NAME_LEN_MAX))
 			cs40l2x->clab_bin_found = true;
-		request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+		request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT,
 				cs40l2x->fw_desc->coeff_files[i], dev,
 				GFP_KERNEL, cs40l2x, cs40l2x_coeff_file_load);
 	}
@@ -9276,7 +9308,7 @@ static int cs40l2x_wavetable_swap(struct cs40l2x_private *cs40l2x,
 	if (ret1)
 		return ret1;
 
-	strlcpy(cs40l2x->wt_file, wt_file, CS40L2X_WT_FILE_NAME_LEN_MAX);
+	strscpy(cs40l2x->wt_file, wt_file, CS40L2X_WT_FILE_NAME_LEN_MAX);
 
 	ret1 = regmap_write(regmap,
 			cs40l2x_dsp_reg(cs40l2x, "NUMBEROFWAVES",
@@ -10440,8 +10472,15 @@ static int cs40l2x_basic_mode_exit(struct cs40l2x_private *cs40l2x)
 	}
 
 	if (i == CS40L2X_BASIC_TIMEOUT_COUNT) {
-		dev_err(dev, "Timed out waiting for basic-mode heartbeat\n");
-		return -ETIME;
+		dev_warn(dev, "Timed out waiting for basic-mode heartbeat\n");
+
+		ret = regmap_update_bits(regmap, CS40L2X_DSP1_CCM_CORE_CONTROL,
+				 CS40L2X_DSP1_CCM_CORE_EN_MASK, 0);
+		if (ret) {
+			dev_err(dev, "Failed to stop DSP\n");
+			return ret;
+		}
+		goto heartbeat_timeout;
 	}
 
 	ret = cs40l2x_ack_write(cs40l2x, CS40L2X_BASIC_SHUTDOWNREQUEST, 1, 0);
@@ -10487,7 +10526,7 @@ static int cs40l2x_basic_mode_exit(struct cs40l2x_private *cs40l2x)
 		if (ret)
 			return ret;
 	}
-
+heartbeat_timeout:
 	ret = regmap_multi_reg_write(regmap, cs40l2x_basic_mode_revert,
 			ARRAY_SIZE(cs40l2x_basic_mode_revert));
 	if (ret) {
@@ -10727,7 +10766,7 @@ static irqreturn_t cs40l2x_irq(int irq, void *data)
 		case CS40L2X_EVENT_CTRL_TRIG_STOP:
 			queue_work(cs40l2x->vibe_workqueue,
 					&cs40l2x->vibe_pbq_work);
-			/* intentionally fall through */
+			fallthrough;
 		case CS40L2X_EVENT_CTRL_GPIO_STOP:
 			if (asp_timeout > 0)
 				hrtimer_start(&cs40l2x->asp_timer,
@@ -10910,10 +10949,10 @@ static int cs40l2x_i2c_probe(struct i2c_client *i2c_client,
 	cs40l2x->wt_ym.waves[0].type = WT_TYPE_TERMINATOR;
 	cs40l2x->wt_ym.waves[0].flags = WT_FLAG_TERMINATOR;
 
-	strlcpy(cs40l2x->wt_file,
+	strscpy(cs40l2x->wt_file,
 			CS40L2X_WT_FILE_NAME_MISSING,
 			CS40L2X_WT_FILE_NAME_LEN_MAX);
-	strlcpy(cs40l2x->wt_date,
+	strscpy(cs40l2x->wt_date,
 			CS40L2X_WT_FILE_DATE_MISSING,
 			CS40L2X_WT_FILE_DATE_LEN_MAX);
 
@@ -11013,7 +11052,7 @@ static int cs40l2x_i2c_probe(struct i2c_client *i2c_client,
 	if (ret)
 		goto err;
 
-	request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+	request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT,
 			cs40l2x->fw_desc->fw_file, dev, GFP_KERNEL, cs40l2x,
 			cs40l2x_firmware_load);
 

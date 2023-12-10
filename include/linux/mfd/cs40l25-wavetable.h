@@ -96,6 +96,7 @@ struct wt_type10_comp {
 #define WT_T12_FLAG_CHIRP	BIT(7)
 #define WT_T12_FLAG_BRAKE	BIT(6)
 #define WT_T12_FLAG_AMP_REG	BIT(5)
+#define WT_T12_FLAG_EXT_FREQ	BIT(4)
 
 struct wt_type12_pwle_section {
 	u16 time;
