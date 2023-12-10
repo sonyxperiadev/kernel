@@ -59,6 +59,10 @@
 				qcom,mdss-dsi-video-mode;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,dsi-wd-jitter-enable;
+				qcom,mdss-dsi-panel-jitter = <0x2 0x1>;
+				qcom,dsi-wd-ltj-max-jitter = <0x4 0x1>;
+				qcom,dsi-wd-ltj-time-sec = <3600>;
 				qcom,mdss-dsi-panel-timings =
 					[00 21 09 09 24 23 08 08 08 03 04 00];
 				qcom,cmd-on-commands =
@@ -212,13 +216,17 @@
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <100>;
-				qcom,mdss-dsi-v-front-porch = <740>;
+				qcom,mdss-dsi-v-front-porch = <100>;
 				qcom,mdss-dsi-v-pulse-width = <40>;
 				qcom,mdss-dsi-h-left-border = <0>;
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,dsi-wd-jitter-enable;
+				qcom,mdss-dsi-panel-jitter = <0x2 0x1>;
+				qcom,dsi-wd-ltj-max-jitter = <0x4 0x1>;
+				qcom,dsi-wd-ltj-time-sec = <3600>;
 				qcom,mdss-dsi-panel-timings =
 					[00 21 09 09 24 23 08 08 08 03 04 00];
 				qcom,mdss-dsi-on-command =
@@ -266,7 +274,7 @@
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <100>;
-				qcom,mdss-dsi-v-front-porch = <1380>;
+				qcom,mdss-dsi-v-front-porch = <100>;
 				qcom,mdss-dsi-v-pulse-width = <40>;
 				qcom,mdss-dsi-h-left-border = <0>;
 				qcom,mdss-dsi-h-right-border = <0>;
@@ -320,7 +328,7 @@
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <100>;
-				qcom,mdss-dsi-v-front-porch = <740>;
+				qcom,mdss-dsi-v-front-porch = <100>;
 				qcom,mdss-dsi-v-pulse-width = <40>;
 				qcom,mdss-dsi-panel-framerate = <90>;
 				qcom,mdss-dsi-panel-timings =
@@ -356,14 +364,12 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 				qcom,compression-mode = "dsc";
-				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <20>;
 				qcom,mdss-dsc-slice-width = <540>;
 				qcom,mdss-dsc-slice-per-pkt = <1>;
 				qcom,mdss-dsc-bit-per-component = <8>;
 				qcom,mdss-dsc-bit-per-pixel = <8>;
 				qcom,mdss-dsc-block-prediction-enable;
-				qcom,src-chroma-format = <1>;
 			};
 
 			timing@5 {
@@ -383,6 +389,10 @@
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-framerate = <180>;
+				qcom,dsi-wd-jitter-enable;
+				qcom,mdss-dsi-panel-jitter = <0x2 0x1>;
+				qcom,dsi-wd-ltj-max-jitter = <0x4 0x1>;
+				qcom,dsi-wd-ltj-time-sec = <3600>;
 				qcom,disable-rsc-solver;
 
 				qcom,mdss-dsi-on-command =
@@ -437,6 +447,10 @@
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-framerate = <240>;
+				qcom,dsi-wd-jitter-enable;
+				qcom,mdss-dsi-panel-jitter = <0x2 0x1>;
+				qcom,dsi-wd-ltj-max-jitter = <0x4 0x1>;
+				qcom,dsi-wd-ltj-time-sec = <3600>;
 				qcom,disable-rsc-solver;
 
 				qcom,mdss-dsi-on-command =
@@ -484,13 +498,336 @@
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <100>;
-				qcom,mdss-dsi-v-front-porch = <740>;
+				qcom,mdss-dsi-v-front-porch = <100>;
 				qcom,mdss-dsi-v-pulse-width = <40>;
 				qcom,mdss-dsi-h-left-border = <0>;
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-framerate = <120>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@8 {
+				cell-index = <8>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <1>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@9 {
+				cell-index = <9>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <5>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@10 {
+				cell-index = <10>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <10>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@11 {
+				cell-index = <11>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <24>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@12 {
+				cell-index = <12>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <30>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-panel-timings =
+					[00 21 09 09 24 23 08 08 08 03 04 00];
+				qcom,mdss-dsi-on-command =
+					[29 01 00 00 00 00 02 b0 03
+					05 01 00 00 0a 00 01 00
+					/* Soft reset, wait 10ms */
+					15 01 00 00 0a 00 02 3a 77
+					/* Set Pixel format (24 bpp) */
+					39 01 00 00 0a 00 05 2a 00 00 04 ff
+					/* Set Column address */
+					39 01 00 00 0a 00 05 2b 00 00 05 9f
+					/* Set page address */
+					15 01 00 00 0a 00 02 35 00
+					/* Set tear on */
+					39 01 00 00 0a 00 03 44 00 00
+					/* Set tear scan line */
+					15 01 00 00 0a 00 02 51 ff
+					/* write display brightness */
+					15 01 00 00 0a 00 02 53 24
+					 /* write control brightness */
+					15 01 00 00 0a 00 02 55 00
+					/* CABC brightness */
+					05 01 00 00 78 00 01 11
+					/* exit sleep mode, wait 120ms */
+					05 01 00 00 10 00 01 29];
+					/* Set display on, wait 16ms */
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command =
+					[05 01 00 00 32 00 02 28 00
+					05 01 00 00 78 00 02 10 00];
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <1>;
+				qcom,mdss-dsc-bit-per-component = <8>;
+				qcom,mdss-dsc-bit-per-pixel = <8>;
+				qcom,mdss-dsc-block-prediction-enable;
+			};
+
+			timing@13 {
+				cell-index = <13>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <120>;
+				qcom,mdss-dsi-h-back-porch = <460>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <100>;
+				qcom,mdss-dsi-v-front-porch = <100>;
+				qcom,mdss-dsi-v-pulse-width = <40>;
+				qcom,mdss-dsi-panel-framerate = <144>;
 				qcom,mdss-dsi-panel-timings =
 					[00 21 09 09 24 23 08 08 08 03 04 00];
 				qcom,mdss-dsi-on-command =

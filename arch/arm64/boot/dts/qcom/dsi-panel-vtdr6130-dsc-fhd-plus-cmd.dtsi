@@ -30,6 +30,11 @@
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
 
+		qcom,mdss-dsi-panel-hdr-color-primaries = <14500 15500 32000
+				17000 15500 30000 8000 3000>;
+		qcom,mdss-dsi-panel-peak-brightness = <4200000>;
+		qcom,mdss-dsi-panel-blackness-level = <3230>;
+
 		qcom,mdss-dsi-te-pin-select = <1>;
 		qcom,mdss-dsi-wr-mem-start = <0x2c>;
 		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
@@ -44,19 +49,19 @@
 				qcom,mdss-dsi-panel-framerate = <144>;
 				qcom,mdss-dsi-panel-width = <1080>;
 				qcom,mdss-dsi-panel-height = <2400>;
-				qcom,mdss-dsi-h-front-porch = <20>;
-				qcom,mdss-dsi-h-back-porch = <20>;
+				qcom,mdss-dsi-h-front-porch = <10>;
+				qcom,mdss-dsi-h-back-porch = <16>;
 				qcom,mdss-dsi-h-pulse-width = <2>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
-				qcom,mdss-dsi-v-back-porch = <18>;
-				qcom,mdss-dsi-v-front-porch = <20>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-front-porch = <18>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-h-left-border = <0>;
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
-				qcom,mdss-dsi-panel-clockrate = <847480320>;
+				qcom,mdss-dsi-panel-clockrate = <813936000>;
 
 				qcom,mdss-dsi-timing-switch-command = [
 					39 01 00 00 00 00 02 6c 01
@@ -75,7 +80,7 @@
 					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 51 00 00
-					39 01 00 00 00 00 02 59 00
+					39 01 00 00 00 00 02 59 09
 					39 01 00 00 00 00 02 6c 01
 					39 01 00 00 00 00 02 6d 00
 					39 01 00 00 00 00 02 6f 02
@@ -89,8 +94,6 @@
 					   b6 4b b6 4b f4 4b f4 6c 34 84 74 00
 					   00 00 00 00 00
 					39 01 00 00 00 00 03 f0 aa 10
-					39 01 00 00 00 00 02 65 16
-					39 01 00 00 00 00 03 EB 00 00
 					39 01 00 00 00 00 16 b1 01 38 00 14 00
 					   1c 00 01 66 00 14 00 14 00 01 66 00
 					   14 05 cc 00
@@ -135,7 +138,7 @@
 					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 51 00 00
-					39 01 00 00 00 00 02 59 00
+					39 01 00 00 00 00 02 59 09
 					39 01 00 00 00 00 02 6C 01
 					39 01 00 00 00 00 02 6D 00
 					39 01 00 00 00 00 02 6F 01
@@ -149,8 +152,6 @@
 					   B6 4B B6 4B F4 4B F4 6C 34 84 74 00
 					   00 00 00 00 00
 					39 01 00 00 00 00 03 F0 AA 10
-					39 01 00 00 00 00 02 65 16
-					39 01 00 00 00 00 03 EB 00 00
 					39 01 00 00 00 00 16 B1 01 38 00 14 00
 					   1C 00 01 66 00 14 00 14 00 01 66 00
 					   14 05 CC 00
@@ -244,7 +245,7 @@
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
-				qcom,mdss-dsi-panel-clockrate = <847480320>;
+				qcom,mdss-dsi-panel-clockrate = <813936000>;
 
 				qcom,mdss-dsi-timing-switch-command = [
 					39 01 00 00 00 00 02 6c 01
@@ -263,7 +264,7 @@
 					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 51 00 00
-					39 01 00 00 00 00 02 59 00
+					39 01 00 00 00 00 02 59 09
 					39 01 00 00 00 00 02 6c 01
 					39 01 00 00 00 00 02 6d 00
 					39 01 00 00 00 00 02 6f 02
@@ -277,8 +278,6 @@
 					   b6 4b b6 4b f4 4b f4 6c 34 84 74 00
 					   00 00 00 00 00
 					39 01 00 00 00 00 03 f0 aa 10
-					39 01 00 00 00 00 02 65 16
-					39 01 00 00 00 00 03 EB 00 00
 					39 01 00 00 00 00 16 b1 01 38 00 14 00
 					   1c 00 01 66 00 14 01 fc 00 01 66 00
 					   14 0d 6c 00
@@ -352,7 +351,7 @@
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
-				qcom,mdss-dsi-panel-clockrate = <847480320>;
+				qcom,mdss-dsi-panel-clockrate = <813936000>;
 
 				qcom,mdss-dsi-timing-switch-command = [
 					39 01 00 00 00 00 02 6c 02
@@ -371,7 +370,7 @@
 					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 51 00 00
-					39 01 00 00 00 00 02 59 00
+					39 01 00 00 00 00 02 59 09
 					39 01 00 00 00 00 02 6c 02
 					39 01 00 00 00 00 02 6d 00
 					39 01 00 00 00 00 02 6f 02
@@ -385,8 +384,6 @@
 					   b6 4b b6 4b f4 4b f4 6c 34 84 74 00
 					   00 00 00 00 00
 					39 01 00 00 00 00 03 f0 aa 10
-					39 01 00 00 00 00 02 65 16
-					39 01 00 00 00 00 03 EB 00 00
 					39 01 00 00 00 00 16 b1 01 38 00 14 00
 					   1c 00 01 66 00 14 00 14 00 01 66 00
 					   14 05 cc 00
@@ -460,7 +457,7 @@
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
 				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
-				qcom,mdss-dsi-panel-clockrate = <847480320>;
+				qcom,mdss-dsi-panel-clockrate = <813936000>;
 
 				qcom,mdss-dsi-timing-switch-command = [
 					39 01 00 00 00 00 02 6c 02
@@ -479,7 +476,7 @@
 					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 51 00 00
-					39 01 00 00 00 00 02 59 00
+					39 01 00 00 00 00 02 59 09
 					39 01 00 00 00 00 02 6c 02
 					39 01 00 00 00 00 02 6d 00
 					39 01 00 00 00 00 02 6f 02
@@ -493,8 +490,6 @@
 					   b6 4b b6 4b f4 4b f4 6c 34 84 74 00
 					   00 00 00 00 00
 					39 01 00 00 00 00 03 f0 aa 10
-					39 01 00 00 00 00 02 65 16
-					39 01 00 00 00 00 03 EB 00 00
 					39 01 00 00 00 00 16 b1 01 38 00 14 00
 					   1c 00 01 66 00 14 01 fc 00 01 66 00
 					   14 0d 6c 00

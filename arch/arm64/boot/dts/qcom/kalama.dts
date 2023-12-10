@@ -1,0 +1,9 @@
+/dts-v1/;
+
+#include "kalama.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kalama SoC";
+	compatible = "qcom,kalama";
+	qcom,board-id = <0 0>;
+};
