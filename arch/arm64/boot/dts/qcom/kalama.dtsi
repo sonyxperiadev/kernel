@@ -3898,6 +3898,20 @@
 #include "kalama-pcie.dtsi"
 #include "msm-rdbg.dtsi"
 #include "kalama-thermal.dtsi"
+#include "kalama-audio.dtsi"
+#include "kalama-bt.dtsi"
+#include "kalama-camera.dtsi"
+#include "kalama-cnss.dtsi"
+#include "kalama-ese-common.dtsi"
+#include "kalama-eva.dtsi"
+#include "kalama-gpu.dtsi"
+#include "kalama-gpu-pwrlevels.dtsi"
+#include "kalama-hw-fence.dtsi"
+#include "kalama-ipa.dtsi"
+#include "kalama-mmrm.dtsi"
+#include "kalama-mmrm-test.dtsi"
+#include "kalama-sde.dtsi"
+#include "kalama-vidc.dtsi"
 
 &qupv3_se7_2uart {
 	status = "ok";
