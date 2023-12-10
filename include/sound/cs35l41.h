@@ -123,7 +123,6 @@ struct cs35l41_private {
 	struct workqueue_struct *wq;
 	struct mutex hb_lock;
 	struct cs35l41_rst_cache reset_cache;
-	struct mutex rate_lock;
 	struct mutex force_int_lock;
 	struct cs35l41_vol_ctl vol_ctl;
 	unsigned int ctl_cache[CS35L41_CTRL_CACHE_SIZE];

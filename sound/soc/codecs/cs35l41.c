@@ -3012,7 +3012,7 @@ static struct snd_soc_dai_driver cs35l41_dai[] = {
 			.formats = CS35L41_TX_FORMATS,
 		},
 		.ops = &cs35l41_ops,
-		.symmetric_rates = 1,
+		.symmetric_rate = 1,
 	},
 };
 
@@ -3331,8 +3331,7 @@ static int cs35l41_dsp_init(struct cs35l41_private *cs35l41)
 			cs35l41_fs_errata_patch,
 			ARRAY_SIZE(cs35l41_fs_errata_patch));
 
-	mutex_init(&cs35l41->rate_lock);
-	ret = wm_halo_init(dsp, &cs35l41->rate_lock);
+	ret = wm_halo_init(dsp);
 	if (ret != 0) {
 		dev_err(cs35l41->dev, "wm_halo_init failed\n");
 		goto err;
@@ -3370,7 +3369,6 @@ static int cs35l41_dsp_init(struct cs35l41_private *cs35l41)
 err_dsp:
 	wm_adsp2_remove(dsp);
 err:
-	mutex_destroy(&cs35l41->rate_lock);
 	return ret;
 }
 
@@ -4022,7 +4020,6 @@ int cs35l41_remove(struct cs35l41_private *cs35l41)
 			     CS35L41_INT3_MASK_DEFAULT);
 	mutex_destroy(&cs35l41->force_int_lock);
 	wm_adsp2_remove(&cs35l41->dsp);
-	mutex_destroy(&cs35l41->rate_lock);
 	regulator_bulk_disable(cs35l41->num_supplies, cs35l41->supplies);
 	snd_soc_unregister_component(cs35l41->dev);
 	return 0;
