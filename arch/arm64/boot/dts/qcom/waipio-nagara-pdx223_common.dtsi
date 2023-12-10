@@ -179,3 +179,4 @@
 #include "somc-nagara-audio-common.dtsi"
 #include "somc-nagara-audio-pdx223.dtsi"
 #include "waipio-camera-sensor-nagara-pdx223.dtsi"
+#include "sec_touchscreen_pdx223.dtsi"
