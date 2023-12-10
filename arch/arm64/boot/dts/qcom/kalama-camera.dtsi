@@ -1,4 +1,4 @@
-#include <dt-bindings/msm-camera.h>
+#include <dt-bindings/msm/msm-camera.h>
 
 &tlmm {
 	cci_i2c_sda0_active: cci_i2c_sda0_active {
