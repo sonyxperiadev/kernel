@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2018-2020 Cirrus Logic, Inc.
 
-#include "../../include/linux/mfd/cs40l2x.h"
+#include <linux/mfd/cs40l2x.h>
 
 const unsigned char cs40l2x_bst_k1_table[4][5] = {
 	{0x24, 0x32, 0x32, 0x4F, 0x57},
@@ -723,6 +723,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_ORIG,
 		.min_rev = 0x050102,
+		.halo_state_started = 1,
 		.halo_state_run = 2,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_orig),
 		.coeff_files = cs40l2x_coeff_files_orig,
@@ -731,6 +732,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_B1ROM,
 		.min_rev = 0x010002,
+		.halo_state_started = 1,
 		.halo_state_run = 2,
 		.num_coeff_files = 0,
 		.coeff_files = NULL,
@@ -739,6 +741,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_REMAP,
 		.min_rev = 0x080100,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_remap),
 		.coeff_files = cs40l2x_coeff_files_remap,
@@ -747,6 +750,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_CAL,
 		.min_rev = 0x080100,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_cal),
 		.coeff_files = cs40l2x_coeff_files_cal,
@@ -755,6 +759,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_CLAB,
 		.min_rev = 0x080100,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_clab),
 		.coeff_files = cs40l2x_coeff_files_clab,
@@ -763,6 +768,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_PAR,
 		.min_rev = 0x080A00,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_par),
 		.coeff_files = cs40l2x_coeff_files_par,
@@ -771,6 +777,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_A2H,
 		.min_rev = 0x080A05,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_a2h),
 		.coeff_files = cs40l2x_coeff_files_a2h,
@@ -779,6 +786,7 @@ const struct cs40l2x_fw_desc cs40l2x_fw_fam[CS40L2X_NUM_FW_FAMS] = {
 	{
 		.id = CS40L2X_FW_ID_DF0_CLAB,
 		.min_rev = 0x0A0303,
+		.halo_state_started = 202,
 		.halo_state_run = 203,
 		.num_coeff_files = ARRAY_SIZE(cs40l2x_coeff_files_df0_clab),
 		.coeff_files = cs40l2x_coeff_files_df0_clab,
