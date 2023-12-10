@@ -1,0 +1,120 @@
+#include <dt-bindings/interconnect/qcom,kalama.h>
+
+&tlmm {
+        bt_en_sleep: bt_en_sleep {
+                mux {
+                        pins = "gpio81";
+                        function = "gpio";
+                };
+
+                config {
+                        pins = "gpio81";
+                        drive-strength = <2>;
+                        output-low;
+                        bias-pull-down;
+                };
+        };
+};
+
+&soc {
+	bluetooth: bt-qca-converged {
+		compatible = "qcom,bt-qca-converged";
+		qcom,converged-dt;
+		qcom,wlan-sw-ctrl-gpio = <&tlmm 83 0>; /* WLAN_SW_CNTRL_GPIO*/
+		bt_kiwi {
+			compatible = "qcom,kiwi";
+			pinctrl-names = "default";
+			pinctrl-0 = <&bt_en_sleep>;
+			qcom,bt-reset-gpio = <&tlmm 81 0>; /* BT_EN */
+			qcom,wl-reset-gpio = <&tlmm 80 0>; /* WL_EN */
+			qcom,bt-sw-ctrl-gpio = <&tlmm 82 0>; /* SW_CTRL */
+			mboxes = <&qmp_aop 0>;
+			qcom,bt-vdd18-aon-supply  = <&L15B>; /* BT VDD1.8 AON */
+			qcom,bt-vdd-dig-supply    = <&S4E>; /* BT LDO*/
+			qcom,bt-vdd-aon-supply    = <&S4E>; /* BT AON LDO*/
+			qcom,bt-vdd-rfaOp8-supply = <&S4E>; /* BT RFAOp8 CMN LDO*/
+			qcom,bt-vdd-rfa1-supply   = <&S4G>;   /* BT RFA1.2 LDO */
+			qcom,bt-vdd-rfa2-supply   = <&S6G>; /* BT RFA1.8 LDO */
+
+			qcom,bt-vdd18-aon-config  = <1800000 1800000 0 1>;
+			qcom,bt-vdd-aon-config    = <950000 950000 0 1>;
+			qcom,bt-vdd-dig-config    = <950000 950000 0 1>;
+			qcom,bt-vdd-rfaOp8-config = <950000 950000 0 1>;
+			qcom,bt-vdd-rfa1-config   = <1350000 1350000 0 1>;
+			qcom,bt-vdd-rfa2-config   = <1900000 1900000 0 1>;
+			qcom,pdc_init_table=
+				"{class: wlan_pdc, ss: rf, res: s4e.v, upval: 916}",
+				"{class: wlan_pdc, ss: rf, res: s4e.v, dwnval: 612}",
+				"{class: wlan_pdc, ss: rf, res: s4g.v, upval: 1316}",
+				"{class: wlan_pdc, ss: rf, res: s4g.v, dwnval: 944}",
+				"{class: wlan_pdc, ss: rf, res: s6g.v, upval: 1864}",
+				"{class: wlan_pdc, ss: rf, res: s6g.v, dwnval: 1820}";
+		};
+		bt_qca6490 {
+			compatible = "qcom,qca6490";
+			pinctrl-names = "default";
+			pinctrl-0 = <&bt_en_sleep>;
+			qcom,bt-reset-gpio = <&tlmm 81 0>; /* BT_EN */
+			qcom,wl-reset-gpio = <&tlmm 80 0>; /* WL_EN */
+			qcom,bt-sw-ctrl-gpio = <&tlmm 82 0>; /* SW_CTRL */
+			mboxes = <&qmp_aop 0>;
+			qcom,bt-vdd-io-supply  = <&L15B>; /* BT VDD1.8 AON */
+			qcom,bt-vdd-aon-supply = <&S4E>;
+			qcom,bt-vdd-dig-supply = <&S4E>;
+			qcom,bt-vdd-rfaOp8-supply = <&S4E>; /* BT RFAOp8 CMN LDO*/
+			qcom,bt-vdd-rfa1-supply = <&S6G>;
+			qcom,bt-vdd-rfa2-supply = <&S4G>;
+
+			qcom,bt-vdd-io-config  = <1800000 1800000 0 1>;
+			qcom,bt-vdd-aon-config = <966000 966000 0 1>;
+			qcom,bt-vdd-dig-config = <966000 966000 0 1>;
+			qcom,bt-vdd-rfaOp8-config = <966000 966000 0 1>;
+			qcom,bt-vdd-rfa1-config = <1900000 1900000 0 1>;
+			qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
+			qcom,pdc_init_table =
+				"{class: wlan_pdc, ss: rf, res: s4e.v, upval: 966}",
+				"{class: wlan_pdc, ss: rf, res: s4e.v, dwnval: 615}",
+				"{class: wlan_pdc, ss: rf, res: s4g.v, upval: 1350}",
+				"{class: wlan_pdc, ss: rf, res: s4g.v, dwnval: 945}",
+				"{class: wlan_pdc, ss: rf, res: s6g.v, upval: 1900}",
+				"{class: wlan_pdc, ss: rf, res: s6g.v, dwnval: 1825}",
+				"{class: wlan_pdc, ss: rf, res: s2g.m, enable: 1}",
+				"{class: wlan_pdc, ss: rf, res: s2g.v, enable: 1}",
+				"{class: wlan_pdc, ss: rf, res: s2g.v, upval: 1012}",
+				"{class: wlan_pdc, ss: rf, res: s2g.v, dwnval: 515}";
+		};
+	};
+	slim_msm: slim@6C40000 {
+		status =  "ok";
+		ngd@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//slimbus child nodes
+			slimbus: btfmslim-driver {
+				compatible = "slim217,221";
+				reg = <1 0>;
+			};
+		};
+	};
+};
+
+// FM changes
+&qupv3_hub_i2c2 {
+    status = "ok";
+	rtc6226@64 {
+		compatible = "richwave,rtc6226";
+		reg = <0x64>;
+		fmint-gpio = <&tlmm 75 0>;
+		vdd-supply = <&L16B>;
+		rtc6226,vdd-supply-voltage = <2800000 2800000>;
+		rtc6226,vdd-load = <15000>;
+		vio-supply = <&L15B>;
+		rtc6226,vio-supply-voltage = <1800000 1800000>;
+	};
+};
+
+//uart instance
+&qupv3_se14_4uart{
+       status = "ok";
+};

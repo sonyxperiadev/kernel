@@ -220,12 +220,14 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <16>;
 				qcom,mdss-dsc-slice-width = <720>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 
 			timing@1 {
@@ -270,12 +272,14 @@
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <20>;
 				qcom,mdss-dsc-slice-width = <540>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 
 			timing@2 {
@@ -463,12 +467,14 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <16>;
 				qcom,mdss-dsc-slice-width = <720>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 
 			timing@3 {
@@ -656,12 +662,14 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <20>;
 				qcom,mdss-dsc-slice-width = <540>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 
 			timing@4 {
@@ -849,12 +857,14 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <20>;
 				qcom,mdss-dsc-slice-width = <540>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 
 			timing@5 {
@@ -872,7 +882,7 @@
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
-				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-framerate = <120>;
 				qcom,mdss-dsi-on-command = [
 					15 01 00 00 00 00 02 bb 10
 					15 01 00 00 00 00 02 b0 03
@@ -897,12 +907,318 @@
 				qcom,mdss-dsi-h-sync-pulse = <0>;
 
 				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
 				qcom,mdss-dsc-slice-height = <20>;
 				qcom,mdss-dsc-slice-width = <540>;
 				qcom,mdss-dsc-slice-per-pkt = <2>;
 				qcom,mdss-dsc-bit-per-component = <10>;
 				qcom,mdss-dsc-bit-per-pixel = <10>;
 				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@6 {
+				cell-index = <6>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <1>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@7 {
+				cell-index = <7>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <10>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@8 {
+				cell-index = <8>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <24>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@9 {
+				cell-index = <9>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <30>;
+				qcom,mdss-mdp-transfer-time-us = <15652>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@10 {
+				cell-index = <10>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <90>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
+			};
+
+			timing@11 {
+				cell-index = <11>;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2340>;
+				qcom,mdss-dsi-h-front-porch = <0>;
+				qcom,mdss-dsi-h-back-porch = <0>;
+				qcom,mdss-dsi-h-pulse-width = <0>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <0>;
+				qcom,mdss-dsi-v-front-porch = <0>;
+				qcom,mdss-dsi-v-pulse-width = <0>;
+				qcom,mdss-dsi-h-left-border = <0>;
+				qcom,mdss-dsi-h-right-border = <0>;
+				qcom,mdss-dsi-v-top-border = <0>;
+				qcom,mdss-dsi-v-bottom-border = <0>;
+				qcom,mdss-dsi-panel-framerate = <144>;
+				qcom,mdss-dsi-on-command = [
+					15 01 00 00 00 00 02 bb 10
+					15 01 00 00 00 00 02 b0 03
+					05 01 00 00 78 00 01 11
+					15 01 00 00 00 00 02 51 ff
+					15 01 00 00 00 00 02 53 24
+					15 01 00 00 00 00 02 ff 23
+					15 01 00 00 00 00 02 08 05
+					15 01 00 00 00 00 02 46 90
+					15 01 00 00 00 00 02 ff 10
+					15 01 00 00 00 00 02 ff f0
+					15 01 00 00 00 00 02 92 01
+					15 01 00 00 00 00 02 ff 10
+					/* enable TE generation */
+					15 01 00 00 00 00 02 35 00
+					05 01 00 00 28 00 01 29];
+				qcom,mdss-dsi-off-command = [
+					05 01 00 00 10 00 01 28
+					05 01 00 00 40 00 01 10];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-h-sync-pulse = <0>;
+
+				qcom,compression-mode = "dsc";
+				qcom,mdss-dsc-version = <0x12>;
+				qcom,mdss-dsc-slice-height = <20>;
+				qcom,mdss-dsc-slice-width = <540>;
+				qcom,mdss-dsc-slice-per-pkt = <2>;
+				qcom,mdss-dsc-bit-per-component = <10>;
+				qcom,mdss-dsc-bit-per-pixel = <10>;
+				qcom,mdss-dsc-block-prediction-enable;
+				qcom,src-chroma-format = <1>;
 			};
 		};
 	};

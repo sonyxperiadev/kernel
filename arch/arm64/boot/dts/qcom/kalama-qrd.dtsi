@@ -1,0 +1,469 @@
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/clock/qcom,gcc-kalama.h>
+
+#include "kalama-pmic-overlay.dtsi"
+#include "kalama-thermal-overlay.dtsi"
+
+&sdhc_2 {
+	status = "ok";
+	vdd-supply = <&pm_humu_l9>;
+	qcom,vdd-voltage-level = <2950000 2960000>;
+	qcom,vdd-current-level = <0 800000>;
+
+	vdd-io-supply = <&pm_humu_l8>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 5600>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>, <&sd_card_det_default>;
+	pinctrl-1 = <&sdc2_off>, <&sd_card_det_default>;
+
+	cd-gpios = <&pm8550_gpios 12 GPIO_ACTIVE_LOW>;
+
+	resets = <&gcc GCC_SDCC2_BCR>;
+	reset-names = "core_reset";
+
+	qcom,iommu-dma = "fastmap";
+	qcom,uses_level_shifter;
+};
+
+&soc {
+	gpio_key {
+		compatible = "gpio-keys";
+		label = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default>;
+
+		vol_up {
+			label = "volume_up";
+			gpios = <&pm8550_gpios 6 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEUP>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+&pm8550b_haptics {
+	qcom,vmax-mv = <1300>;
+	qcom,lra-period-us = <5880>;
+	status = "ok";
+
+	effect_0 {
+		/* CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_1 {
+		/* DOUBLE_CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_2 {
+		/* TICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_3 {
+		/* THUD */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_4 {
+		/* POP */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_5 {
+		/* HEAVY CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+};
+
+&ufsphy_mem {
+	compatible = "qcom,ufs-phy-qmp-v4-kalama";
+
+	/* VDDA_UFS_CORE */
+	vdda-phy-supply = <&pm_v6d_l1>;
+	vdda-phy-max-microamp = <188000>;
+
+	/* VDDA_UFS_0_1P2 */
+	vdda-pll-supply = <&pm_v6e_l3>;
+	vdda-pll-max-microamp = <18300>;
+
+	/* Phy GDSC for VDD_MX, always on */
+	vdd-phy-gdsc-supply = <&gcc_ufs_mem_phy_gdsc>;
+
+	/* Qref power supply, Refer Qref diagram */
+	vdda-qref-supply = <&pm_v6e_l1>;
+	vdda-qref-max-microamp = <30000>;
+
+	status = "ok";
+};
+
+&ufshc_mem {
+	vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+
+	vcc-supply = <&pm_humu_l17>;
+	vcc-max-microamp = <1300000>;
+
+	vccq-supply = <&pm_v6g_l1>;
+	vccq-max-microamp = <1200000>;
+
+	/* VDD_PX10 is voted for the ufs_reset_n */
+	qcom,vddp-ref-clk-supply = <&pm_v6g_l3>;
+	qcom,vddp-ref-clk-max-microamp = <100>;
+
+	qcom,vccq-parent-supply = <&pm_v6g_s4>;
+	qcom,vccq-parent-max-microamp = <210000>;
+
+	reset-gpios = <&tlmm 210 GPIO_ACTIVE_LOW>;
+	resets = <&gcc GCC_UFS_PHY_BCR>;
+	reset-names = "rst";
+
+	status = "ok";
+};
+
+&pm8550_switch0 {
+	qcom,led-mask = <9>; /* Channels 1 & 4 */
+	qcom,symmetry-en;
+};
+
+&pm8550_switch1 {
+	qcom,led-mask = <6>; /* Channels 2 & 3 */
+	qcom,symmetry-en;
+};
+
+&pm8550_switch2 {
+	qcom,led-mask = <15>; /* All Channels */
+	qcom,symmetry-en;
+};
+
+&pm8550_flash {
+	status = "ok";
+};
+
+&qupv3_se4_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	qcom,touch-active = "goodix,gt9916S";
+	qcom,la-vm;
+
+	goodix-berlin@0 {
+		compatible = "goodix,gt9916S";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+
+		goodix,avdd-name = "avdd";
+		avdd-supply = <&L14B>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <25 0x2008>;
+		goodix,reset-gpio = <&tlmm 24 0x00>;
+		goodix,irq-gpio = <&tlmm 25 0x2008>;
+		goodix,irq-flags = <2>;
+		goodix,panel-max-x = <1080>;
+		goodix,panel-max-y = <2400>;
+		goodix,panel-max-w = <255>;
+		goodix,panel-max-p = <4096>;
+		goodix,firmware-name = "goodix_firmware_spi.bin";
+		goodix,config-name = "goodix_cfg_group_spi.bin";
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		goodix,touch-type = "primary";
+		goodix,qts_en;
+		qts,trusted-touch-mode = "vm_mode";
+		qts,touch-environment = "pvm";
+		qts,trusted-touch-type = "primary";
+		qts,trusted-touch-spi-irq = <569>;
+		qts,trusted-touch-io-bases = <0xa90000>;
+		qts,trusted-touch-io-sizes = <0x1000>;
+		qts,trusted-touch-vm-gpio-list = <&tlmm 44 0 &tlmm 45 0 &tlmm 46 0
+						&tlmm 47 0 &tlmm 24 0 &tlmm 25 0x2008>;
+	};
+};
+
+&usb_qmp_dp_phy {
+	pinctrl-names = "unused";
+};
+
+&qupv3_hub_i2c2 {
+	status = "ok";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	redriver: redriver@1c {
+		compatible = "onnn,redriver";
+		reg = <0x1c>;
+
+		lane-channel-swap;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb3phy_portselect_gpio>;
+		gpios = <&tlmm 11 0>;
+
+		eq = /bits/ 8 <
+				/* Parameters for USB */
+				0x4 0x4 0x4 0x4
+				/* Parameters for DP */
+				0x6 0x4 0x4 0x6>;
+		flat-gain = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x1 0x1 0x3
+				/* Parameters for DP */
+				0x2 0x1 0x1 0x2>;
+		output-comp = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x3 0x3 0x3
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+				/* Parameters for USB */
+				0x1 0x3 0x3 0x1
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+	};
+};
+
+&usb0 {
+	ssusb_redriver = <&redriver>;
+};
+
+&pm8550b_eusb2_repeater {
+	qcom,param-override-seq =
+		/* <value reg_offset> */
+		/* Adjust HS trasmit amplitude */
+		<0xd 0x51
+		/* Squelch detection threshold */
+		 0x3 0x54
+		/* Tx pre-emphasis tuning */
+		 0x7 0x57
+		/* HS disconnect threshold */
+		 0x6 0x53>;
+};
+
+&eusb2_phy0 {
+	dummy-supply = <&pm8550b_eusb2_repeater>;
+	usb-repeater = <&pm8550b_eusb2_repeater>;
+};
+
+&usb0 {
+	usb-role-switch;
+	port {
+		usb_port0: endpoint {
+			remote-endpoint = <&usb_port0_connector>;
+		};
+	};
+};
+
+&ucsi {
+	connector {
+		port {
+			usb_port0_connector: endpoint {
+				remote-endpoint = <&usb_port0>;
+			};
+		};
+	};
+};
+
+&battery_charger {
+	qcom,wireless-fw-name = "idt9418.bin";
+	qcom,thermal-mitigation-step = <500000>;
+};
+
+&regulator_ocp_notifier {
+	periph-1c1-supply = <&L1B>;
+	periph-1c2-supply = <&L2B>;
+	periph-1c5-supply = <&L5B>;
+	periph-1c6-supply = <&L6B>;
+	periph-1c7-supply = <&L7B>;
+	periph-1c8-supply = <&L8B>;
+	periph-1c9-supply = <&L9B>;
+	periph-1ca-supply = <&L10B>;
+	periph-1cb-supply = <&L11B>;
+	periph-1cc-supply = <&L12B>;
+	periph-1cd-supply = <&L13B>;
+	periph-1ce-supply = <&L14B>;
+	periph-1cf-supply = <&L15B>;
+	periph-1d0-supply = <&L16B>;
+	periph-1d1-supply = <&L17B>;
+	periph-2c1-supply = <&L1C>;
+	periph-2c3-supply = <&L3C>;
+	periph-3c1-supply = <&L1D>;
+	periph-3c2-supply = <&L2D_LEVEL>;
+	periph-4c1-supply = <&L1E>;
+	periph-4c2-supply = <&L2E>;
+	periph-4c3-supply = <&L3E>;
+	periph-5c1-supply = <&L1F>;
+	periph-5c2-supply = <&L2F>;
+	periph-5c3-supply = <&L3F>;
+	periph-6c1-supply = <&L1G>;
+	periph-6c2-supply = <&L2G>;
+	periph-6c3-supply = <&L3G>;
+	periph-ac1-supply = <&L1K>;
+	periph-ac2-supply = <&L2K>;
+	periph-ac3-supply = <&L3K>;
+	periph-ac4-supply = <&L4K>;
+	periph-ac5-supply = <&L5K>;
+	periph-ac6-supply = <&L6K>;
+	periph-ac7-supply = <&L7K>;
+	periph-bc3-supply = <&L3L>;
+	periph-bc4-supply = <&L4L>;
+	periph-bc5-supply = <&L5L>;
+	periph-bc6-supply = <&L6L>;
+	periph-bc7-supply = <&L7L>;
+	periph-c40-supply = <&L1M>;
+	periph-c41-supply = <&L2M>;
+	periph-c42-supply = <&L3M>;
+	periph-c43-supply = <&L4M>;
+	periph-c44-supply = <&L5M>;
+	periph-c45-supply = <&L6M>;
+	periph-c46-supply = <&L7M>;
+	periph-d40-supply = <&L1N>;
+	periph-d41-supply = <&L2N>;
+	periph-d42-supply = <&L3N>;
+	periph-d43-supply = <&L4N>;
+	periph-d44-supply = <&L5N>;
+	periph-d45-supply = <&L6N>;
+	periph-d46-supply = <&L7N>;
+};
+
+&pcie0 {
+	 qcom,pcie-phy-ver = <102>;
+			qcom,phy-sequence = <0x0240 0x03 0x0
+					0x00c0 0x01 0x0
+					0x00cc 0x62 0x0
+					0x00d0 0x02 0x0
+					0x0060 0xf8 0x0
+					0x0064 0x01 0x0
+					0x0000 0x93 0x0
+					0x0004 0x01 0x0
+					0x00e0 0x90 0x0
+					0x00e4 0x82 0x0
+					0x00f4 0x07 0x0
+					0x0070 0x02 0x0
+					0x0010 0x02 0x0
+					0x0074 0x16 0x0
+					0x0014 0x16 0x0
+					0x0078 0x36 0x0
+					0x0018 0x36 0x0
+					0x0110 0x08 0x0
+					0x00bc 0x0a 0x0
+					0x0120 0x42 0x0
+					0x0080 0x04 0x0
+					0x0084 0x0d 0x0
+					0x0020 0x0a 0x0
+					0x0024 0x1a 0x0
+					0x0088 0x41 0x0
+					0x0028 0x34 0x0
+					0x0090 0xab 0x0
+					0x0094 0xaa 0x0
+					0x0098 0x01 0x0
+					0x0030 0x55 0x0
+					0x0034 0x55 0x0
+					0x0038 0x01 0x0
+					0x0140 0x14 0x0
+					0x0164 0x34 0x0
+					0x003c 0x01 0x0
+					0x001c 0x04 0x0
+					0x0174 0x16 0x0
+					0x01bc 0x0f 0x0
+					0x0170 0xa0 0x0
+					0x11a4 0x38 0x0
+					0x10dc 0x11 0x0
+					0x1160 0xbf 0x0
+					0x1164 0xbf 0x0
+					0x1168 0xb7 0x0
+					0x116c 0xea 0x0
+					0x115c 0x3f 0x0
+					0x1174 0x5c 0x0
+					0x1178 0x9c 0x0
+					0x117c 0x1a 0x0
+					0x1180 0x89 0x0
+					0x1170 0xdc 0x0
+					0x1188 0x94 0x0
+					0x118c 0x5b 0x0
+					0x1190 0x1a 0x0
+					0x1194 0x89 0x0
+					0x10cc 0x00 0x0
+					0x1008 0x09 0x0
+					0x1014 0x05 0x0
+					0x104c 0x08 0x0
+					0x1050 0x08 0x0
+					0x10d8 0x0f 0x0
+					0x1118 0x1c 0x0
+					0x10f8 0x07 0x0
+					0x11f8 0x08 0x0
+					0x0e84 0x15 0x0
+					0x0e90 0x3f 0x0
+					0x0ee4 0x02 0x0
+					0x0e40 0x06 0x0
+					0x0e3c 0x18 0x0
+					0x19a4 0x38 0x0
+					0x18dc 0x11 0x0
+					0x1960 0xbf 0x0
+					0x1964 0xbf 0x0
+					0x1968 0xb7 0x0
+					0x196c 0xea 0x0
+					0x195c 0x3f 0x0
+					0x1974 0x5c 0x0
+					0x1978 0x9c 0x0
+					0x197c 0x1a 0x0
+					0x1980 0x89 0x0
+					0x1970 0xdc 0x0
+					0x1988 0x94 0x0
+					0x198c 0x5b 0x0
+					0x1990 0x1a 0x0
+					0x1994 0x89 0x0
+					0x18cc 0x00 0x0
+					0x1808 0x09 0x0
+					0x1814 0x05 0x0
+					0x184c 0x08 0x0
+					0x1850 0x08 0x0
+					0x18d8 0x0f 0x0
+					0x1918 0x1c 0x0
+					0x18f8 0x07 0x0
+					0x19f8 0x08 0x0
+					0x1684 0x15 0x0
+					0x1690 0x3f 0x0
+					0x16e4 0x02 0x0
+					0x1640 0x06 0x0
+					0x163c 0x18 0x0
+					0x02dc 0x05 0x0
+					0x0388 0x77 0x0
+					0x0398 0x0b 0x0
+					0x06a4 0x1e 0x0
+					0x03e0 0x0f 0x0
+					0x060c 0x1d 0x0
+					0x0614 0x07 0x0
+					0x0620 0xc1 0x0
+					0x0368 0x0f 0x0
+					0x1180 0x8f 0x0
+					0x1980 0x8f 0x0
+					0x0120 0x40 0x0
+					0x0080 0x0a 0x0
+					0x0084 0x1a 0x0
+					0x0020 0x14 0x0
+					0x0024 0x34 0x0
+					0x0624 0x05 0x0
+					0x0694 0x00 0x0
+					0x03d0 0x8c 0x0
+					0x0200 0x00 0x0
+					0x0244 0x03 0x0>;
+
+};
