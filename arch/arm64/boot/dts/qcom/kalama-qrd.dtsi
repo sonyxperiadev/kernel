@@ -4,6 +4,9 @@
 
 #include "kalama-pmic-overlay.dtsi"
 #include "kalama-thermal-overlay.dtsi"
+#include "kalama-audio-qrd.dtsi"
+#include "kalama-sde-display-qrd.dtsi"
+//#include "kalama-camera-sensor-qrd.dtsi"
 
 &sdhc_2 {
 	status = "ok";
