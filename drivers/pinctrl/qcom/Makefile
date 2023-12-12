@@ -69,3 +69,5 @@ obj-$(CONFIG_PINCTRL_SC8280XP_LPASS_LPI) += pinctrl-sc8280xp-lpass-lpi.o
 obj-$(CONFIG_PINCTRL_LPASS_LPI) += pinctrl-lpass-lpi.o
 obj-$(CONFIG_PINCTRL_X1E80100) += pinctrl-x1e80100.o
 obj-$(CONFIG_PINCTRL_MONACO) += pinctrl-monaco.o
+obj-$(CONFIG_PINCTRL_SOMC) += pinctrl-somc.o
+obj-$(CONFIG_PINCTRL_SOMC_PMIC) += pinctrl-somc-pmic.o
