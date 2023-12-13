@@ -826,7 +826,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					location = get_location(ts, ts->coord[t_id].x, ts->coord[t_id].y);
 					if (ts->coord[t_id].action == SEC_TS_COORDINATE_ACTION_RELEASE) {
 
-						ktime_get_real_ts64(&ts->time_released[t_id]);
+						do_gettimeofday(&ts->time_released[t_id]);
 						if (ts->coord[t_id].ttype != SEC_TS_TOUCHTYPE_SIDE)
 							ts->report_flag[t_id] = false;
 
@@ -882,7 +882,7 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 
 					} else if (ts->coord[t_id].action == SEC_TS_COORDINATE_ACTION_PRESS) {
 
-						ktime_get_real_ts64(&ts->time_pressed[t_id]);
+						do_gettimeofday(&ts->time_pressed[t_id]);
 						ts->touch_count++;
 						ts->all_finger_count++;
 
@@ -2160,7 +2160,7 @@ void sec_ts_unlocked_release_all_finger(struct sec_ts_data *ts)
 					ts->cal_status, ts->tspid_val,
 					ts->tspicid_val, ts->coord[i].palm_count);
 
-			ktime_get_real_ts64(&ts->time_released[i]);
+			do_gettimeofday(&ts->time_released[i]);
 			
 			if (ts->time_longest < (ts->time_released[i].tv_sec - ts->time_pressed[i].tv_sec))
 				ts->time_longest = (ts->time_released[i].tv_sec - ts->time_pressed[i].tv_sec);
@@ -2295,7 +2295,7 @@ void sec_ts_locked_release_all_finger(struct sec_ts_data *ts)
 					ts->plat_data->img_version_of_ic[3],
 					ts->cal_status, ts->tspid_val, ts->tspicid_val, ts->coord[i].palm_count);
 
-			ktime_get_real_ts64(&ts->time_released[i]);
+			do_gettimeofday(&ts->time_released[i]);
 			
 			if (ts->time_longest < (ts->time_released[i].tv_sec - ts->time_pressed[i].tv_sec))
 				ts->time_longest = (ts->time_released[i].tv_sec - ts->time_pressed[i].tv_sec);
@@ -2716,11 +2716,11 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 
 #ifndef TOUCH_DRIVER_NOT_SOD_PROXIMITY
 	if (ts->plat_data->sod_mode.status) {
-		display_sod_mode = incell_get_display_sod_mode();
+		display_sod_mode = incell_get_display_sod();
 		if ((!ts->cover_set && ts->flip_enable) || display_sod_mode) {
 			input_dbg(true, &ts->client->dev, "%s: sod skip - SEC_TS_STATE_POWER_OFF\n", __func__);
 			ts->power_status = SEC_TS_STATE_POWER_OFF;
-			incell_control_touch_power();
+			somc_panel_external_control_touch_power(false);
 		} else {
 			sec_ts_set_irq(ts, true);
 			sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
@@ -2915,7 +2915,7 @@ int drm_notifier_callback(struct notifier_block *self, unsigned long event, void
 {
 	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
 	struct sec_ts_data *ts = container_of(self, struct sec_ts_data, drm_notif);
-	struct timespec64 time;
+	struct timespec time;
 	int blank;
 
 	mutex_lock(&ts->aod_mutex);
@@ -2934,11 +2934,11 @@ int drm_notifier_callback(struct notifier_block *self, unsigned long event, void
 					return 0;
 				}
 
-				ktime_get_boottime_ts64(&time);
+				get_monotonic_boottime(&time);
 				input_info(true, &ts->client->dev, "start@%ld.%06ld\n",
 					time.tv_sec, time.tv_nsec);
 				sec_ts_suspend(ts);
-				ktime_get_boottime_ts64(&time);
+				get_monotonic_boottime(&time);
 				input_info(true, &ts->client->dev, "end@%ld.%06ld\n",
 					time.tv_sec, time.tv_nsec);
 				break;
@@ -2971,12 +2971,12 @@ int drm_notifier_callback(struct notifier_block *self, unsigned long event, void
 				}
 
 				if (ts->after_work.done || ts->after_work.err) {
-					ktime_get_boottime_ts64(&time);
+					get_monotonic_boottime(&time);
 					input_info(true, &ts->client->dev, "start@%ld.%06ld\n",
 						time.tv_sec, time.tv_nsec);
 
 					sec_ts_resume(ts);
-					ktime_get_boottime_ts64(&time);
+					get_monotonic_boottime(&time);
 					input_info(true, &ts->client->dev, "end@%ld.%06ld\n",
 						time.tv_sec, time.tv_nsec);
 				}
