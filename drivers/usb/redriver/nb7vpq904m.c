@@ -21,9 +21,6 @@
 
 /* Registers Address */
 #define GEN_DEV_SET_REG			0x00
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-#define AUX_CH_CTRL_REG			0x09
-#endif
 #define CHIP_VERSION_REG		0x17
 
 #define REDRIVER_REG_MAX		0x1f
@@ -165,11 +162,7 @@ static void nb7vpq904m_dev_aux_set(struct nb7vpq904m_redriver *redriver)
 
 static int nb7vpq904m_gen_dev_set(struct nb7vpq904m_redriver *redriver)
 {
-#ifndef CONFIG_SONY_USB_EXTENSIONS
 	u8 val = 0;
-#else
-	u8 val = 0, aux_val = 0x02;
-#endif
 
 	switch (redriver->op_mode) {
 	case OP_MODE_DEFAULT:
@@ -195,9 +188,6 @@ static int nb7vpq904m_gen_dev_set(struct nb7vpq904m_redriver *redriver)
 
 		/* Set to default USB Mode */
 		val |= (0x5 << OP_MODE_SHIFT);
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-		aux_val = 0x02;
-#endif
 		val |= CHIP_EN;
 		break;
 	case OP_MODE_DP:
@@ -207,9 +197,6 @@ static int nb7vpq904m_gen_dev_set(struct nb7vpq904m_redriver *redriver)
 
 		/* Set to DP 4 Lane Mode (OP Mode 2) */
 		val |= (0x2 << OP_MODE_SHIFT);
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-		aux_val = 0x00;
-#endif
 		val |= CHIP_EN;
 		break;
 	case OP_MODE_USB_AND_DP:
@@ -225,28 +212,11 @@ static int nb7vpq904m_gen_dev_set(struct nb7vpq904m_redriver *redriver)
 				== ORIENTATION_CC2)
 			val |= (0x0 << OP_MODE_SHIFT);
 
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-		aux_val = 0x00;
-#endif
-
 		break;
 	default:
 		val &= ~CHIP_EN;
 		break;
 	}
-
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-	aux_val |= (redriver->typec_orientation	== ORIENTATION_CC1) ?
-		0x00 : 0x01;
-
-	ret = redriver_i2c_reg_set(redriver, AUX_CH_CTRL_REG, aux_val);
-	if (ret < 0)
-		goto err_exit;
-
-	dev_dbg(redriver->dev,
-		"redriver chip, aux_ch_ctrl 0x%02x = 0x%02x\n",
-			AUX_CH_CTRL_REG, aux_val);
-#endif
 
 	redriver->gen_dev_val = val;
 
@@ -289,9 +259,6 @@ static int nb7vpq904m_param_config(struct nb7vpq904m_redriver *redriver,
 			if (ret < 0)
 				return ret;
 		}
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-		aux_val = 0x00;
-#endif
 
 		stored_val[chan_mode][channel] = val;
 	}
