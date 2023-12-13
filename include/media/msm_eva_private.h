@@ -1,1 +1,1 @@
-../../techpack/eva/include/uapi/eva/media/msm_eva_private.h
+../../usr/include/eva/media/msm_eva_private.h
