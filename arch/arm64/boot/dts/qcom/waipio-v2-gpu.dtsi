@@ -6,6 +6,8 @@
 
 	qcom,gpu-model = "Adreno730v2";
 
+	qcom,chipid = <0x07030001>;
+
 	qcom,gpu-pwrlevels {
 		#address-cells = <1>;
 		#size-cells = <0>;

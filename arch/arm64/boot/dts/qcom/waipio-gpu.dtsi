@@ -25,6 +25,8 @@
 
 		qcom,gpu-model = "Adreno730v1";
 
+		qcom,chipid = <0x07030000>;
+
 		qcom,initial-pwrlevel = <8>;
 
 		qcom,no-nap;
