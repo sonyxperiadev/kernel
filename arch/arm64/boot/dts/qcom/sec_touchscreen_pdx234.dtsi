@@ -39,5 +39,7 @@
 		sec,aod_mode_supported = <0>;
 		sec,sod_mode_supported = <0>;
 		sec,stamina_mode_supported = <0>;
+
+		panel = <&dsi_1>;
 	};
 };
