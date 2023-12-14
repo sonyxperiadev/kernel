@@ -44,5 +44,7 @@
 		sec,rejection_area_landscape = <150 20 200 60>;
 		sec,rejection_area_portrait_ge = <200 200>;
 		sec,rejection_area_landscape_ge = <200 200 200 200>;
+
+		panel = <&dsi_3>;
 	};
 };
