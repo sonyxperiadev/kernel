@@ -824,6 +824,7 @@ int sec_ts_firmware_update_on_probe(struct sec_ts_data *ts, bool force_update)
 
 err_request_fw:
 	release_firmware(fw_entry);
+	sec_ts_set_irq(ts, true);
 	return result;
 }
 
