@@ -2079,7 +2079,7 @@ err:
 	return -EINVAL;
 }
 
-static void sec_ts_register_for_panel_events(struct sec_ts_data *ts, struct device *dev)
+static void sec_ts_register_for_panel_events(struct sec_ts_data *ts)
 {
 	void *cookie;
 
