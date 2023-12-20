@@ -1,0 +1,22 @@
+/* arch/arm64/boot/dts/qcom/kalama-yodo-pdx237_common.dtsi */
+
+#include "kalama-yodo-common.dtsi"
+
+&soc {
+};
+
+/* GPIO_159 : NC */
+ /* Follow QC */
+
+/* GPIO_160 : NC */
+ /* Follow QC */
+
+/* GPIO_161 : NC */
+ /* Follow QC */
+
+/* GPIO_186 : CS35L45_GPIO3 */
+ /* Don't set here */
+
+#include "somc-charger-yodo-common.dtsi"
+#include "somc-charger-yodo-pdx237.dtsi"
+#include "sec_touchscreen_pdx237.dtsi"

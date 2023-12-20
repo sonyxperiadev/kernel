@@ -1,0 +1,13 @@
+/dts-v1/;
+/plugin/;
+
+#include "kalama-sde-display-qrd.dtsi"
+#include "somc-yodo-display.dtsi"
+#include "somc-yodo-display-pdx237.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX237(Kalama QRD)";
+	compatible = "somc,pdx237", "qcom,kalama", "qcom,qrd";
+	qcom,msm-id = <519 0x10000>, <536 0x10000>, <519 0x20000>, <536 0x20000>;
+	qcom,board-id = <0x1000B 0>;
+};

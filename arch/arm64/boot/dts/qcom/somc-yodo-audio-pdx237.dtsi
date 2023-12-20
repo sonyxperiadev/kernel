@@ -1,0 +1,158 @@
+&cs35l45_l {
+	cirrus,ngate-ch1-thr =  <0x6>;
+	cirrus,ngate-ch1-hold = <0x5>;
+	cirrus,ngate-ch2-thr =  <0x6>;
+	cirrus,ngate-ch2-hold = <0x5>;
+	cirrus,ldpm-config {
+		ldpm-gp1-boost-sel = <0x1>;
+		ldpm-gp1-amp-sel = <0x1>;
+		ldpm-gp1-delay = <0x4>;
+		ldpm-gp1-pcm-thld = <0x6>;
+		ldpm-gp2-imon-sel = <0x1>;
+		ldpm-gp2-vmon-sel = <0x1>;
+		ldpm-gp2-delay = <0x7>;
+		ldpm-gp2-pcm-thld = <0x0>;
+	};
+	cirrus,hvlv-config {
+		hvlv-thld-hys = <0x0>;
+		hvlv-thld = <0x3>;
+		hvlv-dly = <0x1>;
+	};
+	cirrus,classh-config {
+		ch-hdrm = <0x2>;
+		ch-ratio = <0x5>;
+		ch-rel-rate = <0x2>;
+		ch-ovb-thld1 = <0x5a>;
+		ch-ovb-thlddelta = <0xc8>;
+		ch-vdd-bst-max = <0xfa>;
+		ch-ovb-latch = <0x1>;
+		ch-ovb-ratio = <0x1>;
+		ch-thld1-offset = <0x23>;
+	};
+	cirrus,bst-bpe-inst-config {
+		bst-bpe-inst-thld = <0x28 0x3c 0x46 0x50 0>;
+		bst-bpe-inst-ilim = <0 0x00 0x04 0x14 0x3C>;
+		bst-bpe-inst-ss-ilim = <0 0x00 0x04 0x08 0x1C>;
+		bst-bpe-inst-atk-rate = <0 0x3 0x6 0x6 0>;
+		bst-bpe-inst-hold-time = <0x2 0x2 0x2 0x2 0>;
+		bst-bpe-inst-rls-rate = <0x06 0x06 0x06 0x06 0>;
+	};
+	cirrus,bst-bpe-misc-config {
+		bst-bpe-inst-inf-hold-rls = <0x0>;
+		bst-bpe-il-lim-mode = <0x0>;
+		bst-bpe-out-opmode-sel = <0x0>;
+		bst-bpe-inst-l3-byp = <0x1>;
+		bst-bpe-inst-l2-byp = <0x1>;
+		bst-bpe-inst-l1-byp = <0x0>;
+		bst-bpe-filt-sel = <0x0>;
+	};
+	cirrus,bst-bpe-il-lim-config {
+		bst-bpe-il-lim-thld-del1 = <0x0>;
+		bst-bpe-il-lim-thld-del2 = <0x0>;
+		bst-bpe-il-lim1-thld = <0x3C>;
+		bst-bpe-il-lim-thld-hyst = <0x0>;
+		bst-bpe-il-lim1-dly = <0x2>;
+		bst-bpe-il-lim2-dly = <0x4>;
+		bst-bpe-il-lim-dly-hyst = <0x0>;
+		bst-bpe-il-lim1-atk-rate = <0x0>;
+		bst-bpe-il-lim2-atk-rate = <0x0>;
+		bst-bpe-il-lim1-rls-rate = <0x0>;
+		bst-bpe-il-lim2-rls-rate = <0x0>;
+	};
+	cirrus,bpe-inst-config {
+		bpe-inst-thld = <0x1E 0x32 0x3C 0x5A>;
+		bpe-inst-attn = <0x06 0x04 0x0C 0x06>;
+		bpe-inst-atk-rate = <0x0 0x1 0x6 0x6>;
+		bpe-inst-hold-time = <0xb 0x4 0x2 0x2>;
+		bpe-inst-rls-rate = <0x08 0x07 0x05 0x05>;
+	};
+	cirrus,bpe-misc-config {
+		bpe-inst-bpe-byp = <0x0>;
+		bpe-inst-inf-hold-rls = <0x0>;
+		bpe-inst-l3-byp = <0x1>;
+		bpe-inst-l2-byp = <0x1>;
+		bpe-inst-l1-byp = <0x0>;
+		bpe-mode-sel = <0x0>;
+		bpe-filt-sel = <0x0>;
+	};
+};
+
+&cs35l45_r {
+	cirrus,ngate-ch1-thr =  <0x6>;
+	cirrus,ngate-ch1-hold = <0x5>;
+	cirrus,ngate-ch2-thr =  <0x6>;
+	cirrus,ngate-ch2-hold = <0x5>;
+	cirrus,ldpm-config {
+		ldpm-gp1-boost-sel = <0x1>;
+		ldpm-gp1-amp-sel = <0x1>;
+		ldpm-gp1-delay = <0x4>;
+		ldpm-gp1-pcm-thld = <0x6>;
+		ldpm-gp2-imon-sel = <0x1>;
+		ldpm-gp2-vmon-sel = <0x1>;
+		ldpm-gp2-delay = <0x7>;
+		ldpm-gp2-pcm-thld = <0x0>;
+	};
+	cirrus,hvlv-config {
+		hvlv-thld-hys = <0x0>;
+		hvlv-thld = <0x3>;
+		hvlv-dly = <0x1>;
+	};
+	cirrus,classh-config {
+		ch-hdrm = <0x2>;
+		ch-ratio = <0x5>;
+		ch-rel-rate = <0x2>;
+		ch-ovb-thld1 = <0x5a>;
+		ch-ovb-thlddelta = <0xc8>;
+		ch-vdd-bst-max = <0xfa>;
+		ch-ovb-latch = <0x1>;
+		ch-ovb-ratio = <0x1>;
+		ch-thld1-offset = <0x23>;
+	};
+	cirrus,bst-bpe-inst-config {
+		bst-bpe-inst-thld = <0x28 0x3c 0x46 0x50 0>;
+		bst-bpe-inst-ilim = <0 0x00 0x04 0x14 0x3C>;
+		bst-bpe-inst-ss-ilim = <0 0x00 0x04 0x08 0x1C>;
+		bst-bpe-inst-atk-rate = <0 0x3 0x6 0x6 0>;
+		bst-bpe-inst-hold-time = <0x2 0x2 0x2 0x2 0>;
+		bst-bpe-inst-rls-rate = <0x06 0x06 0x06 0x06 0>;
+	};
+	cirrus,bst-bpe-misc-config {
+		bst-bpe-inst-inf-hold-rls = <0x0>;
+		bst-bpe-il-lim-mode = <0x0>;
+		bst-bpe-out-opmode-sel = <0x0>;
+		bst-bpe-inst-l3-byp = <0x1>;
+		bst-bpe-inst-l2-byp = <0x1>;
+		bst-bpe-inst-l1-byp = <0x0>;
+		bst-bpe-filt-sel = <0x0>;
+	};
+	cirrus,bst-bpe-il-lim-config {
+		bst-bpe-il-lim-thld-del1 = <0x0>;
+		bst-bpe-il-lim-thld-del2 = <0x0>;
+		bst-bpe-il-lim1-thld = <0x3C>;
+		bst-bpe-il-lim-thld-hyst = <0x0>;
+		bst-bpe-il-lim1-dly = <0x2>;
+		bst-bpe-il-lim2-dly = <0x4>;
+		bst-bpe-il-lim-dly-hyst = <0x0>;
+		bst-bpe-il-lim1-atk-rate = <0x0>;
+		bst-bpe-il-lim2-atk-rate = <0x0>;
+		bst-bpe-il-lim1-rls-rate = <0x0>;
+		bst-bpe-il-lim2-rls-rate = <0x0>;
+	};
+	cirrus,bpe-inst-config {
+		bpe-inst-thld = <0x1E 0x32 0x3C 0x5A>;
+		bpe-inst-attn = <0x06 0x04 0x0C 0x06>;
+		bpe-inst-atk-rate = <0x0 0x1 0x6 0x6>;
+		bpe-inst-hold-time = <0xb 0x4 0x2 0x2>;
+		bpe-inst-rls-rate = <0x08 0x07 0x05 0x05>;
+	};
+	cirrus,bpe-misc-config {
+		bpe-inst-bpe-byp = <0x0>;
+		bpe-inst-inf-hold-rls = <0x0>;
+		bpe-inst-l3-byp = <0x1>;
+		bpe-inst-l2-byp = <0x1>;
+		bpe-inst-l1-byp = <0x0>;
+		bpe-mode-sel = <0x0>;
+		bpe-filt-sel = <0x0>;
+	};
+};
+

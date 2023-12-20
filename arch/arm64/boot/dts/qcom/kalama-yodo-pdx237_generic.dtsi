@@ -1,0 +1,4 @@
+#include "kalama-yodo-pdx237_common.dtsi"
+
+&soc {
+};

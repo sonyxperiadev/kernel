@@ -1,0 +1,35 @@
+#include "dsi-panel-s6e3fc3-ams605dk02-fhd_plus.dtsi"
+
+&dsi_9 {
+	qcom,panel-supply-entries = <&dsi_panel_oled_ts_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,mdss-brightness-max-level = <4095>;
+	somc,brightness-max-level = <2047>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
+
+	qcom,platform-reset-gpio = <&tlmm 133 0>;
+	somc,platform-touch-reset-gpio = <&tlmm 24 0>;
+	somc,disp-err-flag-gpio = <&tlmm 46 0>;
+	qcom,ulps-enabled;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 22 08 08 19 23 09 08 09 02 04 00 1C 0D];
+		};
+		timing@1 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 22 08 08 19 23 09 08 09 02 04 00 1C 0D];
+		};
+	};
+};
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_9>;
+};
+
