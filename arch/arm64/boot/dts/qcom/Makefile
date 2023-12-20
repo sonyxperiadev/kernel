@@ -11,7 +11,7 @@ waipio-nagara-dtbs := $(WAIPIO_BASE_DTB) $(WAIPIO_SOMC_BOARDS)
 dtb-$(CONFIG_ARCH_SONY_NAGARA) += waipio-nagara.dtb
 
 # SoMC Yodo
-KALAMA_BASE_DTB += kalama.dtb
+KALAMA_BASE_DTB += kalama-v2.dtb
 
 KALAMA_SOMC_BOARDS += \
 	kalama-yodo-pdx234_generic-overlay.dtbo
