@@ -1,4 +1,10 @@
 #include "kalama.dtsi"
+#include "kalama-v2-ese-common.dtsi"
+#include "kalama-v2-gpu.dtsi"
+#include "kalama-v2-gpu-pwrlevels.dtsi"
+#include "kalama-v2-mmrm.dtsi"
+#include "kalama-v2-mmrm-test.dtsi"
+#include "kalama-v2-vidc.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Kalama v2 SoC";
