@@ -1,0 +1,130 @@
+#include "kalama-camera-sensor-yodo-common.dtsi"
+
+&sony_camera_module_1 {
+    module_name = "SUN12BS1";
+    cam_vio-supply = <&slg51000_0_ldo7>;
+    cam_vana-supply = <&L3M>;
+    cam_vdig-supply = <&L2M>;
+    /delete-property/ cam_vdig2-supply;
+    /delete-property/ cam_vana2-supply;
+	/delete-property/ cam_vaf-supply;
+	/delete-property/ cam_vaf2-supply;
+	/delete-property/ cam_ois-supply;
+	/delete-property/ cam_ois2-supply;
+    pinctrl-0 = <&sm_gpio_103 &sm_gpio_119>;
+    pinctrl-1 = <&sm_gpio_103 &sm_gpio_119>;
+    gpios = <&tlmm 103 0>, <&tlmm 119 0>;
+    gpio-req-tbl-label = "CAMIF_MCLK3", "SONY_CAMERA_RESET";
+    cci-device = <1>;
+    cci-master = <1>;
+    clocks = <&camcc CAM_CC_MCLK3_CLK>;
+    match_id = <0x20 0x0016 0x02 0x0663>;
+	thermal_names = "sony_cam_front0";
+
+    /delete-node/ LGI12BC0;
+    SUN12BS1 {
+        i2c_freq_mode = <3>;
+        power_off {
+            commands =
+                "gpio_reset",
+                "cam_clk",
+                "cam_vdig",
+                "cam_vana",
+                "cam_vio",
+                "cam_pmic0",
+                "exit";
+            gpio_reset = <7 0x0 0 1>;
+            cam_clk = <5 0xffffffff 0 0>;
+            cam_vdig = <0 0xffffffff 0 0>;
+            cam_vana = <2 0xffffffff 0 0>;
+            cam_vio = <1 0xffffffff 0 2000>;
+            cam_pmic0 = <40 0xffffffff 0 0>;
+            exit = <99 0x0 0 0>;
+        };
+        power_on {
+            commands =
+                "cam_pmic0",
+                "cam_vio",
+                "cam_vana",
+                "cam_vdig",
+                "cam_clk",
+                "gpio_reset",
+                "exit";
+            cam_pmic0 = <40 0 0 10000>;
+            cam_vio = <1 1800 0 0>;
+            cam_vana = <2 2800 0 0>;
+            cam_vdig = <0 1050 0 0>;
+            cam_clk = <5 24000000 0 1>;
+            gpio_reset = <7 1 0 1000>;
+            exit = <99 0x0 0 0>;
+        };
+    };
+};
+
+&sony_camera_module_2 {
+    module_name = "SEM12BC9";
+    cam_vana-supply = <&L6M>;
+    cam_vana2-supply = <&L7M>;
+    cam_vdig-supply = <&slg51000_0_ldo6>;
+    cam_vaf-supply = <&slg51000_0_ldo4>;
+    pinctrl-0 = <&sm_gpio_102 &sm_gpio_118>;
+    pinctrl-1 = <&sm_gpio_102 &sm_gpio_118>;
+    gpios = <&tlmm 102 0>, <&tlmm 118 0>;
+    gpio-req-tbl-label = "CAMIF_MCLK2", "SONY_CAMERA_RESET";
+    cci-device = <1>;
+    cci-master = <0>;
+    clocks = <&camcc CAM_CC_MCLK2_CLK>;
+    match_id = <0x20 0x0016 0x02 0x0563>;
+	thermal_names = "sony_cam_back1";
+
+    /delete-node/ SUN12BS0;
+    SEM12BC9 {
+        i2c_freq_mode = <3>;
+        power_off {
+            commands =
+                "cam_clk",
+                "gpio_reset",
+                "cam_vaf",
+                "cam_vdig",
+                "cam_vana2",
+                "cam_vana",
+                "cam_vio",
+                "cam_pmic0",
+                "exit";
+            cam_clk = <5 0xffffffff 0 1000>;
+            gpio_reset = <7 0x0 0 1000>;
+            cam_vaf = <3 0xffffffff 0 1000>;
+            cam_vdig = <0 0xffffffff 0 1000>;
+            cam_vana2 = <30 0xffffffff 0 1000>;
+            cam_vana = <2 0xffffffff 0 1000>;
+            cam_vio = <1 0xffffffff 0 2000>;
+            cam_pmic0 = <40 0xffffffff 0 0>;
+            exit = <99 0x0 0 0>;
+        };
+        power_on {
+            commands =
+                "cam_pmic0",
+                "cam_vio",
+                "cam_vana",
+                "cam_vana2",
+                "cam_vdig",
+                "cam_vaf",
+                "cam_clk",
+                "gpio_reset",
+                "exit";
+            cam_pmic0 = <40 0 0 10000>;
+            cam_vio = <1 1800 0 0>;
+            cam_vana = <2 2800 0 0>;
+            cam_vana2 = <30 1800 0 0>;
+            cam_vdig = <0 1100 0 0>;
+            cam_vaf = <3 2800 0 0>;
+            cam_clk = <5 24000000 0 1>;
+            gpio_reset = <7 1 0 1000>;
+            exit = <99 0x0 0 0>;
+        };
+    };
+};
+
+&sony_camera_module_3 {
+    status = "disabled";
+};

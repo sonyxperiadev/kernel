@@ -19,4 +19,9 @@
 
 #include "somc-charger-yodo-common.dtsi"
 #include "somc-charger-yodo-pdx237.dtsi"
+#include "somc-yodo-display.dtsi"
+#include "somc-yodo-display-pdx237.dtsi"
+#include "somc-yodo-audio-common.dtsi"
+#include "somc-yodo-audio-pdx237.dtsi"
+#include "kalama-camera-sensor-pdx237.dtsi"
 #include "sec_touchscreen_pdx237.dtsi"
