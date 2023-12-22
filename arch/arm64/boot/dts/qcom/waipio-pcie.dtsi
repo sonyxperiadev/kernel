@@ -47,11 +47,11 @@
 				&pcie0_wake_default>;
 
 		gdsc-core-vdd-supply = <&gcc_pcie_0_gdsc>;
-		vreg-1p8-supply = <&pm8350_l6>;
+		vreg-1p2-supply = <&pm8350_l6>;
 		vreg-0p9-supply = <&pm8350_l5>;
 		vreg-cx-supply = <&VDD_CX_LEVEL>;
 		vreg-mx-supply = <&VDD_MXA_LEVEL>;
-		qcom,vreg-1p8-voltage-level = <1200000 1200000 18200>;
+		qcom,vreg-1p2-voltage-level = <1200000 1200000 18200>;
 		qcom,vreg-0p9-voltage-level = <880000 880000 80900>;
 		qcom,vreg-cx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX
 						RPMH_REGULATOR_LEVEL_NOM 0>;
@@ -312,14 +312,14 @@
 				&pcie1_wake_default>;
 
 		gdsc-core-vdd-supply = <&gcc_pcie_1_gdsc>;
-		vreg-1p8-supply = <&pm8350_l6>;
+		vreg-1p2-supply = <&pm8350_l6>;
 		vreg-0p9-supply = <&pm8450_l2>;
 		vreg-qref-supply = <&pm8350_l5>;
 		vreg-cx-supply = <&VDD_CX_LEVEL>;
 		vreg-mx-supply = <&VDD_MXA_LEVEL>;
 		qcom,target-link-speed = <3>; /* Set max link speed to Gen3 */
 
-		qcom,vreg-1p8-voltage-level = <1200000 1200000 26100>;
+		qcom,vreg-1p2-voltage-level = <1200000 1200000 26100>;
 		qcom,vreg-0p9-voltage-level = <912000 912000 193000>;
 		qcom,vreg-cx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX
 						RPMH_REGULATOR_LEVEL_LOW_SVS 0>;
@@ -649,12 +649,12 @@
 		wake-gpio = <&tlmm 99 GPIO_ACTIVE_HIGH>;
 
 		gdsc-vdd-supply = <&gcc_pcie_1_gdsc>;
-		vreg-1p8-supply = <&pm8350_l6>;
+		vreg-1p2-supply = <&pm8350_l6>;
 		vreg-0p9-supply = <&pm8450_l2>;
 		vreg-mx-supply = <&VDD_MXA_LEVEL>;
 		vreg-cx-supply = <&VDD_CX_LEVEL>;
 
-		qcom,vreg-1p8-voltage-level = <1200000 1200000 30000>;
+		qcom,vreg-1p2-voltage-level = <1200000 1200000 30000>;
 		qcom,vreg-0p9-voltage-level = <912000 912000 193000>;
 		qcom,vreg-mx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX RPMH_REGULATOR_LEVEL_NOM 0>;
 		qcom,vreg-cx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX RPMH_REGULATOR_LEVEL_LOW_SVS 0>;
