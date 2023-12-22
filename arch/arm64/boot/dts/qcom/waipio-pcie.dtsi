@@ -46,7 +46,7 @@
 				&pcie0_clkreq_sleep
 				&pcie0_wake_default>;
 
-		gdsc-vdd-supply = <&gcc_pcie_0_gdsc>;
+		gdsc-core-vdd-supply = <&gcc_pcie_0_gdsc>;
 		vreg-1p8-supply = <&pm8350_l6>;
 		vreg-0p9-supply = <&pm8350_l5>;
 		vreg-cx-supply = <&VDD_CX_LEVEL>;
@@ -311,7 +311,7 @@
 				&pcie1_clkreq_sleep
 				&pcie1_wake_default>;
 
-		gdsc-vdd-supply = <&gcc_pcie_1_gdsc>;
+		gdsc-core-vdd-supply = <&gcc_pcie_1_gdsc>;
 		vreg-1p8-supply = <&pm8350_l6>;
 		vreg-0p9-supply = <&pm8450_l2>;
 		vreg-qref-supply = <&pm8350_l5>;
