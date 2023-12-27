@@ -44,6 +44,7 @@
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,
 					<&lpass_audio_hw_vote 0>;
+			qcom,swr-master-version = <0x01070000>;
 			qcom,swr_master_id = <3>;
 			qcom,mipi-sdw-block-packing-mode = <1>;
 			swrm-io-base = <0x33b0000 0x0>;
@@ -136,6 +137,7 @@
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,
 					<&lpass_audio_hw_vote 0>;
+			qcom,swr-master-version = <0x01070000>;
 			qcom,swr_master_id = <2>;
 			qcom,mipi-sdw-block-packing-mode = <1>;
 			swrm-io-base = <0x3210000 0x0>;
@@ -179,6 +181,7 @@
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,
 					<&lpass_audio_hw_vote 0>;
+			qcom,swr-master-version = <0x01070000>;
 			qcom,swr_master_id = <1>;
 			qcom,mipi-sdw-block-packing-mode = <0>;
 			swrm-io-base = <0x3250000 0x0>;
@@ -238,6 +241,7 @@
 					"lpass_audio_hw_vote";
 			clocks = <&lpass_core_hw_vote 0>,
 					<&lpass_audio_hw_vote 0>;
+			qcom,swr-master-version = <0x01070000>;
 			qcom,swr_master_id = <4>;
 			qcom,mipi-sdw-block-packing-mode = <0>;
 			swrm-io-base = <0x31f0000 0x0>;
