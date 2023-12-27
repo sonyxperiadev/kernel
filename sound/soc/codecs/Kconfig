@@ -65,6 +65,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_CS35L41_SPI
 	imply SND_SOC_CS35L45_I2C
 	imply SND_SOC_CS35L45_SPI
+	imply SND_SOC_CS40L2X
 	imply SND_SOC_CS42L42
 	imply SND_SOC_CS42L51_I2C
 	imply SND_SOC_CS42L52
@@ -650,6 +651,10 @@ config SND_SOC_CS35L45_SPI
 	depends on SPI_MASTER
 	select SND_SOC_CS35L45
 	select REGMAP_SPI
+
+config SND_SOC_CS40L2X
+	tristate "Cirrus Logic CS40L2X CODEC"
+	depends on HAPTICS_CS40L2X
 
 config SND_SOC_CS42L42
 	tristate "Cirrus Logic CS42L42 CODEC"
