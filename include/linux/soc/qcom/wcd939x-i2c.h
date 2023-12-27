@@ -109,39 +109,39 @@ static inline int wcd_usbss_dpdm_switch_update(bool enable, bool eq_en)
 	return 0;
 }
 
-int wcd_usbss_audio_config(bool enable, enum wcd_usbss_config_type config_type,
+static inline int wcd_usbss_audio_config(bool enable, enum wcd_usbss_config_type config_type,
 			   unsigned int power_mode)
 {
 	return 0;
 }
 
-int wcd_usbss_update_default_trim(void)
+static inline int wcd_usbss_update_default_trim(void)
 {
 	return 0;
 }
 
-enum wcd_usbss_sbu_switch_orientation wcd_usbss_get_sbu_switch_orientation(void)
+static inline enum wcd_usbss_sbu_switch_orientation wcd_usbss_get_sbu_switch_orientation(void)
 {
 	return INVALID_ORIENTATION;
 }
 
-int wcd_usbss_set_switch_settings_enable(enum wcd_usbss_switch_type switch_type,
+static inline int wcd_usbss_set_switch_settings_enable(enum wcd_usbss_switch_type switch_type,
 					 enum wcd_usbss_switch_state switch_state)
 {
 	return 0;
 }
 
-int wcd_usbss_linearizer_rdac_cal_code_select(enum linearizer_rdac_cal_code_select source)
+static inline int wcd_usbss_linearizer_rdac_cal_code_select(enum linearizer_rdac_cal_code_select source)
 {
 	return 0;
 }
 
-int wcd_usbss_set_linearizer_sw_tap(uint32_t aud_tap, uint32_t gnd_tap)
+static inline int wcd_usbss_set_linearizer_sw_tap(uint32_t aud_tap, uint32_t gnd_tap)
 {
 	return 0;
 }
 
-int wcd_usbss_register_update(uint32_t reg_arr[][2], bool write, size_t arr_size)
+static inline int wcd_usbss_register_update(uint32_t reg_arr[][2], bool write, size_t arr_size)
 {
 	return 0;
 }
