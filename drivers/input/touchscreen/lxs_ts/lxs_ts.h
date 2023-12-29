@@ -312,8 +312,6 @@ enum _LXS_CHIP_TYPE {
 
 #define __LXS_SUPPORT_FILTER_CON
 
-#define CONFIG_TOUCHSCREEN_LXS_SW82907
-
 /*---------------------------------------------------------------------------*/
 
 //#define __LXS_CUSTOM_VERSION
