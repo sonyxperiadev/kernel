@@ -26,14 +26,20 @@
 		max_x = <1080>;
 		max_y = <2520>;
 
+		//area-size = <48 81 30>;	//area_indicator, area_navigation, area_edge
+
+		// enable firmware control
 		use_firmware = <1>;
 
+		// auto-update during driver initialization
 		use_fw_upgrade = <1>;
 		use_fw_ver_diff = <1>;
 
+		// watchdog
 		watchdog_support = <1>;
 		watchdog_delay_ms = <10000>;
 
+		// enable knock
 		use_lpwg = <1>;
 		pt_open_cmp = <4800 8192>;
 		pt_short_gnd_cmp = <6500 8192>;
@@ -42,11 +48,17 @@
 		pt_sync_v_cmp = <57 63>;
 		pt_sync_h_cmp = <441 488>;
 
+		// grip rejection
 		lxs,rejection_area_portrait = <25 150 60 200>;
 		lxs,rejection_area_landscape = <150 20 200 60>;
 		lxs,rejection_area_portrait_ge = <200 200>;
 		lxs,rejection_area_landscape_ge = <200 200 200 200>;
 
+		/*
+		 * ex) In android
+		 *      /vendor/firmware/sw82907_v0.01.img
+		 *      /etc/firmware/sw82907_v0.01.img
+		 */
 		fw_image = "touch_module_id_0x02.img";
 
 		panel_spec = "sw82907_test_spec_v0.1.txt";

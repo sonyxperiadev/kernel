@@ -24,4 +24,4 @@
 #include "somc-yodo-audio-common.dtsi"
 #include "somc-yodo-audio-pdx237.dtsi"
 #include "kalama-camera-sensor-pdx237.dtsi"
-#include "sec_touchscreen_pdx237.dtsi"
+#include "lxs_touchscreen_pdx237.dtsi"

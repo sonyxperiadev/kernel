@@ -1,0 +1,68 @@
+/* arch/arm64/boot/dts/qcom/lxs_touchscreen_pdx234.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se4_i2c  {				// indicates parent device : I2C_1 adapter block
+	status = "ok";
+	sw82907@28 {				// define new client device(sw82907), slave addr is 0x28
+		status = "okay";
+		compatible = "lxs,sw82907";	// compatible name (see touch_sw82907.c)
+		reg = <0x28>;				// slave addr. : 0x28
+
+		interrupt-parent = <&tlmm>;	// interrupt source : GPIO group 'gpx1'
+		interrupts = <25 0x02>;		// index 6(0~7) in gpx1 external interrupts
+
+		reset-gpio = <&tlmm 24 GPIO_ACTIVE_LOW>;	// index 7 in gpx1
+		irq-gpio = <&tlmm 25 GPIO_ACTIVE_LOW>;	// index 6 in gpx1
+
+		max_x = <1644>;
+		max_y = <3840>;
+
+		//area-size = <48 81 30>;	//area_indicator, area_navigation, area_edge
+
+		// enable firmware control
+		use_firmware = <1>;
+
+		// auto-update during driver initialization
+		use_fw_upgrade = <1>;
+		use_fw_ver_diff = <1>;
+
+		// watchdog
+		watchdog_support = <1>;
+		watchdog_delay_ms = <10000>;
+
+		// enable knock
+		use_lpwg = <1>;
+		pt_open_cmp = <4800 8192>;
+		pt_short_gnd_cmp = <6500 8192>;
+		pt_short_trx_cmp = <6500 8192>;
+		pt_short_vdd_cmp = <0 5200>;
+		pt_sync_v_cmp = <57 63>;
+		pt_sync_h_cmp = <441 488>;
+
+		// grip rejection
+		lxs,rejection_area_portrait = <40 240 90 300>;
+		lxs,rejection_area_landscape = <240 30 300 90>;
+		lxs,rejection_area_portrait_ge = <200 200>;
+		lxs,rejection_area_landscape_ge = <200 200 200 200>;
+
+		/*
+		 * ex) In android
+		 *      /vendor/firmware/sw82907_v0.01.img
+		 *      /etc/firmware/sw82907_v0.01.img
+		 */
+		fw_image = "touch_module_id_0x01.img";
+
+		panel_spec = "sw82907_test_spec_v0.1.txt";
+
+		self_test = "sw82907_self_test.txt";
+	};
+};

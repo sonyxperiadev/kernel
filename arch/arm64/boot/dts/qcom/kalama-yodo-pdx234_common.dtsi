@@ -12,8 +12,7 @@
 #include "somc-yodo-audio-common.dtsi"
 #include "somc-yodo-audio-pdx234.dtsi"
 #include "kalama-camera-sensor-pdx234.dtsi"
-#include "sec_touchscreen_pdx234.dtsi"
-//#include "lxs_touchscreen_pdx234.dtsi"
+#include "lxs_touchscreen_pdx234.dtsi"
 
 &somc_pinctrl {
 	/* If product common default setting is needed,
