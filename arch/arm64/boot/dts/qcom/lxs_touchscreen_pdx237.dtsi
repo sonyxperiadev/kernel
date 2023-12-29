@@ -64,5 +64,7 @@
 		panel_spec = "sw82907_test_spec_v0.1.txt";
 
 		self_test = "sw82907_self_test.txt";
+
+		panel = <&dsi_9>;
 	};
 };
