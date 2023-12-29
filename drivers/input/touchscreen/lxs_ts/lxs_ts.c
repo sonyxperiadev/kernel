@@ -61,7 +61,11 @@ static void lxs_ts_options(struct lxs_ts *ts)
 #endif
 }
 
-static int drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+static void lxs_ts_dsi_panel_notifier_cb(
+		enum panel_event_notifier_tag tag,
+		struct panel_event_notification *notification,
+		void *client_data);
+struct drm_panel *lxs_ts_active_panel;
 
 static void lxs_ts_params(struct lxs_ts *ts)
 {
@@ -1263,74 +1267,49 @@ int lxs_ts_resume(struct lxs_ts *ts)
 	return 0;
 }
 
-int drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+static void lxs_ts_dsi_panel_notifier_cb(
+		enum panel_event_notifier_tag tag,
+		struct panel_event_notification *notification,
+		void *client_data)
 {
-	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
-	struct lxs_ts *ts = container_of(self, struct lxs_ts, drm_notif);
-	struct timespec64 time;
-	int blank;
+	struct lxs_ts *ts = client_data;
 
-	if (evdata && evdata->data) {
-		if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
-			blank = *(int *)evdata->data;
-			t_dev_info(ts->dev, "Before: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
-				if (!ts->probe_done) {
-					t_dev_info(ts->dev, "not already sleep out\n");
-					return 0;
-				}
-
-				ktime_get_boottime_ts64(&time);
-				t_dev_info(ts->dev, "start@%ld.%06ld\n",
-					time.tv_sec, time.tv_nsec);
-				lxs_ts_suspend(ts);
-				ktime_get_boottime_ts64(&time);
-				t_dev_info(ts->dev, "end@%ld.%06ld\n",
-					time.tv_sec, time.tv_nsec);
-				break;
-			case DRM_BLANK_UNBLANK:
-				break;
-			default:
-				break;
-			}
-		} else if (event == DRM_EXT_EVENT_AFTER_BLANK) {
-			blank = *(int *)evdata->data;
-			t_dev_info(ts->dev, "After: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
-				/* after screen to LP/Off mode */
-				if (ts->probe_done)
-					lxs_ts_release_all_event(ts);
-				break;
-			case DRM_BLANK_UNBLANK:
-				if (!ts->probe_done) {
-					t_dev_info(ts->dev, "not already sleep out\n");
-					if (ts->after_probe.err)
-						lxs_ts_resume(ts);
-				} else {
-					ktime_get_boottime_ts64(&time);
-					t_dev_info(ts->dev, "start@%ld.%06ld\n",
-						time.tv_sec, time.tv_nsec);
-					lxs_ts_resume(ts);
-					ktime_get_boottime_ts64(&time);
-					t_dev_info(ts->dev, "end@%ld.%06ld\n",
-						time.tv_sec, time.tv_nsec);
-				}
-				break;
-			default:
-				break;
-			}
-		}
+	if (!notification) {
+		t_dev_err(ts->dev, "%s: Invalid notification\n", __func__);
+		return;
 	}
 
-	return 0;
+	t_dev_dbg_base(ts->dev, "%s: Notification type: %d, early trigger:%d\n", __func__,
+			notification->notif_type,
+			notification->notif_data.early_trigger);
+
+	if (!client_data) {
+		t_dev_err(ts->dev, "%s: No client data\n", __func__);
+		return;
+	}
+
+	switch (notification->notif_type) {
+	case DRM_PANEL_EVENT_UNBLANK:
+		if (!ts->probe_done) {
+			t_dev_info(ts->dev, "not already sleep out\n");
+			if (ts->after_probe.err)
+				lxs_ts_resume(ts);
+			return;
+		}
+		lxs_ts_resume(ts);
+		break;
+	case DRM_PANEL_EVENT_BLANK:
+		if (!ts->probe_done) {
+			t_dev_info(ts->dev, "not already sleep out\n");
+			return;
+		}
+		lxs_ts_suspend(ts);
+		break;
+	default:
+		t_dev_dbg_base(ts->dev, "%s: notification serviced :%d\n", __func__,
+				notification->notif_type);
+		break;
+	}
 }
 
 #define LXS_TS_RETRY_SESSION_COUNT 30
@@ -1961,10 +1940,65 @@ static void lxs_ts_unset(struct lxs_ts *ts)
 	}
 }
 
+static void lxs_ts_register_for_panel_events(struct lxs_ts *ts)
+{
+	void *cookie;
+
+	cookie = panel_event_notifier_register(
+			PANEL_EVENT_NOTIFICATION_PRIMARY,
+			PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH,
+			lxs_ts_active_panel,
+			&lxs_ts_dsi_panel_notifier_cb,
+			ts);
+	if (!cookie) {
+		t_dev_err(ts->dev, "%s: Failed to register for panel events\n", __func__);
+		return;
+	}
+
+	ts->notifier_cookie = cookie;
+
+	t_dev_dbg_base(ts->dev, "%s: Registered for panel notifications on panel: %s\n",
+			__func__, lxs_ts_active_panel->dev->of_node->name);
+}
+
+static int lxs_ts_get_active_panel(struct device_node *np)
+{
+	struct device_node *node;
+	struct drm_panel *panel;
+	int i, count;
+	int ret = 0;
+
+	count = of_count_phandle_with_args(np, "panel", NULL);
+	if (count <= 0)
+		goto end;
+
+	for (i = 0; i < count; i++) {
+		node = of_parse_phandle(np, "panel", i);
+		panel = of_drm_find_panel(node);
+		of_node_put(node);
+		if (IS_ERR(panel)) {
+			ret = PTR_ERR(panel);
+			if (ret != -EPROBE_DEFER)
+				printk("%s Failed to get active panel, ret = %d\n", __func__, ret);
+			goto end;
+		}
+	}
+
+	lxs_ts_active_panel = panel;
+
+end:
+	return ret;
+}
+
 int lxs_ts_probe(struct lxs_ts *ts)
 {
+	struct device_node *np = ts->dev->of_node;
 	int ret = 0;
 	int i = 0;
+
+	ret = lxs_ts_get_active_panel(np);
+	if (ret == -EPROBE_DEFER)
+		return ret;
 
 	lxs_ts_params(ts);
 
@@ -2019,11 +2053,12 @@ int lxs_ts_probe(struct lxs_ts *ts)
 	}
 
 	/* init notification callbacks */
-	ts->drm_notif.notifier_call = drm_notifier_callback;
-
-	ret = drm_register_client(&ts->drm_notif);
-	if (ret) {
-		t_dev_err(ts->dev, "Unable to register drm_notifier: %d\n", ret);
+	if (lxs_ts_active_panel) {
+		t_dev_dbg_base(ts->dev, "%s: panel detected, registering notifier\n", __func__);
+		lxs_ts_register_for_panel_events(ts);
+	} else {
+		t_dev_err(ts->dev, "%s: panel not detected, freeing data\n", __func__);
+		ret = -1;
 		goto out_err_notifier_register_client;
 	}
 
@@ -2091,7 +2126,10 @@ void lxs_ts_remove(struct lxs_ts *ts, int is_shutdown)
 		ts->probe_done = 0;
 	}
 
-	drm_unregister_client(&ts->drm_notif);
+	if (lxs_ts_active_panel) {
+		t_dev_dbg_base(ts->dev, "%s: unregistering panel notifications\n", __func__);
+		panel_event_notifier_unregister(ts->notifier_cookie);
+	}
 
 	lxs_ts_free_sysfs(ts);
 

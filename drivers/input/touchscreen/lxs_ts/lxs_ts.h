@@ -78,7 +78,8 @@
 
 #include <linux/errno.h>
 
-#include <linux/drm_notify.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
+#include <drm/drm_panel.h>
 #include <linux/incell.h>
 
 #ifndef __weak
@@ -1824,7 +1825,7 @@ struct lxs_ts {
 	void *abt;
 	u32 abt_quirks;
 
-	struct notifier_block drm_notif;
+	void *notifier_cookie;	/* touch notifier for panel events */
 	int after_probe_retry;
 
 	/* For grip rejection */
