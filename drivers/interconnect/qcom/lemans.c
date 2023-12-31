@@ -3231,7 +3231,7 @@ static int qnoc_probe(struct platform_device *pdev)
 
 	ret = qcom_icc_rpmh_probe(pdev);
 	if (ret)
-		dev_err(&pdev->dev, "failed to register ICC provider: %d\n", ret);
+		dev_err_probe(&pdev->dev, ret, "failed to register ICC provider\n");
 	else
 		dev_info(&pdev->dev, "Registered LEMANS ICC\n");
 
