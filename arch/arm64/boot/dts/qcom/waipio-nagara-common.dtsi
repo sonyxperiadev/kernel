@@ -2485,7 +2485,7 @@
 	sm_gpio_129: sm_gpio_129 {
 		mux {
 			pins = "gpio129";
-			function = " mi2s0_ws";
+			function = "mi2s0_ws";
 		};
 
 		config {
