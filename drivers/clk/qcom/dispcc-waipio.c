@@ -18,6 +18,7 @@
 #include "clk-alpha-pll.h"
 #include "clk-branch.h"
 #include "clk-pll.h"
+#include "clk-pm.h"
 #include "clk-rcg.h"
 #include "clk-regmap.h"
 #include "clk-regmap-divider.h"
@@ -25,8 +26,6 @@
 #include "common.h"
 #include "reset.h"
 #include "vdd-level.h"
-
-#define DISP_CC_MISC_CMD	0xF000
 
 static DEFINE_VDD_REGULATORS(vdd_mm, VDD_HIGH + 1, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_mxa, VDD_NOMINAL + 1, 1, vdd_corner);
@@ -60,7 +59,7 @@ static struct pll_vco lucid_evo_vco[] = {
 	{ 249600000, 2000000000, 0 },
 };
 
-static const struct alpha_pll_config disp_cc_pll0_config = {
+static struct alpha_pll_config disp_cc_pll0_config = {
 	.l = 0xD,
 	.cal_l = 0x44,
 	.alpha = 0x6492,
@@ -77,6 +76,7 @@ static struct clk_alpha_pll disp_cc_pll0 = {
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
 	.flags = DISABLE_TO_OFF,
+	.config = &disp_cc_pll0_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "disp_cc_pll0",
@@ -101,7 +101,7 @@ static struct clk_alpha_pll disp_cc_pll0 = {
 	},
 };
 
-static const struct alpha_pll_config disp_cc_pll1_config = {
+static struct alpha_pll_config disp_cc_pll1_config = {
 	.l = 0x1F,
 	.cal_l = 0x44,
 	.alpha = 0x4000,
@@ -118,6 +118,7 @@ static struct clk_alpha_pll disp_cc_pll1 = {
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
 	.flags = DISABLE_TO_OFF,
+	.config = &disp_cc_pll1_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "disp_cc_pll1",
@@ -1856,6 +1857,15 @@ static struct clk_branch disp_cc_sleep_clk = {
 	},
 };
 
+/*
+ * Keep clocks always enabled:
+ *	disp_cc_xo_clk
+ */
+static struct critical_clk_offset disp_cc_waipio_critical_clocks[] = {
+	{ .offset = 0xf000, .mask = BIT(4) },
+	{ .offset = 0xe05c, .mask = BIT(0) },
+};
+
 static struct clk_regmap *disp_cc_waipio_clocks[] = {
 	[DISP_CC_MDSS_AHB1_CLK] = &disp_cc_mdss_ahb1_clk.clkr,
 	[DISP_CC_MDSS_AHB_CLK] = &disp_cc_mdss_ahb_clk.clkr,
@@ -1965,6 +1975,8 @@ static struct qcom_cc_desc disp_cc_waipio_desc = {
 	.num_resets = ARRAY_SIZE(disp_cc_waipio_resets),
 	.clk_regulators = disp_cc_waipio_regulators,
 	.num_clk_regulators = ARRAY_SIZE(disp_cc_waipio_regulators),
+	.critical_clk_en = disp_cc_waipio_critical_clocks,
+	.num_critical_clk = ARRAY_SIZE(disp_cc_waipio_critical_clocks),
 };
 
 static const struct of_device_id disp_cc_waipio_match_table[] = {
@@ -1982,25 +1994,15 @@ static int disp_cc_waipio_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	ret = qcom_cc_runtime_init(pdev, &disp_cc_waipio_desc);
+	ret = register_qcom_clks_pm(pdev, true, &disp_cc_waipio_desc);
 	if (ret)
-		return ret;
-
-	ret = pm_runtime_get_sync(&pdev->dev);
-	if (ret)
-		return ret;
+		dev_err(&pdev->dev, "Failed to register for pm ops\n");
 
 	clk_lucid_evo_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
 	clk_lucid_evo_pll_configure(&disp_cc_pll1, regmap, &disp_cc_pll1_config);
 
-	/* Enable clock gating for MDP clocks */
-	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x10, 0x10);
-
-	/*
-	 * Keep clocks always enabled:
-	 *	disp_cc_xo_clk
-	 */
-	regmap_update_bits(regmap, 0xe05c, BIT(0), BIT(0));
+	/* Enabling always ON clocks */
+	clk_restore_critical_clocks(&pdev->dev);
 
 	ret = qcom_cc_really_probe(pdev, &disp_cc_waipio_desc, regmap);
 	if (ret) {
@@ -2019,19 +2021,12 @@ static void disp_cc_waipio_sync_state(struct device *dev)
 	qcom_cc_sync_state(dev, &disp_cc_waipio_desc);
 }
 
-static const struct dev_pm_ops disp_cc_waipio_pm_ops = {
-	SET_RUNTIME_PM_OPS(qcom_cc_runtime_suspend, qcom_cc_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-};
-
 static struct platform_driver disp_cc_waipio_driver = {
 	.probe = disp_cc_waipio_probe,
 	.driver = {
 		.name = "disp_cc-waipio",
 		.of_match_table = disp_cc_waipio_match_table,
 		.sync_state = disp_cc_waipio_sync_state,
-		.pm = &disp_cc_waipio_pm_ops,
 	},
 };
 

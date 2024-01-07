@@ -11,12 +11,14 @@
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/regmap.h>
+#include <linux/pm_runtime.h>
 
 #include <dt-bindings/clock/qcom,gpucc-waipio.h>
 
 #include "clk-alpha-pll.h"
 #include "clk-branch.h"
 #include "clk-pll.h"
+#include "clk-pm.h"
 #include "clk-rcg.h"
 #include "clk-regmap.h"
 #include "clk-regmap-divider.h"
@@ -52,7 +54,7 @@ static struct pll_vco lucid_evo_vco[] = {
 	{ 249600000, 2000000000, 0 },
 };
 
-static const struct alpha_pll_config gpu_cc_pll0_config = {
+static struct alpha_pll_config gpu_cc_pll0_config = {
 	.l = 0x24,
 	.cal_l = 0x44,
 	.alpha = 0x7555,
@@ -63,7 +65,7 @@ static const struct alpha_pll_config gpu_cc_pll0_config = {
 	.user_ctl_hi_val = 0x00000805,
 };
 
-static const struct alpha_pll_config gpu_cc_pll0_config_waipio_v2 = {
+static struct alpha_pll_config gpu_cc_pll0_config_waipio_v2 = {
 	.l = 0x1D,
 	.cal_l = 0x44,
 	.alpha = 0xB000,
@@ -79,6 +81,7 @@ static struct clk_alpha_pll gpu_cc_pll0 = {
 	.vco_table = lucid_evo_vco,
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
+	.config = &gpu_cc_pll0_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpu_cc_pll0",
@@ -102,7 +105,7 @@ static struct clk_alpha_pll gpu_cc_pll0 = {
 	},
 };
 
-static const struct alpha_pll_config gpu_cc_pll1_config = {
+static struct alpha_pll_config gpu_cc_pll1_config = {
 	.l = 0x34,
 	.cal_l = 0x44,
 	.alpha = 0x1555,
@@ -118,6 +121,7 @@ static struct clk_alpha_pll gpu_cc_pll1 = {
 	.vco_table = lucid_evo_vco,
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
+	.config = &gpu_cc_pll1_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpu_cc_pll1",
@@ -772,7 +776,7 @@ static const struct regmap_config gpu_cc_waipio_regmap_config = {
 	.fast_io = true,
 };
 
-static const struct qcom_cc_desc gpu_cc_waipio_desc = {
+static struct qcom_cc_desc gpu_cc_waipio_desc = {
 	.config = &gpu_cc_waipio_regmap_config,
 	.clks = gpu_cc_waipio_clocks,
 	.num_clks = ARRAY_SIZE(gpu_cc_waipio_clocks),
@@ -792,6 +796,8 @@ MODULE_DEVICE_TABLE(of, gpu_cc_waipio_match_table);
 static void gpu_cc_waipio_fixup_waipiov2(struct regmap *regmap)
 {
 	clk_lucid_evo_pll_configure(&gpu_cc_pll0, regmap, &gpu_cc_pll0_config_waipio_v2);
+	gpu_cc_pll0.config = &gpu_cc_pll0_config_waipio_v2;
+
 	gpu_cc_ff_clk_src.clkr.vdd_data.rate_max[VDD_LOWER_D1] = 200000000;
 	gpu_cc_gmu_clk_src.clkr.vdd_data.rate_max[VDD_LOWER_D1] = 200000000;
 	gpu_cc_hub_clk_src.clkr.vdd_data.rate_max[VDD_LOWER_D1] = 150000000;
@@ -823,6 +829,10 @@ static int gpu_cc_waipio_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
+	ret = register_qcom_clks_pm(pdev, true, &gpu_cc_waipio_desc);
+	if (ret)
+		dev_err(&pdev->dev, "Failed to register for pm ops\n");
+
 	clk_lucid_evo_pll_configure(&gpu_cc_pll0, regmap, &gpu_cc_pll0_config);
 	clk_lucid_evo_pll_configure(&gpu_cc_pll1, regmap, &gpu_cc_pll1_config);
 
@@ -838,6 +848,7 @@ static int gpu_cc_waipio_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	pm_runtime_put_sync(&pdev->dev);
 	dev_info(&pdev->dev, "Registered GPU CC clocks\n");
 
 	return ret;

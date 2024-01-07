@@ -17,6 +17,7 @@
 #include "clk-alpha-pll.h"
 #include "clk-branch.h"
 #include "clk-pll.h"
+#include "clk-pm.h"
 #include "clk-rcg.h"
 #include "clk-regmap.h"
 #include "clk-regmap-divider.h"
@@ -3548,6 +3549,26 @@ static struct clk_branch gcc_video_xo_clk = {
 	},
 };
 
+/* FORCE_MEM_CORE_ON for ufs phy ice core clocks
+ * gcc_camera_ahb_clk
+ * gcc_camera_xo_clk
+ * gcc_disp_ahb_clk
+ * gcc_disp_xo_clk
+ * gcc_gpu_cfg_ahb_clk
+ * gcc_video_ahb_clk
+ * gcc_video_xo_clk
+ */
+static struct critical_clk_offset gcc_waipio_critical_clocks[] = {
+	{ .offset = 0x8706c, .mask = BIT(14) },
+	{ .offset = 0x36004, .mask = BIT(0) },
+	{ .offset = 0x36020, .mask = BIT(0) },
+	{ .offset = 0x37004, .mask = BIT(0) },
+	{ .offset = 0x3701c, .mask = BIT(0) },
+	{ .offset = 0x81004, .mask = BIT(0) },
+	{ .offset = 0x42004, .mask = BIT(0) },
+	{ .offset = 0x42028, .mask = BIT(0) },
+};
+
 static struct clk_regmap *gcc_waipio_clocks[] = {
 	[GCC_AGGRE_NOC_PCIE_0_AXI_CLK] = &gcc_aggre_noc_pcie_0_axi_clk.clkr,
 	[GCC_AGGRE_NOC_PCIE_1_AXI_CLK] = &gcc_aggre_noc_pcie_1_axi_clk.clkr,
@@ -3804,7 +3825,7 @@ static const struct regmap_config gcc_waipio_regmap_config = {
 	.fast_io = true,
 };
 
-static const struct qcom_cc_desc gcc_waipio_desc = {
+static struct qcom_cc_desc gcc_waipio_desc = {
 	.config = &gcc_waipio_regmap_config,
 	.clks = gcc_waipio_clocks,
 	.num_clks = ARRAY_SIZE(gcc_waipio_clocks),
@@ -3814,6 +3835,8 @@ static const struct qcom_cc_desc gcc_waipio_desc = {
 	.num_clk_regulators = ARRAY_SIZE(gcc_waipio_regulators),
 	.clk_hws = gcc_waipio_hws,
 	.num_clk_hws = ARRAY_SIZE(gcc_waipio_hws),
+	.critical_clk_en = gcc_waipio_critical_clocks,
+	.num_critical_clk = ARRAY_SIZE(gcc_waipio_critical_clocks),
 };
 
 static const struct of_device_id gcc_waipio_match_table[] = {
@@ -3836,9 +3859,12 @@ static int gcc_waipio_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	/* FORCE_MEM_CORE_ON for ufs phy ice core clocks */
-	 regmap_update_bits(regmap, gcc_ufs_phy_ice_core_clk.halt_reg,
-				    BIT(14), BIT(14));
+	ret = register_qcom_clks_pm(pdev, false, &gcc_waipio_desc);
+	if (ret)
+		dev_err(&pdev->dev, "Failed to register for pm ops\n");
+
+	/* Enabling always ON clocks */
+	clk_restore_critical_clocks(&pdev->dev);
 
 	ret = qcom_cc_really_probe(pdev, &gcc_waipio_desc, regmap);
 	if (ret) {
