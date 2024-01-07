@@ -18,6 +18,7 @@
 #include "clk-alpha-pll.h"
 #include "clk-branch.h"
 #include "clk-pll.h"
+#include "clk-pm.h"
 #include "clk-rcg.h"
 #include "clk-regmap.h"
 #include "clk-regmap-divider.h"
@@ -45,7 +46,7 @@ static struct pll_vco lucid_evo_vco[] = {
 	{ 249600000, 2000000000, 0 },
 };
 
-static const struct alpha_pll_config video_cc_pll0_config = {
+static struct alpha_pll_config video_cc_pll0_config = {
 	.l = 0x1E,
 	.cal_l = 0x44,
 	.alpha = 0x0,
@@ -61,6 +62,7 @@ static struct clk_alpha_pll video_cc_pll0 = {
 	.vco_table = lucid_evo_vco,
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
+	.config = &video_cc_pll0_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "video_cc_pll0",
@@ -84,7 +86,7 @@ static struct clk_alpha_pll video_cc_pll0 = {
 	},
 };
 
-static const struct alpha_pll_config video_cc_pll1_config = {
+static struct alpha_pll_config video_cc_pll1_config = {
 	.l = 0x2B,
 	.cal_l = 0x44,
 	.alpha = 0xC000,
@@ -100,6 +102,7 @@ static struct clk_alpha_pll video_cc_pll1 = {
 	.vco_table = lucid_evo_vco,
 	.num_vco = ARRAY_SIZE(lucid_evo_vco),
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_LUCID_EVO],
+	.config = &video_cc_pll1_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "video_cc_pll1",
@@ -450,6 +453,16 @@ static struct clk_branch video_cc_sleep_clk = {
 	},
 };
 
+/*
+ * Keep clocks always enabled:
+ *	video_cc_ahb_clk
+ *	video_cc_xo_clk
+ */
+static struct critical_clk_offset video_cc_waipio_critical_clocks[] = {
+	{ .offset = 0x80e4, .mask = BIT(0) },
+	{ .offset = 0x8114, .mask = BIT(0) },
+};
+
 static struct clk_regmap *video_cc_waipio_clocks[] = {
 	[VIDEO_CC_AHB_CLK_SRC] = &video_cc_ahb_clk_src.clkr,
 	[VIDEO_CC_MVS0_CLK] = &video_cc_mvs0_clk.clkr,
@@ -495,6 +508,8 @@ static struct qcom_cc_desc video_cc_waipio_desc = {
 	.num_resets = ARRAY_SIZE(video_cc_waipio_resets),
 	.clk_regulators = video_cc_waipio_regulators,
 	.num_clk_regulators = ARRAY_SIZE(video_cc_waipio_regulators),
+	.critical_clk_en = video_cc_waipio_critical_clocks,
+	.num_critical_clk = ARRAY_SIZE(video_cc_waipio_critical_clocks),
 };
 
 static const struct of_device_id video_cc_waipio_match_table[] = {
@@ -512,24 +527,15 @@ static int video_cc_waipio_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	ret = qcom_cc_runtime_init(pdev, &video_cc_waipio_desc);
+	ret = register_qcom_clks_pm(pdev, true, &video_cc_waipio_desc);
 	if (ret)
-		return ret;
-
-	ret = pm_runtime_get_sync(&pdev->dev);
-	if (ret)
-		return ret;
+		dev_err(&pdev->dev, "Failed to register for pm ops\n");
 
 	clk_lucid_evo_pll_configure(&video_cc_pll0, regmap, &video_cc_pll0_config);
 	clk_lucid_evo_pll_configure(&video_cc_pll1, regmap, &video_cc_pll1_config);
 
-	/*
-	 * Keep clocks always enabled:
-	 *	video_cc_ahb_clk
-	 *	video_cc_xo_clk
-	 */
-	regmap_update_bits(regmap, 0x80e4, BIT(0), BIT(0));
-	regmap_update_bits(regmap, 0x8114, BIT(0), BIT(0));
+	/* Enabling always ON clocks */
+	clk_restore_critical_clocks(&pdev->dev);
 
 	ret = qcom_cc_really_probe(pdev, &video_cc_waipio_desc, regmap);
 	if (ret) {
@@ -548,19 +554,12 @@ static void video_cc_waipio_sync_state(struct device *dev)
 	qcom_cc_sync_state(dev, &video_cc_waipio_desc);
 }
 
-static const struct dev_pm_ops video_cc_waipio_pm_ops = {
-	SET_RUNTIME_PM_OPS(qcom_cc_runtime_suspend, qcom_cc_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-};
-
 static struct platform_driver video_cc_waipio_driver = {
 	.probe = video_cc_waipio_probe,
 	.driver = {
 		.name = "video_cc-waipio",
 		.of_match_table = video_cc_waipio_match_table,
 		.sync_state = video_cc_waipio_sync_state,
-		.pm = &video_cc_waipio_pm_ops,
 	},
 };
 
