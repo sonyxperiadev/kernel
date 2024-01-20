@@ -5,7 +5,7 @@
 printf "static const char *socket_ipproto[] = {\n"
 regex='^[[:space:]]+IPPROTO_(\w+)[[:space:]]+=[[:space:]]+([[:digit:]]+),.*'
 
-egrep $regex ${header_dir}/in.h | \
+grep -E $regex ${header_dir}/in.h | \
 	sed -r "s/$regex/\2 \1/g"	| \
 	sort | xargs printf "\t[%s] = \"%s\",\n"
 printf "};\n"
