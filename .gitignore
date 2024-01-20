@@ -146,3 +146,6 @@ arch/arm64/configs/sony
 
 # Tech package directories
 techpack/
+
+# Qualcomm CNSS WLAN Host Driver
+drivers/staging/wlan-qc/
