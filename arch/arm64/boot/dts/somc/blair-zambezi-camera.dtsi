@@ -72,6 +72,10 @@
 &soc {
 	qcom,cam-res-mgr {
 		compatible = "qcom,cam-res-mgr";
+		gpios-shared = <366>;
+		pinctrl-names = "flash_active", "flash_suspend";
+		pinctrl-0 = <&flash_active>;
+		pinctrl-1 = <&flash_suspend>;
 		status = "ok";
 	};
 
@@ -82,6 +86,13 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		status = "ok";
+	};
+
+	zambezi_flash: zambezi_flash {
+		compatible = "somc,zambezi_flash";
+		pinctrl-names = "camera_flash_pwm_default";
+		pinctrl-0 = <&camera_flash_pwm_default>;
+		pwms = <&pm6125_pwm 0 0>;
 	};
 };
 
@@ -143,6 +154,22 @@
 		status = "ok";
 	};
 
+	led_flash_wide: qcom,camera-flash@0 {
+		cell-index = <0>;
+		compatible = "qcom,camera-flash";
+		flash-type = <CAM_FLASH_TYPE_GPIO>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&flash_active>;
+		pinctrl-1 = <&flash_suspend>;
+		gpios = <&tlmm 11 0>;
+		gpio-custom1 = <0>;
+		gpio-req-tbl-num = <0>;
+		gpio-req-tbl-flags = <0>;
+		gpio-req-tbl-label = "CUSTOM_GPIO1";
+		status = "ok";
+	};
+
 	qcom,cam-sensor@0 {
 		cell-index = <0>;
 		compatible = "qcom,cam-sensor";
@@ -153,7 +180,7 @@
 		sensor-position-yaw = <180>;
 		actuator-src = <&actuator_wide>;
 		eeprom-src = <&eeprom_wide>;
-		// led-flash-src = <&led_flash_wide>;
+		led-flash-src = <&led_flash_wide>;
 		ois-src = <&ois_wide>;
 		cam_vana-supply = <&cam_avdd1>;
 		cam_vdig-supply = <&cam_dvdd2>;
@@ -213,6 +240,22 @@
 		status = "ok";
 	};
 
+	led_flash_uwide: qcom,camera-flash@2 {
+		cell-index = <2>;
+		compatible = "qcom,camera-flash";
+		flash-type = <CAM_FLASH_TYPE_GPIO>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&flash_active>;
+		pinctrl-1 = <&flash_suspend>;
+		gpios = <&tlmm 11 0>;
+		gpio-custom1 = <0>;
+		gpio-req-tbl-num = <0>;
+		gpio-req-tbl-flags = <0>;
+		gpio-req-tbl-label = "CUSTOM_GPIO1";
+		status = "ok";
+	};
+
 	qcom,cam-sensor@2 {
 		cell-index = <2>;
 		compatible = "qcom,cam-sensor";
@@ -222,7 +265,7 @@
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
 		eeprom-src = <&eeprom_uwide>;
-		// led-flash-src = <&led_flash_uwide>;
+		led-flash-src = <&led_flash_uwide>;
 		cam_vana-supply = <&cam_avdd2>;
 		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
@@ -375,6 +418,22 @@
 		status = "ok";
 	};
 
+	led_flash_tele: qcom,camera-flash@3 {
+		cell-index = <3>;
+		compatible = "qcom,camera-flash";
+		flash-type = <CAM_FLASH_TYPE_GPIO>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&flash_active>;
+		pinctrl-1 = <&flash_suspend>;
+		gpios = <&tlmm 11 0>;
+		gpio-custom1 = <0>;
+		gpio-req-tbl-num = <0>;
+		gpio-req-tbl-flags = <0>;
+		gpio-req-tbl-label = "CUSTOM_GPIO1";
+		status = "ok";
+	};
+
 	qcom,cam-sensor@3 {
 		cell-index = <3>;
 		compatible = "qcom,cam-sensor";
@@ -385,7 +444,7 @@
 		sensor-position-yaw = <180>;
 		actuator-src = <&actuator_tele>;
 		eeprom-src = <&eeprom_tele>;
-		// led-flash-src = <&led_flash_tele>;
+		led-flash-src = <&led_flash_tele>;
 		cam_vana-supply = <&cam_vddois>;
 		cam_vdig-supply = <&cam_dvdd1>;
 		cam_vio-supply = <&cam_vddio>;
@@ -557,4 +616,8 @@
 			drive-strength = <3>;
 		};
 	};
+};
+
+&pm6125_pwm {
+	status = "ok";
 };
