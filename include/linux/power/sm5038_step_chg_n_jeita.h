@@ -90,7 +90,6 @@ struct sm5038_chg_jeita_info {
 	struct power_supply	*sm5038_chg_psy;
 	struct power_supply	*sm5038_typec_psy;	
 
-
 	/* delay work */
 	struct delayed_work	get_config_work;
 	struct delayed_work	update_step_work;
@@ -98,15 +97,12 @@ struct sm5038_chg_jeita_info {
 	struct notifier_block	nb;
 
 	unsigned int battery_temp;
-
-	
-
 };
 
 
 static struct sm5038_chg_jeita_info *gJeita_info;
 
-
+int update_step_chg_n_jeita_work(void);
 int sm5038_step_chg_n_jeita_init(struct device *dev, bool step_chg_enable, bool sw_jeita_enable);
 void sm5038_step_chg_n_jeita_deinit(void);
 

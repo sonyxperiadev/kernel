@@ -13,9 +13,9 @@
 #include <linux/platform_device.h>
 #include <linux/err.h>
 #include <linux/power/sm5038.h>
-
 #include <linux/power/sm5038_charger.h>
-
+#include <linux/power/sm5038_muic.h>
+#include <linux/usb/typec/sm5038/sm5038_pd.h>
 
 #define SM5038_FLED_VERSION		"UF1"
 static struct sm5038_fled_data *g_sm5038_fled;
@@ -26,15 +26,6 @@ typedef enum {
 	PM6125_FLASH_GPIO_STATE_SUSPEND,
 	PM6125_FLASH_GPIO_STATE_MAX,	/* for array size */
 } PM6125_FLASH_GPIO_STATE;
-
-extern void sm5038_request_default_power_src(void);
-extern int sm5038_muic_get_vbus_voltage(void);
-extern void pm6125_flash_gpio_select_state(PM6125_FLASH_GPIO_STATE s);
-
-extern int sm5038_muic_check_fled_state(int enable, int mode);   /* FLEDEN_TORCH_ON  = 0x1, FLEDEN_FLASH_ON  = 0x2 */
-extern int sm5038_usbpd_check_fled_state(bool enable, u8 mode);
-
-extern int sm5038_charger_oper_push_event(int event_type, bool enable);
 
 struct sm5038_fled_platform_data {
 	const char *name;
@@ -51,8 +42,6 @@ struct sm5038_fled_platform_data {
 	bool activated_mled;	/* torch used */
 
 	bool used_gpio_ctrl;
-
-	
 };
 
 struct sm5038_fled_data {

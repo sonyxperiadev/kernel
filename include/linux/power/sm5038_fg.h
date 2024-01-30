@@ -166,4 +166,35 @@ struct sm5038_fg_data {
 #endif
 };
 
+int sm5038_fg_get_prop_cycle(void);
+int sm5038_fg_get_prop_vbat_max(void);
+int sm5038_fg_get_prop_vbat_min(void);
+int sm5038_fg_get_prop_init_vbat_max(void);
+int sm5038_fg_get_prop_init_vbat_min(void);
+int sm5038_fg_get_prop_vbat_now(void);
+int sm5038_fg_get_prop_vbat_avg(void);
+int sm5038_fg_get_prop_ocv(void);
+int sm5038_fg_get_prop_soc(void);
+int sm5038_fg_get_prop_rsoc(void);
+int sm5038_fg_get_prop_q_max_design(void);
+int sm5038_fg_get_prop_q_max(void);
+int sm5038_fg_get_prop_q_now(void);
+int sm5038_fg_get_prop_soc_cycle(void);
+int sm5038_fg_get_prop_soh(void);
+int sm5038_fg_get_prop_temp(void);
+int sm5038_fg_get_prop_temp_min(void);
+int sm5038_fg_get_prop_temp_max(void);
+int sm5038_fg_get_prop_current_now(void);
+int sm5038_fg_get_prop_current_avg(void);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int somc_sm5038_fg_learn_update(void);
+int somc_sm5038_fg_learn_get_counter(void);
+int somc_sm5038_fg_learn_set_range(int min, int max);
+int somc_sm5038_fg_learn_get_learned_capacity_raw(void);
+int somc_sm5038_fg_get_prop_batt_soc(void);
+#endif
+void sm5038_fg_set_proc_cycle(int cycle);
+int sm5038_fuelgauge_probe(struct platform_device *pdev);
+int sm5038_fuelgauge_remove(struct platform_device *pdev);
+
 #endif /* __SM5038_FUELGAUGE_H */

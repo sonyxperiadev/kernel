@@ -906,58 +906,46 @@ static inline struct sm5038_usbpd_data *manager_to_usbpd(
 	return container_of(manager, struct sm5038_usbpd_data, manager);
 }
 
-extern void sm5038_usbpd_uevent_notifier(struct device *dev);
-extern void sm5038_usbpd_class_unregister(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_device_unregister(struct sm5038_usbpd_data *pd_data);
-extern int sm5038_usbpd_init(struct device *dev, void *phy_driver_data);
-extern void sm5038_usbpd_init_policy(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_dp_detach(struct device *dev);
-extern void sm5038_usbpd_acc_detach(struct device *dev);
-extern int sm5038_usbpd_check_accessory(
-		struct sm5038_usbpd_manager_data *manager);
-extern void sm5038_usbpd_power_ready(struct device *dev,
-	enum usbpd_power_role power_role);
-extern int  sm5038_usbpd_match_request(struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_power_role_swap(struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_vconn_source_swap(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_turn_on_source(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_turn_off_power_supply(
-		struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_turn_off_power_sink(
-		struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_data_role_swap(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_inform_event(struct sm5038_usbpd_data *pd_data,
+void sm5038_usbpd_uevent_notifier(struct device *dev);
+void sm5038_request_default_power_src(void);
+int sm5038_usbpd_check_fled_state(bool enable, u8 mode);
+void sm5038_usbpd_dp_detach(struct device *dev);
+void sm5038_usbpd_acc_detach(struct device *dev);
+void sm5038_usbpd_power_ready(struct device *dev,
+		enum usbpd_power_role power_role);
+void sm5038_usbpd_inform_event(struct sm5038_usbpd_data *pd_data,
 		sm5038_usbpd_manager_event_type event);
-extern int sm5038_usbpd_evaluate_capability(struct sm5038_usbpd_data *pd_data);
-extern data_obj_type sm5038_usbpd_select_capability(
-		struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_vdm_request_enabled(
-		struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_ext_request_enabled(
-		struct sm5038_usbpd_data *pd_data);
-extern bool sm5038_usbpd_dex_vdm_request(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_set_rp_scr_sel(struct sm5038_usbpd_data *pd_data,
-		int scr_sel);
-extern void sm5038_usbpd_policy_work(struct work_struct *work_s);
-extern void sm5038_usbpd_protocol_rx(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_kick_policy_work(struct device *dev);
-extern void sm5038_usbpd_rx_hard_reset(struct device *dev);
-extern void sm5038_usbpd_rx_soft_reset(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_policy_reset(struct sm5038_usbpd_data *pd_data,
-		unsigned int flag);
-extern void sm5038_usbpd_tx_request_discard(struct sm5038_usbpd_data *pd_data);
-extern void sm5038_usbpd_set_ops(struct device *dev, usbpd_phy_ops_type *ops);
-extern bool sm5038_usbpd_send_msg(struct sm5038_usbpd_data *pd_data,
-		msg_header *h, data_obj_type *obj);
-extern bool sm5038_usbpd_send_ctrl_msg(struct sm5038_usbpd_data *pd_data,
-		msg_header *h, unsigned int msg, unsigned int dr,
-		unsigned int pr);
-extern unsigned int sm5038_usbpd_wait_msg(struct sm5038_usbpd_data *pd_data,
+bool sm5038_usbpd_vdm_request_enabled(struct sm5038_usbpd_data *pd_data);
+bool sm5038_usbpd_power_role_swap(struct sm5038_usbpd_data *pd_data);
+bool sm5038_usbpd_vconn_source_swap(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_turn_on_source(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_turn_off_power_supply(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_turn_off_power_sink(struct sm5038_usbpd_data *pd_data);
+bool sm5038_usbpd_data_role_swap(struct sm5038_usbpd_data *pd_data);
+data_obj_type sm5038_usbpd_select_capability(struct sm5038_usbpd_data *pd_data);
+int sm5038_usbpd_evaluate_capability(struct sm5038_usbpd_data *pd_data);
+int sm5038_usbpd_match_request(struct sm5038_usbpd_data *pd_data);
+bool sm5038_usbpd_send_msg(struct sm5038_usbpd_data *pd_data, msg_header *header,
+		data_obj_type *obj);
+bool sm5038_usbpd_send_ctrl_msg(struct sm5038_usbpd_data *d, msg_header *h,
+		unsigned int msg, unsigned int dr, unsigned int pr);
+unsigned int sm5038_usbpd_wait_msg(struct sm5038_usbpd_data *pd_data,
 		unsigned int msg_status, unsigned int ms);
-extern void sm5038_usbpd_reinit(struct device *dev);
-extern void sm5038_usbpd_init_protocol(struct sm5038_usbpd_data *pd_data);
-#if 0
-extern int (*fp_sec_pd_get_apdo_max_power)(unsigned int *pdo_pos,
-		unsigned int *taMaxVol, unsigned int *taMaxCur, unsigned int *taMaxPwr);
-#endif
+void sm5038_usbpd_protocol_rx(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_rx_hard_reset(struct device *dev);
+void sm5038_usbpd_rx_soft_reset(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_set_ops(struct device *dev, usbpd_phy_ops_type *ops);
+void sm5038_usbpd_tx_request_discard(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_init_protocol(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_reinit(struct device *dev);
+void sm5038_usbpd_device_unregister(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_class_unregister(struct sm5038_usbpd_data *pd_data);
+int sm5038_usbpd_init(struct device *dev, void *phy_driver_data);
+
+void sm5038_usbpd_policy_reset(struct sm5038_usbpd_data *pd_data,
+		unsigned int flag);
+void sm5038_usbpd_policy_work(struct work_struct *work);
+void sm5038_usbpd_init_policy(struct sm5038_usbpd_data *pd_data);
+void sm5038_usbpd_kick_policy_work(struct device *dev);
+
 #endif

@@ -27,7 +27,9 @@
 #endif
 
 #include <linux/power/sm5038.h>
+#include <linux/power/sm5038_charger.h>
 #include <linux/power/sm5038_muic.h>
+#include <linux/usb/typec/sm5038/sm5038_typec.h>
 
 static struct sm5038_muic_data *static_data;
 
@@ -37,16 +39,6 @@ static void sm5038_muic_handle_attach(struct sm5038_muic_data *muic_data,
 static void sm5038_muic_handle_detach(struct sm5038_muic_data *muic_data,
 			int irq);
 static void sm5038_muic_detect_dev(struct sm5038_muic_data *muic_data, int irq);
-
-extern int sm5038_charger_oper_get_input_current_ua(void);
-extern int sm5038_usbpd_get_otg_status(void);
-extern int sm5038_charger_get_chg_mode_type(void);
-extern int sm5038_charger_get_chg_on_status(void);
-
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-extern int sm5038_cc_control_command(int enable);
-extern int somc_sm5038_present_is_pd_apdapter(void);
-#endif
 
 char *SM5038_MUIC_INT_NAME[5] = {
 	"DPDM_OVP",		/* 0 */
@@ -79,6 +71,7 @@ int sm5038_muic_i2c_read_byte(struct i2c_client *client, unsigned char command)
 	sm5038_read_reg(client, command, &ret);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(sm5038_muic_i2c_read_byte);
 
 int sm5038_muic_i2c_write_byte(struct i2c_client *client,
 			unsigned char command, unsigned char value)
@@ -110,6 +103,7 @@ int sm5038_muic_i2c_write_byte(struct i2c_client *client,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(sm5038_muic_i2c_write_byte);
 
 int sm5038_set_ctrl2_reg(struct sm5038_muic_data *muic_data, int shift, bool on)
 {
@@ -852,8 +846,9 @@ bool somc_sm5038_is_cc_reconnection_running(void)
 
 	return muic_data->cc_reconnection_running;
 }
-
+EXPORT_SYMBOL_GPL(somc_sm5038_is_cc_reconnection_running);
 #endif
+
 static void sm5038_muic_init_detect(struct work_struct *work)
 {
 	struct sm5038_muic_data *muic_data = container_of(work,

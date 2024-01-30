@@ -152,5 +152,15 @@ struct sm5038_muic_data {
 
 int sm5038_muic_i2c_read_byte(struct i2c_client *client, unsigned char command);
 int sm5038_muic_i2c_write_byte(struct i2c_client *client, unsigned char command, unsigned char value);
+int sm5038_muic_get_vbus_voltage(void);
+int sm5038_muic_check_fled_state(int enable, int mode);
+int sm5038_manual_sw_control(int sw_control);
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+bool somc_sm5038_is_cc_reconnection_running(void);
+#endif
+void sm5038_muic_register_reset(struct i2c_client *i2c, void *muic);
+int sm5038_muic_probe(struct platform_device *pdev);
+int sm5038_muic_remove(struct platform_device *pdev);
+void sm5038_muic_shutdown(struct platform_device *pdev);
 
 #endif /* __SM5038_MUIC_H__ */

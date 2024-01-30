@@ -16,10 +16,12 @@
 #include <linux/math64.h>
 
 #include <linux/power/sm5038_charger.h>
+#include <linux/power/sm5038_fg.h>
+#include <linux/power/sm5038_muic.h>
 #if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #include <linux/power/sm5038_step_chg_n_jeita.h>
-
 #endif
+#include <linux/usb/typec/sm5038/sm5038_typec.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/consumer.h>
 
@@ -123,51 +125,7 @@ static enum power_supply_property sm5038_otg_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
 
-/* fuelgauge */
-extern int sm5038_fg_get_prop_cycle(void);
-extern int sm5038_fg_get_prop_vbat_max(void);
-extern int sm5038_fg_get_prop_vbat_min(void);
-extern int sm5038_fg_get_prop_init_vbat_max(void);
-extern int sm5038_fg_get_prop_init_vbat_min(void);
-extern int sm5038_fg_get_prop_vbat_now(void);
-extern int sm5038_fg_get_prop_vbat_avg(void);
-extern int sm5038_fg_get_prop_ocv(void);
-extern int sm5038_fg_get_prop_rsoc(void);
-extern int sm5038_fg_get_prop_soc(void);
-extern int sm5038_fg_get_prop_q_max(void);
-extern int sm5038_fg_get_prop_q_now(void);
-extern int sm5038_fg_get_prop_soc_cycle(void);
-extern int sm5038_fg_get_prop_soh(void);
-extern int sm5038_fg_get_prop_temp(void);
-extern int sm5038_fg_get_prop_temp_min(void);
-extern int sm5038_fg_get_prop_temp_max(void);
-extern int sm5038_fg_get_prop_current_now(void);
 #if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
-extern int sm5038_fg_get_prop_current_avg(void);
-#endif
-extern int sm5038_fg_get_prop_q_max_design(void);
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-extern int somc_sm5038_fg_get_prop_batt_soc(void);
-extern int somc_sm5038_fg_learn_update(void);
-extern int somc_sm5038_fg_learn_get_counter(void);
-extern int somc_sm5038_fg_learn_set_range(int min, int max);
-extern int somc_sm5038_fg_learn_get_learned_capacity_raw(void);
-
-/* muic */
-extern bool somc_sm5038_is_cc_reconnection_running(void);
-#endif
-
-/* typec */
-extern int sm5038_cc_control_command(int enable);
-extern int sm5038_charger_cable_type_update(int cable_type);
-extern int sm5038_charger_charge_mode_update(int charge_mode);
-extern int sm5038_charger_chg_on_status_update(int chg_on_status);
-extern int sm5038_charger_input_current_update(int input_current);
-
-#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
-/* jeita */
-extern int update_step_chg_n_jeita_work(void);
-
 static void sm5038_chg_set_fast_charging_current_by_type(struct sm5038_charger_data *charger, int cable_type);
 #endif
 static void sm5038_chg_set_vbuslimit_current_by_type(struct sm5038_charger_data *charger, int cable_type);
@@ -181,17 +139,8 @@ static void sm5038_charger_enable_aicl_irq(struct sm5038_charger_data *charger);
 static void chg_set_thermal_status(struct sm5038_charger_data *charger, int thermal);
 #endif
 
-extern int sm5038_step_chg_n_jeita_init(struct device *dev, bool step_chg_enable, bool sw_jeita_enable);
-extern void sm5038_step_chg_n_jeita_deinit(void);
-
-extern int sm5038_charger_oper_push_event(int event_type, bool enable);
-
 /* add adc begin */
 int sm5038_parse_dt_adc_channels(struct sm5038_charger_data *charger);
-int sm5038_get_batt_id_ohm(unsigned int *batt_id_ohm);
-int sm5038_get_batt_therm(int *batt_therm);
-int sm5038_get_usb_conn_therm(int *usb_conn_therm);
-int sm5038_get_charger_skin_therm(int *charger_skin_therm);
 /* add adc end */
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
@@ -3065,14 +3014,10 @@ static void somc_sm5038_full_work(struct work_struct *work)
 		schedule_delayed_work(&charger->somc_full_work,
 			msecs_to_jiffies(SOMC_SM5038_FULL_WORK_POL_TIME_MS));
 }
-
 #endif
-
-extern int sm5038_muic_get_vbus_voltage(void);
 
 #define SW_VBUS_OVP_RECHECK_DELAY_5S		5000	/* 5s */
 #define WA_SW_VBUS_OVP_THRESH 		10000	/* 10V */
-
 static void sm5038_sw_ovp_work(struct work_struct *work)
 {
 	struct sm5038_charger_data *charger = container_of(work, struct sm5038_charger_data,

@@ -467,9 +467,25 @@ struct sm5038_charger_data {
 };
 
 /* export functions */
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+int somc_sm5038_present_is_pd_apdapter(void);
+#endif
+int sm5038_charger_get_chg_mode_type(void);
+int sm5038_charger_get_chg_on_status(void);
+int sm5038_get_batt_id_ohm(unsigned int *batt_id_ohm);
+int sm5038_get_batt_therm(int *batt_therm);
+int sm5038_get_charger_skin_therm(int *charger_skin_therm);
+int sm5038_get_usb_conn_therm(int *usb_conn_therm);
+void psy_chg_set_regulation_voltage(u16 mV);
+void sm5038_chg_register_reset(struct i2c_client *i2c, void *charger_data);
+void sm5038_charger_shutdown(struct platform_device *pdev);
+int sm5038_charger_oper_push_event(int event_type, bool enable);
 int sm5038_charger_oper_table_init(struct sm5038_dev *sm5038);
-//int sm5038_charger_oper_push_event(int event_type, bool enable);
 int sm5038_charger_oper_get_current_status(void);
 int sm5038_charger_oper_get_current_op_mode(void);
+int sm5038_charger_oper_get_wpc_voltage(void);
+int sm5038_charger_oper_get_vsys_voltage(void);
+int sm5038_charger_oper_get_input_current_ua(void);
+int32_t sm5038_fled_mode_ctrl(int state, uint32_t brightness);
 
 #endif  /* __SM5038_CHARGER_H__ */

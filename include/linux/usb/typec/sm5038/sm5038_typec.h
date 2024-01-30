@@ -25,6 +25,9 @@
 #include <linux/of_gpio.h>
 #endif
 #include <linux/gpio.h>
+
+#include <linux/usb/typec/sm5038/sm5038_pd.h>
+
 #define USBPD_DEV_NAME					"usbpd-sm5038"
 
 #define SM5038_MAX_NUM_MSG_OBJ				(7)
@@ -328,22 +331,31 @@ struct sm5038_phydrv_data {
 #endif
 };
 
-extern void sm5038_pd_reset_protocol(void *_data);
-extern void sm5038_cc_state_hold_on_off(void *_data, int onoff);
-extern bool sm5038_check_vbus_state(void *_data);
-extern void sm5038_charger_psy_changed(enum power_supply_property psp,
-		const union power_supply_propval val);
-extern int sm5038_get_pd_support(struct sm5038_phydrv_data *usbpd_data);
+int sm5038_charger_cable_type_update(int cable_type);
+int sm5038_charger_charge_mode_update(int charge_mode);
+int sm5038_charger_chg_on_status_update(int chg_on_status);
+int sm5038_charger_input_current_update(int input_current);
 #if defined(CONFIG_SM5038_SUPPORT_SBU) && defined(CONFIG_SM5038_SHORT_PROTECTION)
-extern void sm5038_sbu_short_state_check(void *_data);
+void sm5038_sbu_short_state_check(void *_data);
 #endif
-extern void sm5038_set_pd_function(void *_data, int enable);
-extern void sm5038_vbus_turn_on_ctrl(struct sm5038_phydrv_data *usbpd_data, bool enable);
-extern void sm5038_src_transition_to_default(void *_data);
-extern void sm5038_src_transition_to_pwr_on(void *_data);
-extern void sm5038_snk_transition_to_default(void *_data);
-extern bool sm5038_get_rx_buf_st(void *_data);
-extern void sm5038_set_bist_carrier_m2(void *_data);
-extern void sm5038_usbpd_set_vbus_dischg_gpio(struct sm5038_phydrv_data *pdic_data, int vbus_dischg);
-extern void sm5038_error_recovery_mode(void *_data);
+void sm5038_usbpd_set_vbus_dischg_gpio(struct sm5038_phydrv_data *pdic_data,
+		int vbus_dischg);
+int sm5038_cc_control_command(int enable);
+void sm5038_usbpd_set_rp_scr_sel(struct sm5038_usbpd_data *_data,
+		int scr_sel);
+void sm5038_pd_reset_protocol(void *_data);
+void sm5038_set_pd_function(void *_data, int enable);
+void sm5038_cc_state_hold_on_off(void *_data, int onoff);
+bool sm5038_get_rx_buf_st(void *_data);
+void sm5038_src_transition_to_default(void *_data);
+void sm5038_src_transition_to_pwr_on(void *_data);
+void sm5038_snk_transition_to_default(void *_data);
+bool sm5038_check_vbus_state(void *_data);
+void sm5038_set_bist_carrier_m2(void *_data);
+void sm5038_error_recovery_mode(void *_data);
+void sm5038_charger_psy_changed(enum power_supply_property psp,
+		const union power_supply_propval val);
+void sm5038_vbus_turn_on_ctrl(struct sm5038_phydrv_data *usbpd_data, bool enable);
+int sm5038_get_pd_support(struct sm5038_phydrv_data *usbpd_data);
+
 #endif /* __SM5038_TYPEC_H__ */

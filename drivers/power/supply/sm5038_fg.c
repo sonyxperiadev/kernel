@@ -24,6 +24,7 @@
 #include <linux/pm.h>
 #include <linux/mod_devicetable.h>
 #include <linux/power_supply.h>
+#include <linux/power/sm5038_charger.h>
 #include <linux/power/sm5038_fg.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
@@ -119,11 +120,6 @@ static int sm5038_get_current(struct sm5038_fg_data *fuelgauge);
 static int sm5038_get_soh(struct sm5038_fg_data *fuelgauge);
 #endif
 static unsigned int  sm5038_get_cycle(struct sm5038_fg_data *fuelgauge);
-#ifdef CHECK_BATT_ID
-extern int sm5038_get_batt_id_ohm(unsigned int *batt_id_ohm);
-#endif
-void sm5038_fg_set_proc_cycle(int cycle);
-
 
 static int sm5038_fg_read_sram(struct sm5038_fg_data *fuelgauge, int sram_addr)
 {
@@ -610,7 +606,6 @@ int sm5038_fg_get_prop_q_now(void)
 }
 EXPORT_SYMBOL_GPL(sm5038_fg_get_prop_q_now);
 
-
 int sm5038_fg_get_prop_soc_cycle(void)
 {
 	struct sm5038_fg_data *fuelgauge = static_fg_data;
@@ -623,7 +618,6 @@ int sm5038_fg_get_prop_soc_cycle(void)
 	return (fuelgauge->info.batt_soc_cycle);
 }
 EXPORT_SYMBOL_GPL(sm5038_fg_get_prop_soc_cycle);
-
 
 int sm5038_fg_get_prop_soh(void)
 {
@@ -645,7 +639,6 @@ int sm5038_fg_get_prop_soh(void)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(sm5038_fg_get_prop_soh);
-
 
 int sm5038_fg_get_prop_temp(void)
 {
@@ -705,7 +698,6 @@ int sm5038_fg_get_prop_current_now(void)
 #endif
 }
 EXPORT_SYMBOL_GPL(sm5038_fg_get_prop_current_now);
-
 
 int sm5038_fg_get_prop_current_avg(void)
 {
@@ -770,6 +762,7 @@ int somc_sm5038_fg_learn_update(void)
 	}
 	return 0;
 }
+EXPORT_SYMBOL_GPL(somc_sm5038_fg_learn_update);
 
 int somc_sm5038_fg_learn_get_counter(void)
 {
@@ -777,6 +770,7 @@ int somc_sm5038_fg_learn_get_counter(void)
 
 	return fuelgauge->learning_counter;
 }
+EXPORT_SYMBOL_GPL(somc_sm5038_fg_learn_get_counter);
 
 int somc_sm5038_fg_learn_set_range(int min, int max)
 {
@@ -832,6 +826,7 @@ int somc_sm5038_fg_learn_set_range(int min, int max)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(somc_sm5038_fg_learn_set_range);
 
 int somc_sm5038_fg_learn_get_learned_capacity_raw(void)
 {
@@ -839,6 +834,7 @@ int somc_sm5038_fg_learn_get_learned_capacity_raw(void)
 
 	return fuelgauge->learned_capacity_raw;
 }
+EXPORT_SYMBOL_GPL(somc_sm5038_fg_learn_get_learned_capacity_raw);
 
 int somc_sm5038_fg_get_prop_batt_soc(void)
 {
@@ -869,15 +865,15 @@ int somc_sm5038_fg_get_prop_batt_soc(void)
 	return (fuelgauge->somc_batt_soc);
 }
 EXPORT_SYMBOL(somc_sm5038_fg_get_prop_batt_soc);
-
 #endif
+
 static unsigned int sm5038_get_vbat(struct sm5038_fg_data *fuelgauge)
 {
 	int ret1 = 0, ret2 = 0;
 	unsigned int vbat = 0, vbat_avg = 0; /* = 3500; 3500 means 3500mV*/
 
 	ret1 = sm5038_fg_read_sram(fuelgauge, SM5038_FG_ADDR_SRAM_VBAT);
-    ret2 = sm5038_fg_read_sram(fuelgauge, SM5038_FG_ADDR_SRAM_VBAT_AVG);
+	ret2 = sm5038_fg_read_sram(fuelgauge, SM5038_FG_ADDR_SRAM_VBAT_AVG);
 
 	if (ret1 < 0) {
 		pr_err("%s: read vbat reg fail", __func__);
@@ -2570,8 +2566,6 @@ err_free:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(sm5038_fuelgauge_probe);
-
-
 
 int sm5038_fuelgauge_remove(struct platform_device *pdev)
 {
