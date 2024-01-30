@@ -18,6 +18,8 @@
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 
+static struct sm5038_dev *static_sm5038_data;
+
 static struct mfd_cell sm5038_devs[] = {
 	{ .name = "sm5038-muic", },
 	{ .name = "sm5038-fuelgauge", },
@@ -142,8 +144,10 @@ int sm5038_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 }
 EXPORT_SYMBOL_GPL(sm5038_update_reg);
 
-void sm5038_irq_thread_lock(struct sm5038_dev *sm5038)
+void sm5038_irq_thread_lock(void)
 {
+	struct sm5038_dev *sm5038 = static_sm5038_data;
+
 	pr_info("%s: %s\n", SM5038_DEV_NAME, __func__);
 	mutex_lock(&sm5038->irq_thread_lock);
 	
@@ -151,8 +155,10 @@ void sm5038_irq_thread_lock(struct sm5038_dev *sm5038)
 }
 EXPORT_SYMBOL_GPL(sm5038_irq_thread_lock);
 
-void sm5038_irq_thread_unlock(struct sm5038_dev *sm5038)
+void sm5038_irq_thread_unlock(void)
 {
+	struct sm5038_dev *sm5038 = static_sm5038_data;
+
 	pr_info("%s: %s\n", SM5038_DEV_NAME, __func__);
 	mutex_unlock(&sm5038->irq_thread_lock);
 
@@ -240,6 +246,8 @@ static int sm5038_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *
 
 	mutex_init(&sm5038->i2c_lock);
 	mutex_init(&sm5038->irq_thread_lock);
+
+	static_sm5038_data = sm5038;
 
 	i2c_set_clientdata(i2c, sm5038);
 	
