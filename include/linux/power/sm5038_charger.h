@@ -486,6 +486,13 @@ int sm5038_charger_oper_get_current_op_mode(void);
 int sm5038_charger_oper_get_wpc_voltage(void);
 int sm5038_charger_oper_get_vsys_voltage(void);
 int sm5038_charger_oper_get_input_current_ua(void);
+#if IS_ENABLED(CONFIG_IFPM_SM5038)
 int32_t sm5038_fled_mode_ctrl(int state, uint32_t brightness);
+#else
+static inline int32_t sm5038_fled_mode_ctrl(int state, uint32_t brightness)
+{
+	return 0;
+}
+#endif
 
 #endif  /* __SM5038_CHARGER_H__ */
