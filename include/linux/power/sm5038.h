@@ -434,21 +434,19 @@ enum sm5038_fled_mode {
 };
 
 
-extern int sm5038_irq_init(struct sm5038_dev *sm5038);
+int sm5038_irq_init(struct sm5038_dev *sm5038);
 
 /* SM5038 shared i2c API function */
-extern int sm5038_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);
-extern int sm5038_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf);
-extern int sm5038_read_word(struct i2c_client *i2c, u8 reg);
-extern int sm5038_write_reg(struct i2c_client *i2c, u8 reg, u8 value);
-extern int sm5038_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf);
-extern int sm5038_write_word(struct i2c_client *i2c, u8 reg, u16 value);
+int sm5038_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest);
+int sm5038_bulk_read(struct i2c_client *i2c, u8 reg, int count, u8 *buf);
+int sm5038_read_word(struct i2c_client *i2c, u8 reg);
+int sm5038_write_reg(struct i2c_client *i2c, u8 reg, u8 value);
+int sm5038_bulk_write(struct i2c_client *i2c, u8 reg, int count, u8 *buf);
+int sm5038_write_word(struct i2c_client *i2c, u8 reg, u16 value);
 
-extern int sm5038_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
-extern int sm5038_update_word(struct i2c_client *i2c, u8 reg, u16 val, u16 mask);
+int sm5038_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 
-extern void sm5038_irq_thread_lock(void);
-extern void sm5038_irq_thread_unlock(void);
-	
+void sm5038_irq_thread_lock(void);
+void sm5038_irq_thread_unlock(void);
+
 #endif /* __SM5038_H__ */
-

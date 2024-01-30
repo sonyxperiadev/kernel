@@ -520,6 +520,7 @@ void sm5038_sbu_short_state_check(void *_data)
 		pr_info("%s, SBU-GND SHORT\n", __func__);
 	}
 }
+EXPORT_SYMBOL_GPL(sm5038_sbu_short_state_check);
 #endif
 #endif
 
@@ -965,7 +966,7 @@ int sm5038_get_pd_support(struct sm5038_phydrv_data *usbpd_data)
 
 	return usbpd_data->pwr_opmode;
 }
-
+EXPORT_SYMBOL_GPL(sm5038_get_pd_support);
 
 void sm5038_typec_partner_event(void *data, int event)
 {

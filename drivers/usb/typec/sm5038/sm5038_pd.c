@@ -1274,7 +1274,7 @@ bool sm5038_usbpd_send_msg(struct sm5038_usbpd_data *pd_data, msg_header *header
 }
 EXPORT_SYMBOL_GPL(sm5038_usbpd_send_msg);
 
-inline bool sm5038_usbpd_send_ctrl_msg(struct sm5038_usbpd_data *d, msg_header *h,
+bool sm5038_usbpd_send_ctrl_msg(struct sm5038_usbpd_data *d, msg_header *h,
 		unsigned int msg, unsigned int dr, unsigned int pr)
 {
 	h->msg_type = msg;
@@ -1286,7 +1286,7 @@ inline bool sm5038_usbpd_send_ctrl_msg(struct sm5038_usbpd_data *d, msg_header *
 EXPORT_SYMBOL_GPL(sm5038_usbpd_send_ctrl_msg);
 
 /* return: 0 if timed out, positive is status */
-inline unsigned int sm5038_usbpd_wait_msg(struct sm5038_usbpd_data *pd_data,
+unsigned int sm5038_usbpd_wait_msg(struct sm5038_usbpd_data *pd_data,
 				unsigned int msg_status, unsigned int ms)
 {
 	unsigned long ret;

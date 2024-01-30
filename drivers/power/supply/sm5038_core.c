@@ -41,7 +41,7 @@ int sm5038_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 	}
 	*dest = (ret & 0xff);
 
-    return 0;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(sm5038_read_reg);
 

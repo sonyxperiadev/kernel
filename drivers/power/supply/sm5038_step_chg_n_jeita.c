@@ -9,12 +9,10 @@
 
 #include <linux/power_supply.h>
 #include <linux/power/sm5038.h>
-
-#include <linux/slab.h>
+#include <linux/power/sm5038_charger.h>
 #include <linux/power/sm5038_step_chg_n_jeita.h>
 
-extern int sm5038_get_batt_therm(unsigned int *batt_therm);
-extern void psy_chg_set_regulation_voltage(u16 mV);
+#include <linux/slab.h>
 
 void sm5038_chg_psy_changed(enum power_supply_property psp,
 		const union power_supply_propval val)
