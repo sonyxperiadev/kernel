@@ -33,6 +33,9 @@ jobs:
 
           # Assuming you don't need to run 'make' because the kernel source is already built
 
+          git config --global user.email "plodmrasif@gmail.com"
+          git config --global user.name "Max Regner"
+
           sudo make modules_install || true
           sudo make install || true
           sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }} || true
