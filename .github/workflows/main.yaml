@@ -1,33 +1,47 @@
-name: Update Kernel to 5.15
+name: Update Kernel
 
 on:
   workflow_run:
     workflows: ["CI/CD Pipeline"]
     types:
       - completed
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      upstream-repo:
+        description: 'Upstream repository URL'
+        required: true
+      branch-name:
+        description: 'Branch name in the upstream repository'
+        required: true
+        default: 'v5.15'
 
 jobs:
   update_kernel:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Fetch updates from upstream
+        run: |
+          git remote add upstream ${{ github.event.inputs.upstream-repo }}
+          git fetch upstream
+
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Update kernel to v5.15
+      - name: Merge updates from upstream
         run: |
-          git fetch --tags  # Make sure tags are fetched
-          git checkout tags/v5.15 -B v5.15  # Create or update a local branch named v5.15
-          make defconfig
-          make -j$(nproc)
+          git checkout ${{ github.event.inputs.branch-name }}
+          git pull upstream ${{ github.event.inputs.branch-name }} --ff-only
+
+          # Assuming you don't need to run 'make' because the kernel source is already built
+
           sudo make modules_install
           sudo make install
-          sudo update-initramfs -c -k 5.15
+          sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }}
           sudo update-grub
 
       - name: Commit and push changes
         run: |
           git add .
-          git commit -m "Update kernel to version 5.15"
-          git push origin v5.15
+          git commit -m "Merge updates from upstream to branch ${{ github.event.inputs.branch-name }}"
+          git push origin ${{ github.event.inputs.branch-name }}
