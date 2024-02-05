@@ -25,29 +25,33 @@ jobs:
 
       - name: Merge updates from upstream
         run: |
+          git checkout ${{ github.event.inputs.branch-name }}
           git pull upstream ${{ github.event.inputs.branch-name }} --ff-only --quiet || true
 
           # Ensure the kernel source is properly configured
           sudo make oldconfig || true
           sudo make prepare || true
 
-          # Assuming you don't need to run 'make' because the kernel source is already built
+          # Build the kernel
+          sudo make -j$(nproc) || true
 
-          git config --global user.email "plodmrasif@gmail.com"
-          git config --global user.name "Max Regner"
-
-          sudo make modules_install || true
+          # Install the kernel
           sudo make install || true
+
+          # Create System.map (assuming it's missing)
+          sudo make modules_install || true
+
+          # Run depmod
+          sudo depmod -a ${{ github.event.inputs.branch-name }} || true
+
+          # Update initramfs
           sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }} || true
 
-           - name: Commit and push changes
-             run: |
+          # Update grub
+          sudo update-grub || true
+
+      - name: Commit and push changes
+        run: |
           git add -A
 
-          # Check if there are changes to commit
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Merge updates from upstream to branch ${{ github.event.inputs.branch-name }}"
-            git push origin ${{ github.event.inputs.branch-name }}
-          else
-            echo "No changes to commit."
-          fi
+          
