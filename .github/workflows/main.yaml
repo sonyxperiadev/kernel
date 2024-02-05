@@ -1,0 +1,32 @@
+name: Update Kernel to 5.15
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+
+jobs:
+  update_kernel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Update kernel to v5.15
+        run: |
+          git checkout aosp/LA.UM.9.14.r1
+          git checkout v5.15
+          make defconfig
+          make -j$(nproc)
+          sudo make modules_install
+          sudo make install
+          sudo update-initramfs -c -k 5.15
+          sudo update-grub
+
+      - name: Commit and push changes
+        run: |
+          git add .
+          git commit -m "Update kernel to version 5.15"
+          git push origin aosp/LA.UM.9.14.r1
