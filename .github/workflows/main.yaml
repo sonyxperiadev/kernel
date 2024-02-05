@@ -25,7 +25,6 @@ jobs:
 
       - name: Merge updates from upstream
         run: |
-          git checkout ${{ github.event.inputs.branch-name }}
           git pull upstream ${{ github.event.inputs.branch-name }} --ff-only --quiet || true
           git config --global user.name "Max Regner"
           git config --global user.email "plodmrasif@gmail.com"
