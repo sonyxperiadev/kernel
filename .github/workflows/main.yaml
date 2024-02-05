@@ -41,8 +41,14 @@ jobs:
           sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }} || true
           sudo update-grub || true
 
-      - name: Commit and push changes
-        run: |
-          git add .
-          git commit -m "Merge updates from upstream to branch ${{ github.event.inputs.branch-name }}"
-          git push origin ${{ github.event.inputs.branch-name }}
+           - name: Commit and push changes
+             run: |
+          git add -A
+
+          # Check if there are changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Merge updates from upstream to branch ${{ github.event.inputs.branch-name }}"
+            git push origin ${{ github.event.inputs.branch-name }}
+          else
+            echo "No changes to commit."
+          fi
