@@ -5,6 +5,7 @@ on:
     workflows: ["CI/CD Pipeline"]
     types:
       - completed
+  workflow_dispatch: {}
 
 jobs:
   update_kernel:
