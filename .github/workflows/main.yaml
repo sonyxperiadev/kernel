@@ -17,8 +17,8 @@ jobs:
 
       - name: Update kernel to v5.15
         run: |
-          git checkout aosp/LA.UM.9.14.r1
-          git checkout v5.15
+          git fetch --tags  # Make sure tags are fetched
+          git checkout tags/v5.15 -B v5.15  # Create or update a local branch named v5.15
           make defconfig
           make -j$(nproc)
           sudo make modules_install
@@ -30,4 +30,4 @@ jobs:
         run: |
           git add .
           git commit -m "Update kernel to version 5.15"
-          git push origin aosp/LA.UM.9.14.r1
+          git push origin v5.15
