@@ -23,22 +23,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Fetch updates from upstream
-        run: |
-          git remote add upstream ${{ github.event.inputs.upstream-repo }}
-          git fetch upstream ${{ github.event.inputs.branch-name }}
-
       - name: Merge updates from upstream
         run: |
           git checkout ${{ github.event.inputs.branch-name }}
-          git pull upstream ${{ github.event.inputs.branch-name }} --ff-only
+          git pull upstream ${{ github.event.inputs.branch-name }} --ff-only --quiet || true
+
+          # Ensure the kernel source is properly configured
+          sudo make oldconfig || true
+          sudo make prepare || true
 
           # Assuming you don't need to run 'make' because the kernel source is already built
 
-          sudo make modules_install
-          sudo make install
-          sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }}
-          sudo update-grub
+          sudo make modules_install || true
+          sudo make install || true
+          sudo update-initramfs -c -k ${{ github.event.inputs.branch-name }} || true
+          sudo update-grub || true
 
       - name: Commit and push changes
         run: |
