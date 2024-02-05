@@ -25,7 +25,6 @@ jobs:
 
       - name: Merge updates from upstream
         run: |
-          git checkout ${{ github.event.inputs.branch-name }}
           git pull upstream ${{ github.event.inputs.branch-name }} --ff-only --quiet || true
 
           # Ensure the kernel source is properly configured
