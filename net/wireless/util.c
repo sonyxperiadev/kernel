@@ -241,7 +241,7 @@ bool cfg80211_valid_key_idx(struct cfg80211_registered_device *rdev,
 		max_key_idx = 3;
 	else if (cfg80211_igtk_cipher_supported(rdev))
 		max_key_idx = 5;
-        if (wiphy_ext_feature_isset(&rdev->wiphy,
+	else if (wiphy_ext_feature_isset(&rdev->wiphy,
 				    NL80211_EXT_FEATURE_BEACON_PROTECTION))
 		max_key_idx = 7;
 	else
@@ -257,7 +257,7 @@ int cfg80211_validate_key_settings(struct cfg80211_registered_device *rdev,
 				   struct key_params *params, int key_idx,
 				   bool pairwise, const u8 *mac_addr)
 {
-        if (!cfg80211_valid_key_idx(rdev, key_idx, pairwise))
+	if (!cfg80211_valid_key_idx(rdev, key_idx, pairwise))
 		return -EINVAL;
 
 	if (!pairwise && mac_addr && !(rdev->wiphy.flags & WIPHY_FLAG_IBSS_RSN))
