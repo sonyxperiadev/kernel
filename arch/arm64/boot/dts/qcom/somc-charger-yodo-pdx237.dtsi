@@ -1,3 +1,7 @@
+&battery_charger {
+	qcom,display-panels = <&dsi_9>;
+};
+
 &somc_battchg_ext {
 	somc,bcext-product-code = <10>;
 
