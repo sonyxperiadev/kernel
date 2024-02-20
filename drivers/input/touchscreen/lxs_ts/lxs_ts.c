@@ -1290,20 +1290,22 @@ static void lxs_ts_dsi_panel_notifier_cb(
 
 	switch (notification->notif_type) {
 	case DRM_PANEL_EVENT_UNBLANK:
-		if (!ts->probe_done) {
-			t_dev_info(ts->dev, "not already sleep out\n");
-			if (ts->after_probe.err)
-				lxs_ts_resume(ts);
-			return;
-		}
-		lxs_ts_resume(ts);
+		/*
+		 * Make sure that the touchscreen resumes after
+		 * turning on the display (post commit).
+		 */
+		if (!notification->notif_data.early_trigger)
+			lxs_ts_resume(ts);
 		break;
 	case DRM_PANEL_EVENT_BLANK:
-		if (!ts->probe_done) {
-			t_dev_info(ts->dev, "not already sleep out\n");
-			return;
-		}
-		lxs_ts_suspend(ts);
+		/*
+		 * Make sure that the touchscreen suspends before
+		 * turning off the display (pre commit).
+		 */
+		if (notification->notif_data.early_trigger)
+			lxs_ts_suspend(ts);
+		else
+			lxs_ts_release_all_event(ts);
 		break;
 	default:
 		t_dev_dbg_base(ts->dev, "%s: notification serviced :%d\n", __func__,
