@@ -1619,6 +1619,8 @@ int lxs_hal_reset(struct lxs_ts *ts, int ctrl, int pwr_con)
 		break;
 	}
 
+	chip->reset_is_on_going = false;
+
 out:
 	mutex_unlock(&ts->reset_lock);
 
