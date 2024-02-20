@@ -2072,6 +2072,8 @@ int lxs_ts_probe(struct lxs_ts *ts)
 
 	ts->probe_init = 1;
 
+	queue_delayed_work(ts->wq, &ts->after_probe.start, 0);
+
 	return 0;
 
 out_err_notifier_register_client:
