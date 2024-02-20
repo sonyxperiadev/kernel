@@ -3307,16 +3307,16 @@ static void sec_ts_dsi_panel_notifier_cb(
 	case DRM_PANEL_EVENT_UNBLANK:
 		if (!ts->after_work.done && !ts->after_work.err)
 			input_info(true, &ts->client->dev, "%s: not already sleep out\n", __func__);
-		else
+		else if (!notification->notif_data.early_trigger)
 			sec_ts_resume(ts);
 		break;
 	case DRM_PANEL_EVENT_BLANK:
 		if (!ts->after_work.done)
 			input_info(true, &ts->client->dev, "%s: not already sleep out\n", __func__);
-		else
+		else if (notification->notif_data.early_trigger)
 			sec_ts_suspend(ts);
 
-		if (ts->aod_pending) {
+		if (!notification->notif_data.early_trigger && ts->aod_pending) {
 			mutex_lock(&ts->aod_mutex);
 			input_info(true, &ts->client->dev,
 				"Applying aod_pending_lowpower_mode: %d\n",
