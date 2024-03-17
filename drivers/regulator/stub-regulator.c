@@ -293,7 +293,6 @@ int __init regulator_stub_init(void)
 
 	return platform_driver_register(&regulator_stub_driver);
 }
-EXPORT_SYMBOL(regulator_stub_init);
 postcore_initcall(regulator_stub_init);
 
 static void __exit regulator_stub_exit(void)
