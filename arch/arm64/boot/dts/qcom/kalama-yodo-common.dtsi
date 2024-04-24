@@ -74,26 +74,20 @@
 		pinctrl-2 = <>;
 	};
 
-	egistec_fp {
-		status = "ok";
-		compatible = "fp-egistec";
-		egistec,gpio_reset = <&tlmm 42 0x00>; 		// reset gpio pin num
-		egistec,gpio_irq = <&tlmm 40 0x00>; 		// irq gpio pin num
-		egistec,gpio_vcc_en= <&pm8550_gpios 9 0x00>; 	// vcc enable gpio pin num
-		fp-ctrl-power;					// enable power control
-		fp-gpio-vcc-enable; 				// use gpio enable power or not
-		fp-gpio-ext-ldo;                                // yodo use regulator pm_humu_bob1
-		pinctrl-names = "egis_rst_high", "egis_rst_low", "egis_vcc_high", "egis_vcc_low", "egis_irq_active", "egis_irq_low";
-		pinctrl-0 = <&EGIS_RST_active>;
-		pinctrl-1 = <&EGIS_RST_sleep>;
-		pinctrl-2 = <&EGIS_VCC_active>;
-		pinctrl-3 = <&EGIS_VCC_sleep>;
-		pinctrl-4 = <&sm_gpio_40_input_pull_up>;
-		pinctrl-5 = <&sm_gpio_40>;
-		vcc_fp-supply = <&pm_humu_bob1>;
-		egis-fp,vcc-voltage = <3400000 3800000>;
-		egis-fp,vcc-current = <1000000>;
-		egis-fp,vcc-max-voltage = <3960000>;
+	et6xx {
+		compatible = "egistec,et580";
+
+		et51x,gpio_irq = <&tlmm 40 0x0>;
+		et51x,no-low-voltage-probe;
+		et51x,vana-voltage = <3800000>;
+		vdd_ana-supply =  <&pm_humu_bob1>;
+
+		pinctrl-names = "et51x_reset_reset",
+				"et51x_reset_active",
+				"et51x_irq_active";
+		pinctrl-0 = <&EGIS_RST_sleep>;
+		pinctrl-1 = <&EGIS_RST_active>;
+		pinctrl-2 = <&sm_gpio_40_input_pull_up>;
 	};
 
 	last_logs@ffcc0000 {
