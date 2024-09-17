@@ -2132,6 +2132,8 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 	else
 		phydev->irq = PHY_POLL;
 	netdev_dbg(dev->net, "phydev->irq = %d\n", phydev->irq);
+	
+	phydev->irq = PHY_POLL;
 
 	/* set to AUTOMDIX */
 	phydev->mdix = ETH_TP_MDI_AUTO;
