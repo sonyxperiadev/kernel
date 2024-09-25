@@ -2132,7 +2132,10 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 	else
 		phydev->irq = PHY_POLL;
 	netdev_dbg(dev->net, "phydev->irq = %d\n", phydev->irq);
-	
+
+ 	// softing 24.9.2024: Various problems with the PHY detection
+ 	// are leading to this workaround to put the driver into
+  	// polling mode instead of having in interrupt mode
 	phydev->irq = PHY_POLL;
 
 	/* set to AUTOMDIX */
