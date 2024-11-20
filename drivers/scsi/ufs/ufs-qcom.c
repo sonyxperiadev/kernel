@@ -5113,7 +5113,7 @@ static void ufs_qcom_register_hooks(void)
 }
 
 #ifdef CONFIG_ARM_QCOM_CPUFREQ_HW
-static int ufs_cpufreq_status(void)
+static int ufs_cpufreq_status(struct device *dev)
 {
 	struct cpufreq_policy *policy;
 
@@ -5128,7 +5128,7 @@ static int ufs_cpufreq_status(void)
 	return 0;
 }
 #else
-static int ufs_cpufreq_status(void)
+static int ufs_cpufreq_status(struct device *dev)
 {
 	return 0;
 }
@@ -5192,7 +5192,7 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 	 * policy later on, cpufreq would be disabled and performance would be
 	 * impacted adversly.
 	 */
-	err = ufs_cpufreq_status();
+	err = ufs_cpufreq_status(dev);
 	if (err)
 		return err;
 
