@@ -3413,7 +3413,7 @@ static ssize_t qdss_trace_start_store(struct device *dev,
 {
 	struct cnss_plat_data *plat_priv = dev_get_drvdata(dev);
 
-	wlfw_qdss_trace_start(plat_priv);
+	cnss_wlfw_qdss_trace_start(plat_priv);
 	cnss_pr_dbg("Received QDSS start command\n");
 	return count;
 }
@@ -3428,7 +3428,7 @@ static ssize_t qdss_trace_stop_store(struct device *dev,
 	if (sscanf(buf, "%du", &option) != 1)
 		return -EINVAL;
 
-	wlfw_qdss_trace_stop(plat_priv, option);
+	cnss_wlfw_qdss_trace_stop(plat_priv, option);
 	cnss_pr_dbg("Received QDSS stop command\n");
 	return count;
 }

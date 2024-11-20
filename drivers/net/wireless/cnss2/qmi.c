@@ -1426,13 +1426,13 @@ out:
 	return rc;
 }
 
-int wlfw_qdss_trace_start(struct cnss_plat_data *plat_priv)
+int cnss_wlfw_qdss_trace_start(struct cnss_plat_data *plat_priv)
 {
 	return wlfw_send_qdss_trace_mode_req(plat_priv,
 					     QMI_WLFW_QDSS_TRACE_ON_V01, 0);
 }
 
-int wlfw_qdss_trace_stop(struct cnss_plat_data *plat_priv, unsigned long long option)
+int cnss_wlfw_qdss_trace_stop(struct cnss_plat_data *plat_priv, unsigned long long option)
 {
 	return wlfw_send_qdss_trace_mode_req(plat_priv, QMI_WLFW_QDSS_TRACE_OFF_V01,
 					     option);
