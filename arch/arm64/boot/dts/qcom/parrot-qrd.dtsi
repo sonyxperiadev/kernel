@@ -3,6 +3,9 @@
 
 #include "parrot-pmic-overlay.dtsi"
 #include "parrot-thermal-overlay.dtsi"
+#include "parrot-audio-qrd.dtsi"
+#include "parrot-sde-display-qrd.dtsi"
+//#include "parrot-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {

@@ -3079,6 +3079,10 @@
 #include "parrot-dma-heaps.dtsi"
 #include "parrot-gpu.dtsi"
 #include "msm-arm-smmu-parrot.dtsi"
+#include "parrot-camera.dtsi"
+#include "parrot-sde.dtsi"
+#include "parrot-vidc.dtsi"
+#include "waipio-audio.dtsi"
 
 &qupv3_se3_2uart {
 	status = "ok";
