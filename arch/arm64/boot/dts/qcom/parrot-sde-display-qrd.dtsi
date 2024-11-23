@@ -1,0 +1,104 @@
+#include "parrot-sde-display.dtsi"
+
+&dsi_vtdr6130_amoled_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_vtdr6130_amoled_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_vtdr6130_amoled_90hz_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_vtdr6130_amoled_120hz_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_amoled>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <10>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <8191>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_sim_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_sim>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+};
+
+&dsi_sim_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_sim>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,platform-reset-gpio = <&tlmm 98 0>;
+};
+
+&dsi_sim_dsc_375_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_sim>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+};
+
+&dsi_sim_dsc_10b_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_sim>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+};
+
+&sde_dsi {
+	vddio-supply = <&display_panel_vddio>;
+	vci-supply = <&L4E>;
+	ibb-supply = <&display_panel_ibb>;
+	extvdd-supply = <&display_panel_extvdd>;
+
+	qcom,dsi-default-panel = <&dsi_vtdr6130_amoled_cmd>;
+};
+
+&qupv3_se9_spi {
+	goodix-berlin@0 {
+		panel = <&dsi_vtdr6130_amoled_cmd
+			&dsi_vtdr6130_amoled_video
+			&dsi_vtdr6130_amoled_qsync_144hz_cmd
+			&dsi_vtdr6130_amoled_qsync_144hz_video
+			&dsi_vtdr6130_amoled_120hz_cmd
+			&dsi_vtdr6130_amoled_90hz_video>;
+	};
+};
