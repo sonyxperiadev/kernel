@@ -1,0 +1,177 @@
+&soc {
+	dsi_panel_pwr_supply_samsung_amoled: dsi_panel_pwr_supply_samsung_amoled {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <200000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vci";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3300000>;
+			qcom,supply-enable-load = <10000>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+};
+
+&sde_dsi {
+	pinctrl-0 = <&sde_te_active>;
+	pinctrl-1 = <&sde_te_suspend>;
+};
+
+&display_panel_vddio {
+	gpio = <&pm6150l_gpios 9 1>;
+};
+
+&display_panel_ibb {
+	status = "disabled";
+};
+
+&display_panel_extvdd {
+	status = "disabled";
+};
+
+&sde_dsi_active {
+	mux {
+		pins = "gpio127";
+	};
+
+	config {
+		pins = "gpio127";
+	};
+};
+
+&sde_dsi_suspend {
+	mux {
+		pins = "gpio127";
+	};
+
+	config {
+		pins = "gpio127";
+	};
+};
+
+&dsi_r66451_amoled_video_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_cmd_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_cmd_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_video_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_120hz_cmd_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_120hz_video_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_60hz_video {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_60hz_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_video {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_cmd {
+	status = "disabled";
+};
+
+&dsi_nt36672e_fhd_plus_144_video {
+	status = "disabled";
+};
+
+&dsi_ft8726_fhd_plus_120_video {
+	status = "disabled";
+};
+
+&dsi_nt36672e_fhd_plus_120_video {
+	status = "disabled";
+};
+
+&dsi_nt36672e_fhd_plus_90hz_video {
+	status = "disabled";
+};
+
+&dsi_nt36672e_dsc_fhd_plus_60hz_video {
+	status = "disabled";
+};
+
+&dsi_nt36672e_fhd_plus_144hz_video_cphy {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_cmd {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_120hz_cmd {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_video {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_120hz_video {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_90hz_video {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_cmd {
+	status = "disabled";
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_video {
+	status = "disabled";
+};
+
+&dsi_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_vid {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_10b_cmd {
+	status = "disabled";
+};

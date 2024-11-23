@@ -419,4 +419,13 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config ARCH_SONY_COLUMBIA
+	bool "Sony Mobile Columbia platform"
+	depends on ARCH_PARROT
+	help
+	  Support for the SONY Mobile Columbia platform
+	  which is based on QCOM Parrot chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 endmenu

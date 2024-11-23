@@ -1,0 +1,157 @@
+&soc {
+	gpio_keys {
+		vol_up {
+			label = "volume_down";
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+	};
+};
+
+&tlmm {
+	qcom,gpios-reserved = <38>;
+};
+
+&icnss {
+	qcom,vdd-3.3-ch1-config = <3300000 3312000>;
+	qcom,vdd-3.3-ch0-config = <3300000 3312000>;
+};
+
+&usb0 {
+	dwc3@a600000 {
+		snps,usb2-gadget-lpm-disable;
+		snps,usb2-lpm-disable;
+	};
+};
+
+&usb2_phy0 {
+	qcom,param-override-seq = <
+			0x83 0x6c
+			0xc6 0x70
+			0x1e 0x74
+			0x03 0x78>;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 107 GPIO_ACTIVE_HIGH>;
+};
+
+&cdsp_secure_heap {
+	size = <0x0 0x2800000>;
+};
+
+&qseecom_ta_mem {
+	size = <0x0 0x2000000>;
+};
+
+&qupv3_se9_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	qcom,i2c-touch-active = "focaltech,fts_ts";
+
+	focaltech@38 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <13 0x02>;
+		vdd-supply = <&L28B>;
+		focaltech,reset-gpio = <&tlmm 12 0x01>;
+		focaltech,irq-gpio = <&tlmm 13 0x02>;
+		focaltech,max-touch-number = <10>;
+		focaltech,display-coords =  <0 0 1080 2520>;
+		focaltech,avdd-gpio = <&tlmm 103 0x0>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		panel = <&dsi_samsung_amoled_cmd>;
+	};
+};
+
+&qupv3_se9_spi {
+	status = "disabled";
+};
+
+&pm6150l_l10 {
+	regulator-min-microvolt = <3300000>;
+	qcom,init-voltage = <3300000>;
+};
+
+&pm6150l_l11 {
+	regulator-min-microvolt = <3300000>;
+	qcom,init-voltage = <3300000>;
+};
+
+&pm6150l_vadc {
+	wide_rfc_therm {
+		reg = <ADC5_AMUX_THM2_100K_PU>;
+	};
+};
+
+&pm6150l_adc_tm {
+	io-channels = <&pm6150l_vadc ADC5_AMUX_THM1_100K_PU>,
+			<&pm6150l_vadc ADC5_AMUX_THM3_100K_PU>,
+			<&pm6150l_vadc ADC5_GPIO1_100K_PU>,
+			<&pm6150l_vadc ADC5_AMUX_THM2_100K_PU>;
+
+	wide_rfc_therm {
+		reg = <ADC5_AMUX_THM2_100K_PU>;
+	};
+};
+
+&pmk8350 {
+	pon_hlos@1300 {
+		resin {
+			linux,code = <KEY_VOLUMEUP>;
+		};
+	};
+};
+
+&pmk8350_vadc {
+	pm6450_quiet_therm {
+		qcom,avg-sample = <8>;
+	};
+};
+
+&sdc2_on {
+	clk {
+		drive-strength = <10>;
+	};
+
+	cmd {
+		drive-strength = <8>;
+	};
+
+	data {
+		drive-strength = <8>;
+	};
+};
+
+&ts_reset_suspend {
+	config {
+		drive-strength = <8>;
+	};
+};
+
+&ts_int_suspend {
+	config {
+		drive-strength = <8>;
+	};
+};
+
+&ts_release {
+	config {
+		drive-strength = <8>;
+	};
+};
+
+&thermal_zones {
+	sys-therm-2 {
+		thermal-sensors = <&pm6150l_adc_tm ADC5_AMUX_THM2_100K_PU>;
+	};
+};
+
+&socd_trip {
+	temperature = <95>;
+};

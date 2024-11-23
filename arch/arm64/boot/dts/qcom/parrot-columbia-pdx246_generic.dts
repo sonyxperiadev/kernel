@@ -1,0 +1,13 @@
+/dts-v1/;
+
+#include "parrot.dtsi"
+#include "parrot-wcn3990.dtsi"
+#include "parrot-qrd.dtsi"
+#include "parrot-qrd-pm7250b.dtsi"
+#include "parrot-columbia-pdx246_generic.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-246(Parrot QRD)";
+	compatible = "somc,pdx246-generic", "qcom,parrot", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+};
