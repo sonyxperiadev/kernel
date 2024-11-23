@@ -1,0 +1,86 @@
+#include <dt-bindings/clock/qcom,dispcc-parrot.h>
+#include "parrot-sde-display-common.dtsi"
+
+&soc {
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+
+	disp_rdump_memory: disp_rdump_region@e1000000 {
+		reg = <0xb8000000 0x00800000>;
+		label = "disp_rdump_region";
+	};
+};
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 0>,
+			<&mdss_dsi_phy0 1>,
+			 /*
+			  * Currently the dsi clock handles are under the dsi
+			  * controller DT node. As soon as the controller probe
+			  * finishes, the dispcc sync state can get called before
+			  * the dsi_display probe potentially disturbing the clock
+			  * votes for cont_splash use case. Hence we are no longer
+			  * protected by the component model in this case against the
+			  * disp cc sync state getting triggered after the dsi_ctrl
+			  * probe. To protect against this incorrect sync state trigger
+			  * add this dummy MDP clk vote handle to the dsi_display
+			  * DT node. Since the dsi_display driver does not parse
+			  * MDP clock nodes, no actual vote shall be added and this
+			  * change is done just to satisfy sync state requirements.
+			  */
+			 <&dispcc DISP_CC_MDSS_MDP_CLK>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+			"mdp_core_clk";
+};
+
+&mdss_mdp {
+	connectors = <&sde_dsi &smmu_sde_unsec &smmu_sde_sec &sde_wb &sde_dp &sde_rscc>;
+};
+
+&dsi_vtdr6130_amoled_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_vtdr6130_amoled_120hz_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_cmd{
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS cmd vid mode*/
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+		timing@2 { /* FHD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <540 40 540 40 540 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+		timing@3 { /* HD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <360 20 360 20 360 20>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+	};
+};
+
+&dsi_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_dsc_10b_cmd {
+	qcom,ulps-enabled;
+};
+
+&reserved_memory {
+	splash_memory: splash_region {
+		reg = <0x0 0xb8000000 0x0 0x02b00000>;
+		label = "cont_splash_region";
+	};
+};

@@ -1,0 +1,58 @@
+#include "parrot-audio-overlay.dtsi"
+
+&waipio_snd {
+	qcom,model = "parrot-qrd-snd-card";
+	qcom,sku-model = "parrot-qrd-sku1-snd-card";
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
+	qcom,audio-routing =
+			"AMIC1", "Analog Mic1",
+			"AMIC1", "MIC BIAS1",
+			"AMIC2", "Analog Mic2",
+			"AMIC2", "MIC BIAS2",
+			"AMIC3", "Analog Mic3",
+			"AMIC3", "MIC BIAS3",
+			"AMIC4", "Analog Mic4",
+			"AMIC4", "MIC BIAS1",
+			"AMIC5", "Analog Mic5",
+			"AMIC5", "MIC BIAS1",
+			"VA AMIC1", "Analog Mic1",
+			"VA AMIC1", "VA MIC BIAS1",
+			"VA AMIC2", "Analog Mic2",
+			"VA AMIC2", "VA MIC BIAS2",
+			"VA AMIC3", "Analog Mic3",
+			"VA AMIC3", "VA MIC BIAS3",
+			"VA AMIC4", "Analog Mic4",
+			"VA AMIC4", "VA MIC BIAS1",
+			"VA AMIC5", "Analog Mic5",
+			"VA AMIC5", "VA MIC BIAS1",
+			"TX DMIC0", "Digital Mic0",
+			"TX DMIC0", "MIC BIAS3",
+			"TX DMIC1", "Digital Mic1",
+			"TX DMIC1", "MIC BIAS3",
+			"TX DMIC2", "Digital Mic2",
+			"TX DMIC2", "MIC BIAS1",
+			"TX DMIC3", "Digital Mic3",
+			"TX DMIC3", "MIC BIAS1",
+			"IN1_HPHL", "HPHL_OUT",
+			"IN2_HPHR", "HPHR_OUT",
+			"IN3_AUX", "AUX_OUT",
+			"WSA SRC0_INP", "SRC0",
+			"WSA_TX DEC0_INP", "TX DEC0 MUX",
+			"WSA_TX DEC1_INP", "TX DEC1 MUX",
+			"RX_TX DEC0_INP", "TX DEC0 MUX",
+			"RX_TX DEC1_INP", "TX DEC1 MUX",
+			"RX_TX DEC2_INP", "TX DEC2 MUX",
+			"RX_TX DEC3_INP", "TX DEC3 MUX",
+			"SpkrLeft IN", "WSA_SPK1 OUT",
+			"SpkrRight IN", "WSA_SPK2 OUT",
+			"TX SWR_INPUT", "WCD_TX_OUTPUT",
+			"VA SWR_INPUT", "VA_SWR_CLK",
+			"VA SWR_INPUT", "WCD_TX_OUTPUT",
+			"VA_AIF1 CAP", "VA_SWR_CLK",
+			"VA_AIF2 CAP", "VA_SWR_CLK",
+			"VA_AIF3 CAP", "VA_SWR_CLK";
+};
