@@ -1,0 +1,242 @@
+&qupv3_se0_i2c {
+	status = "okay";
+
+	aw882xx_smartpa@34 {
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x34>;
+		reset-gpio = <&tlmm 26 0>;
+		irq-gpio = <&tlmm 95 0>;
+		dc-flag = <0>;
+		rename-flag = <1>;
+		sound-channel = <0>;
+		aw-tx-topo-id = <0x1000ff00>;
+		aw-rx-topo-id = <0x1000ff01>;
+		aw-tx-port-id = <0x1003>;
+		aw-rx-port-id = <0x1002>;
+		aw-re-min = <4000>;
+		aw-re-max= <30000>;
+		aw-cali-mode = "aw_attr";
+		status = "okay";
+	};
+};
+
+&qupv3_se2_i2c {
+	status = "okay";
+
+	aw882xx_smartpa@34 {
+		compatible = "awinic,aw882xx_smartpa";
+		reg = <0x34>;
+		reset-gpio = <&tlmm 27 0>;
+		irq-gpio = <&tlmm 31 0>;
+		dc-flag = <0>;
+		rename-flag = <1>;
+		sound-channel = <1>;
+		aw-tx-topo-id = <0x1000ff00>;
+		aw-rx-topo-id = <0x1000ff01>;
+		aw-tx-port-id = <0x1003>;
+		aw-rx-port-id = <0x1002>;
+		aw-re-min = <4000>;
+		aw-re-max= <30000>;
+		aw-cali-mode = "aw_attr";
+		status = "okay";
+	};
+};
+
+&spf_core_platform {
+	cdc_quin_mi2s_gpios: quin_mi2s_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&lpi_i2s1_sck_active &lpi_i2s1_ws_active
+				&lpi_i2s1_sd0_active &lpi_i2s1_sd1_active>;
+		pinctrl-1 = <&lpi_i2s1_sck_sleep &lpi_i2s1_ws_sleep
+				&lpi_i2s1_sd0_sleep &lpi_i2s1_sd1_sleep>;
+		#gpio-cells = <0>;
+	};
+};
+
+&lpass_cdc {
+	qcom,num-macros = <3>;
+
+	clock-names = "tx_core_clk", "rx_core_clk",
+		"va_core_clk", "rx_tx_core_clk";
+	clocks = <&clock_audio_tx_1 0>, <&clock_audio_rx_1 0>,
+		<&clock_audio_va_1 0>, <&clock_audio_rx_tx 0>;
+};
+
+&waipio_snd {
+	qcom,wcn-btfm = <1>;
+	qcom,pri-mi2s-gpios = <&fm_i2s0_gpios>;
+	qcom,wsa881x-support = <0>;
+	qcom,mi2s-audio-intf = <1>;
+	qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
+	qcom,audio-routing =
+			"AMIC1", "Analog Mic1",
+			"AMIC1", "MIC BIAS1",
+			"AMIC2", "Analog Mic2",
+			"AMIC2", "MIC BIAS2",
+			"AMIC3", "Analog Mic3",
+			"AMIC3", "MIC BIAS3",
+			"TX DMIC0", "Digital Mic0",
+			"TX DMIC0", "MIC BIAS3",
+			"TX DMIC1", "Digital Mic1",
+			"TX DMIC1", "MIC BIAS3",
+			"TX DMIC2", "Digital Mic2",
+			"TX DMIC2", "MIC BIAS1",
+			"TX DMIC3", "Digital Mic3",
+			"TX DMIC3", "MIC BIAS1",
+			"IN1_HPHL", "HPHL_OUT",
+			"IN2_HPHR", "HPHR_OUT",
+			"IN3_AUX", "AUX_OUT",
+			"RX_TX DEC0_INP", "TX DEC0 MUX",
+			"RX_TX DEC1_INP", "TX DEC1 MUX",
+			"RX_TX DEC2_INP", "TX DEC2 MUX",
+			"RX_TX DEC3_INP", "TX DEC3 MUX",
+			"TX SWR_INPUT", "WCD_TX_OUTPUT",
+			"VA SWR_INPUT", "VA_SWR_CLK",
+			"VA SWR_INPUT", "WCD_TX_OUTPUT",
+			"VA_AIF1 CAP", "VA_SWR_CLK",
+			"VA_AIF2 CAP", "VA_SWR_CLK",
+			"VA_AIF3 CAP", "VA_SWR_CLK";
+	qcom,msm-mbhc-usbc-audio-supported = <0>;
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
+	asoc-codec  = <&stub_codec>, <&lpass_cdc>,
+		      <&wcd937x_codec>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+			   "wcd937x_codec";
+	qcom,wsa-max-devs = <0>;
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&lpi_tlmm>,
+			  <&lpass_cdc>;
+};
+
+&wcd938x_codec {
+	status = "disabled";
+};
+
+&wcd938x_tx_slave {
+	status = "disabled";
+};
+
+&wcd938x_rx_slave {
+	status = "disabled";
+};
+
+&wcd937x_codec {
+	status = "okay";
+};
+
+&wcd937x_tx_slave {
+	status = "okay";
+};
+
+&wcd937x_rx_slave {
+	status = "okay";
+};
+
+&wsa_macro {
+	status = "disabled";
+};
+
+&fm_i2s0_gpios {
+	status = "okay";
+};
+
+&cdc_dmic01_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic23_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic45_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic67_gpios {
+	status = "disabled";
+};
+
+&wsa_spkr_en1 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
+&clock_audio_wsa_1 {
+	status = "disabled";
+};
+
+&clock_audio_wsa_2 {
+	status = "disabled";
+};
+
+&clock_audio_wsa_tx {
+	status = "disabled";
+};
+
+&clock_audio_wsa2_tx {
+	status = "disabled";
+};
+
+&pri_aux_pcm_sync_sleep {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};
+
+&pri_aux_pcm_sync_active {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};
+
+&pri_tdm_sync_sleep {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};
+
+&pri_tdm_sync_active {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};
+
+&pri_mi2s_ws_sleep {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};
+
+&pri_mi2s_ws_active {
+	mux {
+		pins = "gpio125";
+	};
+
+	config {
+		pins = "gpio125";
+	};
+};

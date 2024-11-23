@@ -1,0 +1,11 @@
+#include "parrot-columbia-common.dtsi"
+
+&soc {
+};
+
+#include "somc-columbia-audio-common.dtsi"
+#include "somc-columbia-audio-pdx246.dtsi"
+#include "somc-columbia-charger-common.dtsi"
+#include "somc-columbia-charger-pdx246.dtsi"
+#include "somc-columbia-display-common.dtsi"
+#include "somc-columbia-display-pdx246.dtsi"
