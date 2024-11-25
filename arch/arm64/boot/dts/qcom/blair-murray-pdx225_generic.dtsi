@@ -1,0 +1,4 @@
+#include "blair-murray-pdx225_common.dtsi"
+
+&soc {
+};
