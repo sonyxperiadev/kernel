@@ -78,7 +78,7 @@
 };
 
 &ufsphy_mem {
-	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+	compatible = "qcom,ufs-phy-qmp-v4-blair";
 	vdda-phy-supply = <&L7A>;
 	vdda-pll-supply = <&L4A>;
 	vdda-phy-max-microamp = <85700>;
