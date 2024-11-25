@@ -1,0 +1,13 @@
+#include "blair-murray-common.dtsi"
+
+&soc {
+};
+
+#include "somc-murray-camera.dtsi"
+#include "somc-murray-display.dtsi"
+#include "somc-murray-display-pdx225.dtsi"
+#include "somc-murray-charger-common.dtsi"
+#include "somc-murray-charger-sm5038.dtsi"
+#include "somc-murray-touchscreen.dtsi"
+#include "somc-murray-nfc.dtsi"
+#include "somc-murray-fingerprint.dtsi"

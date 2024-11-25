@@ -1,0 +1,40 @@
+&qupv3_se8_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	qcom,i2c-touch-active="sec,sec_ts";
+
+	sec_ts@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <22 0x2008>;
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&pmx_ts_release>;
+		vdd-supply = <&L13A>;
+		//avdd-supply = <&L6A>;
+		sec,irq-gpio = <&tlmm 22 0x2008>;
+		sec,irq_type = <8200>;
+		sec,reset-gpio = <&tlmm 21 0x00>;
+		sec,avdd-en-gpio = <&tlmm 59 0x00>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "vdd";
+		//sec,regulator_avdd = "avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1080 2520>;
+		sec,always_lpmode = <0>;
+		sec,bringup = <0>;
+		sec,firmware_name = "s6sy761_p213.bin";
+
+		/* feature */
+		sec,rejection_area_portrait = <25 150 60 200>;
+		sec,rejection_area_landscape = <150 20 200 60>;
+
+		panel = <&dsi_samsung_amoled_cmd>;
+	};
+};
