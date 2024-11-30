@@ -80,6 +80,9 @@ config INTERCONNECT_QCOM_RPMH_POSSIBLE
 	  but in order to avoid link failures, drivers must not be built-in
 	  when QCOM_RPMH or QCOM_COMMAND_DB are loadable modules
 
+config INTERCONNECT_QCOM_RPM
+	tristate
+
 config INTERCONNECT_QCOM_RPMH
 	tristate
 
