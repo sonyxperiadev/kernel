@@ -1,4 +1,4 @@
-#include "dsi-panel-samsung-amoled-fhd-cmd.dtsi"
+#include "dsi-panel-pdx246.dtsi"
 
 &dsi_samsung_amoled_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_samsung_amoled>;
