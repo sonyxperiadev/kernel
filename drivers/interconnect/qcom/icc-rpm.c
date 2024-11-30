@@ -13,6 +13,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/soc/qcom/smd-rpm.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
 
 #include "icc-rpm.h"
 #include "qnoc-qos-rpm.h"
