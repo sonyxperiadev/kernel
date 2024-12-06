@@ -9564,19 +9564,19 @@ static int qseecom_register_heap_shmbridge(struct platform_device *pdev,
 
 	node = of_parse_phandle(pdev->dev.of_node, heap_mem_region_name, 0);
 	if (!node) {
-		pr_err("unable to parse memory-region of heap %d\n", heap_mem_region_name);
+		pr_err("unable to parse memory-region of heap %s\n", heap_mem_region_name);
 		return -EINVAL;
 	}
 	rmem = of_reserved_mem_lookup(node);
 	if (!rmem) {
-		pr_err("unable to acquire memory-region of heap %d\n", heap_mem_region_name);
+		pr_err("unable to acquire memory-region of heap %s\n", heap_mem_region_name);
 		return -EINVAL;
 	}
 
 	heap_pa = rmem->base;
 	heap_size = (size_t)rmem->size;
 
-	pr_debug("get heap %d info: shmbridge created\n", heap_mem_region_name);
+	pr_debug("get heap %s info: shmbridge created\n", heap_mem_region_name);
 	return qtee_shmbridge_register(heap_pa,
 			heap_size, ns_vmids, ns_vm_perms, 1,
 			PERM_READ | PERM_WRITE, handle);
