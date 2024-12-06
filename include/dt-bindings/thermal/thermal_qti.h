@@ -83,6 +83,9 @@
 #define QMI_MCG_FR2_CC	69
 #define QMI_SCG_FR1_CC	70
 #define QMI_SCG_FR2_CC	71
+#define QMI_BEAMER_N_THERM	72
+#define QMI_BEAMER_E_THERM	73
+#define QMI_BEAMER_W_THERM	74
 
 #define QMI_MODEM_INST_ID	0x0
 #define QMI_ADSP_INST_ID	0x1
