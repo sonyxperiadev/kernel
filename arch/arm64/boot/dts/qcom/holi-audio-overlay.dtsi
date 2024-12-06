@@ -297,8 +297,7 @@
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd937x_codec", "wsa-codec0",
 			   "wsa-codec1";
-	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
-				  <&bolero>;
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&lpi_tlmm>, <&bolero>;
 };
 
 &qupv3_se10_i2c {
@@ -346,10 +345,6 @@
 		reg = <0x045>;
 		qcom,wsa-analog-clk-gpio = <&wsa881x_analog_clk_gpio>;
 	};
-};
-
-&va_cdc_dma_0_tx {
-	qcom,msm-dai-is-island-supported = <1>;
 };
 
 &soc {

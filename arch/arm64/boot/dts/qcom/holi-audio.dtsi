@@ -1,59 +1,102 @@
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
+#include <dt-bindings/sound/qcom,gpr.h>
 #include "msm-audio-lpass.dtsi"
 
-&msm_audio_ion {
-	iommus = <&apps_smmu 0x00A1 0x0>;
-	qcom,smmu-sid-mask = /bits/ 64 <0xf>;
+&soc {
+	spf_core_platform: spf_core_platform {
+		compatible = "qcom,spf-core-platform";
+	};
+
+	lpass_audio_hw_vote: vote_lpass_audio_hw {
+		compatible = "qcom,audio-ref-clk";
+		qcom,codec-ext-clk-src = <AUDIO_LPASS_AUDIO_HW_VOTE>;
+		#clock-cells = <1>;
+	};
 };
 
-&audio_apr {
-	q6core: qcom,q6core-audio {
-		compatible = "qcom,q6core-audio";
-		#address-cells = <1>;
-		#size-cells = <1>;
+&glink_edge {
+	#address-cells = <1>;
+	#size-cells = <0>;
 
-		lpass_audio_hw_vote: vote_lpass_audio_hw {
-			compatible = "qcom,audio-ref-clk";
-			qcom,codec-ext-clk-src = <AUDIO_LPASS_AUDIO_HW_VOTE>;
-			#clock-cells = <1>;
+	audio_gpr: qcom,gpr {
+		compatible = "qcom,gpr";
+		qcom,glink-channels = "adsp_apps";
+		qcom,intents = <0x200 20>;
+		reg = <GPR_DOMAIN_ADSP>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spf_core {
+			compatible = "qcom,spf_core";
+			reg = <GPR_SVC_ADSP_CORE>;
 		};
 
-		lpi_tlmm: lpi_pinctrl@a7c0000 {
-			compatible = "qcom,lpi-pinctrl";
-			reg = <0xa7c0000 0x0>;
-			qcom,slew-reg = <0x0a95a000 0x0>;
-			clock-names = "lpass_audio_hw_vote";
-			clocks = <&lpass_audio_hw_vote 0>;
-			qcom,gpios-count = <19>;
-			gpio-controller;
-			#gpio-cells = <2>;
-			qcom,lpi-offset-tbl = <0x00000000>, <0x00001000>,
-					      <0x00002000>, <0x00003000>,
-					      <0x00004000>, <0x00005000>,
-					      <0x00006000>, <0x00007000>,
-					      <0x00008000>, <0x00009000>,
-					      <0x0000A000>, <0x0000B000>,
-					      <0x0000C000>, <0x0000D000>,
-					      <0x0000E000>, <0x0000F000>,
-					      <0x00010000>, <0x00011000>,
-					      <0x00012000>;
-			qcom,lpi-slew-offset-tbl = <0x00000000>, <0x00000002>,
-						   <0x00000004>, <0x00000008>,
-						   <0x0000000A>, <0x0000000C>,
-						   <0x00000000>, <0x00000000>,
-						   <0x00000000>, <0x00000000>,
-						   <0x00000010>, <0x00000012>,
-						   <0x00000000>, <0x00000000>,
-						   <0x00000000>, <0x00000000>,
-						   <0x00000000>, <0x00000000>,
-						   <0x00000014>;
+		audio-pkt {
+			compatible = "qcom,audio-pkt";
+			qcom,audiopkt-ch-name = "apr_audio_svc";
+			reg = <GPR_SVC_MAX>;
+		};
 
+		audio_prm: q6prm {
+			compatible = "qcom,audio_prm";
+			reg = <GPR_SVC_ASM>;
 		};
 	};
 };
 
+&spf_core_platform {
+	#address-cells = <2>;
+	#size-cells = <0>;
+
+	msm_audio_ion: qcom,msm-audio-ion {
+		compatible = "qcom,msm-audio-ion";
+		qcom,smmu-version = <2>;
+		qcom,smmu-enabled;
+		iommus = <&apps_smmu 0x00A1 0x0>;
+		qcom,iommu-dma-addr-pool = <0x10000000 0x10000000>;
+		qcom,smmu-sid-mask = /bits/ 64 <0xf>;
+	};
+
+	msm_audio_ion_cma: qcom,msm-audio-ion-cma {
+		compatible = "qcom,msm-audio-ion-cma";
+	};
+
+	lpi_tlmm: lpi_pinctrl@a7c0000 {
+		compatible = "qcom,lpi-pinctrl";
+		reg = <0xa7c0000 0x0>;
+		qcom,slew-reg = <0x0a95a000 0x0>;
+		clock-names = "lpass_audio_hw_vote";
+		clocks = <&lpass_audio_hw_vote 0>;
+		qcom,gpios-count = <19>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		qcom,lpi-offset-tbl = <0x00000000>, <0x00001000>,
+				      <0x00002000>, <0x00003000>,
+				      <0x00004000>, <0x00005000>,
+				      <0x00006000>, <0x00007000>,
+				      <0x00008000>, <0x00009000>,
+				      <0x0000A000>, <0x0000B000>,
+				      <0x0000C000>, <0x0000D000>,
+				      <0x0000E000>, <0x0000F000>,
+				      <0x00010000>, <0x00011000>,
+				      <0x00012000>;
+		qcom,lpi-slew-offset-tbl = <0x00000000>, <0x00000002>,
+					   <0x00000004>, <0x00000008>,
+					   <0x0000000A>, <0x0000000C>,
+					   <0x00000000>, <0x00000000>,
+					   <0x00000000>, <0x00000000>,
+					   <0x00000010>, <0x00000012>,
+					   <0x00000000>, <0x00000000>,
+					   <0x00000000>, <0x00000000>,
+					   <0x00000000>, <0x00000000>,
+					   <0x00000014>;
+	};
+};
+
 #include "holi-lpi.dtsi"
-&q6core {
+
+&spf_core_platform {
 	rx_swr_gpios: rx_swr_clk_data_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
@@ -106,9 +149,7 @@
 		qcom,lpi-gpios;
 		#gpio-cells = <0>;
 	};
-};
 
-&q6core {
 	bolero: bolero-cdc {
 		compatible = "qcom,bolero-codec";
 		clock-names = "lpass_audio_hw_vote";
@@ -128,9 +169,7 @@
 		};
 
 	};
-};
 
-&q6core {
 	holi_snd: sound {
 		compatible = "qcom,holi-asoc-snd";
 		qcom,mi2s-audio-intf = <1>;
@@ -141,83 +180,10 @@
 
 		clock-names = "lpass_audio_hw_vote";
 		clocks = <&lpass_audio_hw_vote 0>;
-
-		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
-				<&loopback>, <&compress>, <&hostless>,
-				<&afe>, <&lsm>, <&routing>, <&compr>,
-				<&pcm_noirq>;
-		asoc-platform-names = "msm-pcm-dsp.0", "msm-pcm-dsp.1",
-				"msm-pcm-dsp.2", "msm-voip-dsp",
-				"msm-pcm-voice", "msm-pcm-loopback",
-				"msm-compress-dsp", "msm-pcm-hostless",
-				"msm-pcm-afe", "msm-lsm-client",
-				"msm-pcm-routing", "msm-compr-dsp",
-				"msm-pcm-dsp-noirq";
-		asoc-cpu = <&dai_mi2s0_rx>, <&dai_mi2s0_tx>,
-				<&dai_mi2s1_rx>, <&dai_mi2s1_tx>,
-				<&dai_mi2s2_rx>, <&dai_mi2s2_tx>,
-				<&dai_mi2s3_rx>, <&dai_mi2s3_tx>,
-				<&dai_pri_auxpcm>,
-				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
-				<&dai_quat_auxpcm>,
-				<&afe_pcm_rx>, <&afe_pcm_tx>, <&afe_proxy_rx>,
-				<&afe_proxy_tx>, <&incall_record_rx>,
-				<&incall_record_tx>, <&incall_music_rx>,
-				<&incall_music_2_rx>,
-				<&afe_proxy_tx_1>,
-				<&proxy_rx>, <&proxy_tx>,
-				<&usb_audio_rx>, <&usb_audio_tx>,
-				<&sb_7_rx>, <&sb_7_tx>, <&sb_8_tx>,
-				<&dai_pri_tdm_rx_0>, <&dai_pri_tdm_tx_0>,
-				<&dai_sec_tdm_rx_0>, <&dai_sec_tdm_tx_0>,
-				<&dai_tert_tdm_rx_0>, <&dai_tert_tdm_tx_0>,
-				<&dai_quat_tdm_rx_0>, <&dai_quat_tdm_tx_0>,
-				<&va_cdc_dma_0_tx>, <&va_cdc_dma_1_tx>,
-				<&va_cdc_dma_2_tx>,
-				<&rx_cdc_dma_0_rx>, <&tx_cdc_dma_0_tx>,
-				<&rx_cdc_dma_1_rx>, <&tx_cdc_dma_1_tx>,
-				<&rx_cdc_dma_2_rx>, <&tx_cdc_dma_2_tx>,
-				<&rx_cdc_dma_3_rx>, <&tx_cdc_dma_3_tx>,
-				<&rx_cdc_dma_4_rx>, <&tx_cdc_dma_4_tx>,
-				<&rx_cdc_dma_5_rx>, <&tx_cdc_dma_5_tx>,
-				<&rx_cdc_dma_7_rx>,<&afe_loopback_tx>;
-		asoc-cpu-names = "msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
-				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
-				"msm-dai-q6-mi2s.4", "msm-dai-q6-mi2s.5",
-				"msm-dai-q6-mi2s.6", "msm-dai-q6-mi2s.7",
-				"msm-dai-q6-auxpcm.1",
-				"msm-dai-q6-auxpcm.2", "msm-dai-q6-auxpcm.3",
-				"msm-dai-q6-auxpcm.4",
-				"msm-dai-q6-dev.224",
-				"msm-dai-q6-dev.225", "msm-dai-q6-dev.241",
-				"msm-dai-q6-dev.240", "msm-dai-q6-dev.32771",
-				"msm-dai-q6-dev.32772", "msm-dai-q6-dev.32773",
-				"msm-dai-q6-dev.32770",
-				"msm-dai-q6-dev.242",
-				"msm-dai-q6-dev.8194", "msm-dai-q6-dev.8195",
-				"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673",
-				"msm-dai-q6-dev.16398", "msm-dai-q6-dev.16399",
-				"msm-dai-q6-dev.16401",
-				"msm-dai-q6-tdm.36864", "msm-dai-q6-tdm.36865",
-				"msm-dai-q6-tdm.36880", "msm-dai-q6-tdm.36881",
-				"msm-dai-q6-tdm.36896", "msm-dai-q6-tdm.36897",
-				"msm-dai-q6-tdm.36912", "msm-dai-q6-tdm.36913",
-				"msm-dai-cdc-dma-dev.45089",
-				"msm-dai-cdc-dma-dev.45091",
-				"msm-dai-cdc-dma-dev.45093",
-				"msm-dai-cdc-dma-dev.45104",
-				"msm-dai-cdc-dma-dev.45105",
-				"msm-dai-cdc-dma-dev.45106",
-				"msm-dai-cdc-dma-dev.45107",
-				"msm-dai-cdc-dma-dev.45108",
-				"msm-dai-cdc-dma-dev.45109",
-				"msm-dai-cdc-dma-dev.45110",
-				"msm-dai-cdc-dma-dev.45111",
-				"msm-dai-cdc-dma-dev.45112",
-				"msm-dai-cdc-dma-dev.45113",
-				"msm-dai-cdc-dma-dev.45114",
-				"msm-dai-cdc-dma-dev.45115",
-				"msm-dai-cdc-dma-dev.45118",
-				"msm-dai-q6-dev.24577";
 	};
+};
+
+&aliases {
+	swr0 = "/soc/spf_core_platform/bolero-codec/va-macro@A730000/va_swr_master";
+	swr1 = "/soc/spf_core_platform/bolero-codec/rx-macro@A600000/rx_swr_master";
 };
