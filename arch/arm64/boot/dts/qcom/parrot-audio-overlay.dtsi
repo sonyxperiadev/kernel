@@ -525,10 +525,6 @@
 	};
 };
 
-&va_cdc_dma_0_tx {
-	qcom,msm-dai-is-island-supported = <1>;
-};
-
 &soc {
 	wsa_spkr_en1: wsa_spkr_en1_pinctrl {
 		compatible = "qcom,msm-cdc-pinctrl";
