@@ -3404,7 +3404,7 @@
 #include "pmr735a-rpm-regulator.dtsi"
 #include "holi-regulators-pm6125.dtsi"
 #include "holi-gdsc.dtsi"
-#include "holi-ion.dtsi"
+#include "holi-dma-heaps.dtsi"
 #include "msm-arm-smmu-holi.dtsi"
 #include "holi-coresight.dtsi"
 #include "holi-pm.dtsi"
