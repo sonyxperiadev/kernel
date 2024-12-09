@@ -76,7 +76,6 @@
 			interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&usb2_phy0>, <&usb_qmp_dp_phy>;
 			tx-fifo-resize;
-			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,is-utmi-l1-suspend;
 			snps,usb2-gadget-lpm-disable;
