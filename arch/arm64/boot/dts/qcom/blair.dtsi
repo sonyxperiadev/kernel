@@ -3,7 +3,7 @@
 #include <dt-bindings/clock/qcom,gpucc-blair.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
 #include <dt-bindings/interconnect/qcom,cpucp-l3.h>
-#include <dt-bindings/interconnect/qcom,holi.h>
+#include <dt-bindings/interconnect/qcom,blair.h>
 #include <dt-bindings/interconnect/qcom,icc.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/soc/qcom,dcc_v2.h>
@@ -1004,7 +1004,7 @@
 	};
 
 	clk_virt: interconnect {
-		compatible = "qcom,holi-clk_virt";
+		compatible = "qcom,blair-clk_virt";
 		#interconnect-cells = <1>;
 		qcom,keepalive;
 		clock-names = "bus", "bus_a";
@@ -1013,7 +1013,7 @@
 	};
 
 	mmnrt_virt: interconnect@0 {
-		compatible = "qcom,holi-mmnrt_virt";
+		compatible = "qcom,blair-mmnrt_virt";
 		#interconnect-cells = <1>;
 		qcom,util-factor = <142>;
 		qcom,keepalive;
@@ -1023,7 +1023,7 @@
 	};
 
 	mmrt_virt: interconnect@1 {
-		compatible = "qcom,holi-mmrt_virt";
+		compatible = "qcom,blair-mmrt_virt";
 		#interconnect-cells = <1>;
 		qcom,util-factor = <142>;
 		qcom,keepalive;
@@ -1036,7 +1036,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0x01880000 0x5f080>;
-		compatible = "qcom,holi-system_noc";
+		compatible = "qcom,blair-system_noc";
 		#interconnect-cells = <1>;
 		qcom,keepalive;
 		clock-names = "bus", "bus_a";
@@ -1048,7 +1048,7 @@
 
 	config_noc: interconnect@1900000 {
 		reg = <0x01900000 0x6200>;
-		compatible = "qcom,holi-config_noc";
+		compatible = "qcom,blair-config_noc";
 		#interconnect-cells = <1>;
 		qcom,keepalive;
 		clock-names = "bus", "bus_a";
@@ -1058,7 +1058,7 @@
 
 	bimc: interconnect@4480000 {
 		reg = <0x04480000 0x80000>;
-		compatible = "qcom,holi-bimc";
+		compatible = "qcom,blair-bimc";
 		#interconnect-cells = <1>;
 		qcom,util-factor = <151>;
 		qcom,keepalive;
