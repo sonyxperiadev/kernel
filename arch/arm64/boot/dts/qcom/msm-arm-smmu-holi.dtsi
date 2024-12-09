@@ -44,6 +44,7 @@
 		#iommu-cells = <2>;
 		qcom,skip-init;
 		qcom,use-3-lvl-tables;
+		qcom,handoff-smrs = <0x820 0x2>;
 		#global-interrupts = <1>;
 		#size-cells = <1>;
 		#address-cells = <1>;
