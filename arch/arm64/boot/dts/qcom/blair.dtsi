@@ -602,6 +602,14 @@
 		#gpio-cells = <0>;
 	};
 
+	gic-interrupt-router {
+		compatible = "qcom,gic-intr-routing";
+		/* keep silver core only to avoid wakeup of gold cores */
+		qcom,gic-class0-cpus = <0 1 2 3 4 5>;
+		/* keep gold cores in class1 */
+		qcom,gic-class1-cpus = <6 7>;
+	};
+
 	spmi_bus: qcom,spmi@1c40000 {
 		compatible = "qcom,spmi-pmic-arb";
 		reg = <0x1c40000 0x1100>,
