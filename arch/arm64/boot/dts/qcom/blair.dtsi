@@ -3071,6 +3071,9 @@
 	qcom_qseecom: qseecom@c1800000 {
 		compatible = "qcom,qseecom";
 		memory-region = <&qseecom_mem>;
+		qseecom_mem = <&qseecom_mem>;
+		qseecom_ta_mem = <&qseecom_ta_mem>;
+		user_contig_mem = <&user_contig_mem>;
 		qcom,hlos-num-ce-hw-instances = <1>;
 		qcom,hlos-ce-hw-instance = <0>;
 		qcom,qsee-ce-hw-instance = <0>;
