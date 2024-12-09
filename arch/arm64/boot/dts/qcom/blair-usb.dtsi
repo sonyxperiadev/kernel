@@ -8,9 +8,6 @@
 		reg = <0x4e00000 0x100000>;
 		reg-names = "core_base";
 
-		iommus = <&apps_smmu 0xe0 0x0>;
-		qcom,iommu-dma = "atomic";
-		qcom,iommu-dma-addr-pool = <0x90000000 0x60000000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -70,6 +67,11 @@
 		dwc3@4e00000 {
 			compatible = "snps,dwc3";
 			reg = <0x4e00000 0xcd00>;
+
+			iommus = <&apps_smmu 0xe0 0x0>;
+			qcom,iommu-dma = "atomic";
+			qcom,iommu-dma-addr-pool = <0x90000000 0x60000000>;
+
 			interrupt-parent = <&intc>;
 			interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&usb2_phy0>, <&usb_qmp_dp_phy>;
