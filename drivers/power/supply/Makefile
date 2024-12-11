@@ -103,3 +103,5 @@ obj-$(CONFIG_RN5T618_POWER)	+= rn5t618_power.o
 obj-$(CONFIG_SCHGM_FLASH)       += schgm-flash.o
 obj-$(CONFIG_CHARGER_BQ256XX)	+= bq256xx_charger.o
 obj-$(CONFIG_QCOM_POWER_SUPPLY)		+= qcom/
+obj-$(CONFIG_IFPM_SM5038) += sm5038_drv.o
+sm5038_drv-y += sm5038_core.o sm5038_irq.o sm5038_muic.o sm5038_charger.o sm5038_charger_oper.o sm5038_step_chg_n_jeita.o sm5038_fg.o qcom/pmic-voter.o
