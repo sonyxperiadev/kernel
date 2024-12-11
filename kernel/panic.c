@@ -307,6 +307,8 @@ void panic(const char *fmt, ...)
 	if (!test_taint(TAINT_DIE) && oops_in_progress <= 1)
 		dump_stack();
 #endif
+	dump_stack();
+	kmsg_dump(KMSG_DUMP_PANIC);
 
 	/*
 	 * If kgdb is enabled, give it a chance to run before we stop all
@@ -332,14 +334,16 @@ void panic(const char *fmt, ...)
 		 * unfortunately means it may not be hardened to work in a
 		 * panic situation.
 		 */
-		smp_send_stop();
+		// Don't stop all the CPUs here to have kernel crash stored in dmesg
+		// smp_send_stop();
 	} else {
 		/*
 		 * If we want to do crash dump after notifier calls and
 		 * kmsg_dump, we will need architecture dependent extra
 		 * works in addition to stopping other CPUs.
 		 */
-		crash_smp_send_stop();
+		// Don't stop all the CPUs here to have kernel crash stored in dmesg
+		// crash_smp_send_stop();
 	}
 
 	/*
@@ -400,6 +404,9 @@ void panic(const char *fmt, ...)
 			}
 			mdelay(PANIC_TIMER_STEP);
 		}
+
+		// Stop CPUs here
+		crash_smp_send_stop();
 	}
 	if (panic_timeout != 0) {
 		/*
