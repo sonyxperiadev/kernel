@@ -973,18 +973,6 @@ static int qcom_vadc_scale_hw_calib_batt_therm_100(
 				const struct vadc_prescale_ratio *prescale,
 				const struct adc5_data *data,
 				u16 adc_code, int *result_mdec);
-#if defined(CONFIG_ARCH_SONY_COLUMBIA)
-/* other sys therm */
-static int qcom_vadc_scale_hw_calib_therm_100_QN6813A(
-				const struct vadc_prescale_ratio *prescale,
-				const struct adc5_data *data,
-				u16 adc_code, int *result_mdec);
-/*  sys therm 3 */
-static int qcom_vadc_scale_hw_calib_sys_therm_100_QN6813A(
-				const struct vadc_prescale_ratio *prescale,
-				const struct adc5_data *data,
-				u16 adc_code, int *result_mdec);
-#endif
 static int qcom_vadc_scale_hw_calib_batt_therm_30(
 				const struct vadc_prescale_ratio *prescale,
 				const struct adc5_data *data,
@@ -1037,6 +1025,18 @@ static int qcom_vadc7_scale_hw_calib_die_temp(
 				const struct vadc_prescale_ratio *prescale,
 				const struct adc5_data *data,
 				u16 adc_code, int *result_mdec);
+#if defined(CONFIG_ARCH_SONY_COLUMBIA)
+/* other sys therm */
+static int qcom_vadc_scale_hw_calib_therm_100_QN6813A(
+				const struct vadc_prescale_ratio *prescale,
+				const struct adc5_data *data,
+				u16 adc_code, int *result_mdec);
+/* sys therm 3 */
+static int qcom_vadc_scale_hw_calib_sys_therm_100_QN6813A(
+				const struct vadc_prescale_ratio *prescale,
+				const struct adc5_data *data,
+				u16 adc_code, int *result_mdec);
+#endif
 
 static struct qcom_adc5_scale_type scale_adc5_fn[] = {
 	[SCALE_HW_CALIB_DEFAULT] = {qcom_vadc_scale_hw_calib_volt},
@@ -1053,12 +1053,6 @@ static struct qcom_adc5_scale_type scale_adc5_fn[] = {
 	[SCALE_HW_CALIB_XOTHERM] = {qcom_vadc_scale_hw_calib_therm},
 	[SCALE_HW_CALIB_THERM_100K_PU_PM7] = {
 					qcom_vadc7_scale_hw_calib_therm},
-#if defined(CONFIG_ARCH_SONY_COLUMBIA)
-	[SCALE_HW_CALIB_THERM_100K_PU_QN6813A] = {
-					qcom_vadc_scale_hw_calib_therm_100_QN6813A},
-	[SCALE_HW_CALIB_THERM_100K_PU_PM7_QN6813A] = {
-					qcom_vadc_scale_hw_calib_sys_therm_100_QN6813A},
-#endif
 	[SCALE_HW_CALIB_PMIC_THERM] = {qcom_vadc_scale_hw_calib_die_temp},
 	[SCALE_HW_CALIB_PMIC_THERM_PM7] = {
 					qcom_vadc7_scale_hw_calib_die_temp},
@@ -1075,6 +1069,12 @@ static struct qcom_adc5_scale_type scale_adc5_fn[] = {
 					qcom_vadc7_scale_hw_calib_resistance},
 	[SCALE_HW_CALIB_THERM_PMR_COMP_100K_PU_PM7] = {
 					qcom_vadc7_scale_hw_calib_therm_pmr_comp},
+#if defined(CONFIG_ARCH_SONY_COLUMBIA)
+	[SCALE_HW_CALIB_THERM_100K_PU_QN6813A] = {
+					qcom_vadc_scale_hw_calib_therm_100_QN6813A},
+	[SCALE_HW_CALIB_THERM_100K_PU_PM7_QN6813A] = {
+					qcom_vadc_scale_hw_calib_sys_therm_100_QN6813A},
+#endif
 };
 
 static int qcom_vadc_map_voltage_temp(const struct vadc_map_pt *pts,
