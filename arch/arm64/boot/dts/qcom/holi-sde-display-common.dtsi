@@ -201,7 +201,7 @@
 };
 
 &dsi_sim_vid {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0d>;
 	qcom,mdss-dsi-t-clk-pre = <0x2d>;
 	qcom,mdss-dsi-display-timings {
@@ -218,9 +218,7 @@
 	qcom,dsi-supported-dfps-list = <60 55 48>;
 	qcom,mdss-dsi-pan-enable-dynamic-fps;
 	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
-				"src_byte_clk0", "src_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list =
 		<952174080 948206688 956141472>;
@@ -238,7 +236,7 @@
 };
 
 &dsi_rm69299_visionox_amoled_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list =
 		<929813440 925939216 922064992>;
@@ -255,7 +253,7 @@
 };
 
 &dsi_r66451_amoled_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0A>;
 	qcom,mdss-dsi-t-clk-pre = <0x1D>;
 	qcom,mdss-dsi-display-timings {
@@ -283,7 +281,7 @@
 };
 
 &dsi_r66451_amoled_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0B>;
 	qcom,mdss-dsi-t-clk-pre = <0x27>;
 	qcom,mdss-dsi-display-timings {
@@ -297,7 +295,7 @@
 };
 
 &dsi_r66451_amoled_90hz_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0A>;
 	qcom,mdss-dsi-t-clk-pre = <0x1D>;
 	qcom,mdss-dsi-display-timings {
@@ -318,7 +316,7 @@
 };
 
 &dsi_r66451_amoled_90hz_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0B>;
 	qcom,mdss-dsi-t-clk-pre = <0x27>;
 	qcom,mdss-dsi-display-timings {
@@ -332,7 +330,7 @@
 };
 
 &dsi_r66451_amoled_60hz_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
@@ -344,7 +342,7 @@
 };
 
 &dsi_sharp_qsync_fhd_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0c>;
 	qcom,mdss-dsi-t-clk-pre = <0x2c>;
 	qcom,dsi-ctrl-num = <0>;
@@ -539,7 +537,7 @@
 };
 
 &dsi_sharp_qsync_fhd_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x09>;
 	qcom,mdss-dsi-t-clk-pre = <0x18>;
 	qcom,dsi-ctrl-num = <0>;
@@ -752,7 +750,7 @@
 };
 
 &dsi_sharp_qsync_fhd_60hz_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x09>;
 	qcom,mdss-dsi-t-clk-pre = <0x18>;
 	qcom,mdss-dsi-display-timings {
@@ -768,7 +766,7 @@
 };
 
 &dsi_nt36672e_fhd_plus_120_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x32>;
 	qcom,mdss-dsi-display-timings {
@@ -782,7 +780,7 @@
 };
 
 &dsi_nt36672e_fhd_plus_144_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0E>;
 	qcom,mdss-dsi-t-clk-pre = <0x34>;
 	qcom,mdss-dsi-display-timings {
@@ -797,7 +795,7 @@
 };
 
 &dsi_nt36672e_fhd_plus_60_video {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-clocks = "pll_byte_clk0", "pll_dsi_clk0";
 	qcom,mdss-dsi-t-clk-post = <0x0F>;
 	qcom,mdss-dsi-t-clk-pre = <0x39>;
 	qcom,mdss-dsi-display-timings {

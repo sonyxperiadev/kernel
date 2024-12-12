@@ -2,12 +2,8 @@
 #include <dt-bindings/clock/qcom,dispcc-holi.h>
 
 &sde_dsi {
-	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
-		 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
-		 <&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
-		 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
-		 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
-		 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+	clocks = <&mdss_dsi_phy0 0>,
+		 <&mdss_dsi_phy0 1>,
 		/*
 		 * Currently the dsi clock handles are under the dsi
 		 * controller DT node. As soon as the controller probe
@@ -23,9 +19,7 @@
 		 * change is done just to satisfy sync state requirements.
 		 */
 		<&dispcc DISP_CC_MDSS_MDP_CLK>;
-	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
-			"src_byte_clk0", "src_pixel_clk0",
-			"shadow_byte_clk0", "shadow_pixel_clk0",
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
 			"mdp_core_clk";
 
 	pinctrl-names = "panel_active", "panel_suspend";
