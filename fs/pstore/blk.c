@@ -93,7 +93,6 @@ MODULE_PARM_DESC(blkdev, "block device for pstore storage");
 static DEFINE_MUTEX(pstore_blk_lock);
 static struct file *psblk_file;
 static struct pstore_zone_info *pstore_zone_info;
-static pstore_blk_panic_write_op blkdev_panic_write;
 
 #define check_size(name, alignsize) ({				\
 	long _##name_ = (name);					\
@@ -217,6 +216,13 @@ static ssize_t psblk_generic_blk_write(const char *buf, size_t bytes,
 	return kernel_write(psblk_file, buf, bytes, &pos);
 }
 
+static ssize_t psblk_panic_blk_write(const char *buf, size_t bytes,
+		loff_t pos)
+{
+	pr_info("psblk_panic_blk_write");
+	return kernel_write(psblk_file, buf, bytes, &pos);
+}
+
 /*
  * This takes its configuration only from the module parameters now.
  */
@@ -225,6 +231,7 @@ static int __register_pstore_blk(const char *devpath)
 	struct pstore_device_info dev = {
 		.read = psblk_generic_blk_read,
 		.write = psblk_generic_blk_write,
+		.panic_write = psblk_panic_blk_write,
 	};
 	struct inode *inode;
 	int ret = -ENODEV;
@@ -273,19 +280,6 @@ static void __unregister_pstore_blk(struct file *device)
 	}
 }
 
-/**
- * unregister_pstore_blk() - unregister block device from pstore/blk
- *
- * @major: the major device number of device
- */
-void unregister_pstore_blk(unsigned int major)
-{
-	mutex_lock(&pstore_blk_lock);
-	__unregister_pstore_blk(major);
-	mutex_unlock(&pstore_blk_lock);
-}
-EXPORT_SYMBOL_GPL(unregister_pstore_blk);
-
 /* get information of pstore/blk */
 int pstore_blk_get_config(struct pstore_blk_config *info)
 {
@@ -332,7 +326,6 @@ static inline const char *early_boot_devpath(const char *initial_devname)
 
 static int __init pstore_blk_init(void)
 {
-	struct pstore_blk_info info = { };
 	int ret = 0;
 
 	mutex_lock(&pstore_blk_lock);
@@ -366,6 +359,7 @@ static void __exit pstore_blk_exit(void)
 module_exit(pstore_blk_exit);
 
 MODULE_LICENSE("GPL");
+MODULE_IMPORT_NS(ANDROID_GKI_VFS_EXPORT_ONLY);
 MODULE_AUTHOR("WeiXiong Liao <liaoweixiong@allwinnertech.com>");
 MODULE_AUTHOR("Kees Cook <keescook@chromium.org>");
 MODULE_DESCRIPTION("pstore backend for block devices");

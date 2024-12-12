@@ -768,11 +768,11 @@ static inline int notrace psz_kmsg_write_record(struct psz_context *cxt,
 		}
 		zone->buffer->sig = zone->oldbuf->sig;
 
-		pr_debug("write %s to zone id %d\n", zone->name, zonenum);
 		psz_write_kmsg_hdr(zone, record);
 		hlen = sizeof(struct psz_kmsg_header);
 		size = min_t(size_t, record->size, zone->buffer_size - hlen);
 		ret = psz_zone_write(zone, FLUSH_ALL, record->buf, size, hlen);
+		pr_info("write %s to zone id %d ret=%d \n", zone->name, zonenum, ret);
 		if (likely(!ret || ret != -ENOMSG)) {
 			cxt->kmsg_write_cnt = zonenum + 1;
 			cxt->kmsg_write_cnt %= cxt->kmsg_max_cnt;
