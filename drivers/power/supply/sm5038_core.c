@@ -278,7 +278,7 @@ static int sm5038_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *
 	pr_info("%s:%s v_id=0x%x, rev=0x%x\n",
 		SM5038_DEV_NAME, __func__, sm5038->vender_id, sm5038->pmic_rev);
 
-	sm5038->fuelgauge_i2c = i2c_new_dummy(i2c->adapter, SM5038_I2C_SADR_FG);
+	sm5038->fuelgauge_i2c = i2c_new_dummy_device(i2c->adapter, SM5038_I2C_SADR_FG);
 	i2c_set_clientdata(sm5038->fuelgauge_i2c, sm5038);
 	/* Check FG I2C transmission */
 	ret = sm5038_read_word(sm5038->fuelgauge_i2c, SM5038_FG_REG_DEVICE_ID);
@@ -288,7 +288,7 @@ static int sm5038_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *
 		goto err_w_lock;
 	}
 
-	sm5038->muic_i2c = i2c_new_dummy(i2c->adapter, SM5038_I2C_SADR_MUIC);
+	sm5038->muic_i2c = i2c_new_dummy_device(i2c->adapter, SM5038_I2C_SADR_MUIC);
 	i2c_set_clientdata(sm5038->muic_i2c, sm5038);
 	/* Check MUIC I2C transmission */
 	ret = sm5038_read_reg(sm5038->muic_i2c, SM5038_MUIC_REG_DEVICEID, &temp);
