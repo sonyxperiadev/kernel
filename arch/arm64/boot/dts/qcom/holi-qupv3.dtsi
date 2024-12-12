@@ -20,10 +20,12 @@
 	qupv3_0: qcom,qupv3_0_geni_se@4ac0000 {
 		compatible = "qcom,qupv3-geni-se";
 		reg = <0x4ac0000 0x2000>;
-		qcom,msm-bus,num-paths = <2>;
-		qcom,msm-bus,vectors-bus-ids =
-			<MASTER_QUP_CORE_0 SLAVE_QUP_CORE_0>,
-			<MASTER_QUP_0 SLAVE_EBI>;
+		qcom,msm-bus,num-paths = <3>;
+		interconnect-names = "qup-core", "snoc-llcc", "qup-ddr";
+		interconnects =
+			<&clk_virt MASTER_QUP_CORE_0 &clk_virt SLAVE_QUP_CORE_0>,
+			<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_QUP_0>,
+			<&system_noc MASTER_QUP_0 &bimc SLAVE_EBI>;
 		qcom,vote-for-bw;
 		iommus = <&apps_smmu 0x0003 0x0>;
 		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
@@ -188,10 +190,12 @@
 	qupv3_1: qcom,qupv3_1_geni_se@4cc0000 {
 		compatible = "qcom,qupv3-geni-se";
 		reg = <0x4cc0000 0x2000>;
-		qcom,msm-bus,num-paths = <2>;
-		qcom,msm-bus,vectors-bus-ids =
-			<MASTER_QUP_CORE_1 SLAVE_QUP_CORE_1>,
-			<MASTER_QUP_1 SLAVE_EBI>;
+		qcom,msm-bus,num-paths = <3>;
+		interconnect-names = "qup-core", "snoc-llcc", "qup-ddr";
+		interconnects =
+			<&clk_virt MASTER_QUP_CORE_1 &clk_virt SLAVE_QUP_CORE_1>,
+			<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_QUP_1>,
+			<&system_noc MASTER_QUP_1 &bimc SLAVE_EBI>;
 		qcom,vote-for-bw;
 		iommus = <&apps_smmu 0x00c3 0x0>;
 		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
