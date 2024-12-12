@@ -78,6 +78,10 @@ struct se_geni_rsc {
 	unsigned long *clk_perf_tbl;
 	enum se_protocol_types proto;
 	bool is_list_add;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION) && \
+					defined(CONFIG_SERIAL_MSM_GENI_CONSOLE)
+	struct pinctrl_state *geni_gpio_suspend;
+#endif
 };
 
 #define PINCTRL_DEFAULT	"default"
