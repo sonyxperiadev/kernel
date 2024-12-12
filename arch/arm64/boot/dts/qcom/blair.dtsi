@@ -3499,6 +3499,7 @@
 
 &msm_gpu {
 	qcom,chipid = <0x06010901>;
+	qcom,gpu-model = "Adreno619v2";
 	vdd-parent-supply = <&S8A_LEVEL>;
 	qcom,no-nap;
 

@@ -31,6 +31,7 @@
 		vdd-parent-supply = <&S3A_LEVEL>;
 		vdd-parent-min-corner = <RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 		qcom,chipid = <0x06010900>;
+		qcom,gpu-model = "Adreno619v1";
 
 		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
 		nvmem-cell-names = "speed_bin", "gaming_bin";
