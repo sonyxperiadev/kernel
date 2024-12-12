@@ -30,6 +30,8 @@
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #include <linux/pmic-voter.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
+#include <drm/drm_panel.h>
 #endif
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
@@ -3698,33 +3700,43 @@ static int sm5038_charger_parse_dt(struct sm5038_charger_data *charger)
 }
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-
-static void somc_sm5038_get_active_panel(struct sm5038_charger_data *charger)
+static int somc_sm5038_get_active_panel(struct sm5038_charger_data *charger)
 {
-	int i;
-	int count;
 	struct device_node *node;
 	struct drm_panel *panel;
+	int i, count, ret;
 
 	charger->active_panel = NULL;
 
 	count = of_count_phandle_with_args(charger->dev->of_node, "panel",
 									NULL);
+	if (count <= 0)
+		return 0;
 
 	for (i = 0; i < count; i++) {
 		node = of_parse_phandle(charger->dev->of_node, "panel", i);
+		if (!node)
+			return -ENODEV;
+
 		panel = of_drm_find_panel(node);
 		of_node_put(node);
 		if (!IS_ERR(panel)) {
 			pr_debug("sm5038-charger: %s: Get active panel\n",
 								__func__);
 			charger->active_panel = panel;
-		} else {
-			pr_err("sm5038-charger: %s: Failed to Get active panel\n",
-								__func__);
 			break;
 		}
 	}
+
+	if (!charger->active_panel) {
+		ret = PTR_ERR(panel);
+		if (ret != -EPROBE_DEFER)
+			pr_err("sm5038-charger: %s: Failed to get active panel\n",
+								__func__);
+		return ret;
+	}
+
+	return 0;
 }
 
 static int somc_sm5038_apply_thermal_mitigation(
@@ -3785,31 +3797,58 @@ static int somc_sm5038_apply_thermal_mitigation(
 	return rc;
 }
 
-static int somc_sm5038_apply_thermal_mitigation_cb(struct notifier_block *self,
-					unsigned long event, void *data)
+static void somc_sm5038_apply_thermal_mitigation_cb(enum panel_event_notifier_tag tag,
+					struct panel_event_notification *notification,
+					void *client_data)
 {
-	int transition;
-	struct drm_panel_notifier *evdata = data;
-	struct sm5038_charger_data *charger =
-		container_of(self, struct sm5038_charger_data, fb_notifier);
+	struct sm5038_charger_data *charger = client_data;
 
-	if (!evdata)
-		return 0;
-
-	if (evdata && evdata->data) {
-		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
-			transition = *(int *)evdata->data;
-			if (transition == DRM_PANEL_BLANK_POWERDOWN)
-				charger->screen_state = 0;
-		}
-		if (event == DRM_PANEL_EVENT_BLANK) {
-			transition = *(int *)evdata->data;
-			if (transition == DRM_PANEL_BLANK_UNBLANK)
-				charger->screen_state = 1;
-		}
+	if (!notification) {
+		pr_err("sm5038-charger: %s: Invalid notification\n", __func__);
+		return;
 	}
 
-	return somc_sm5038_apply_thermal_mitigation(charger);
+	pr_debug("sm5038-charger:%s: Notification type: %d, early trigger:%d\n", __func__,
+						notification->notif_type,
+						notification->notif_data.early_trigger);
+
+	if (!client_data) {
+		pr_err("sm5038-charger: %s: No client data\n", __func__);
+		return;
+	}
+
+	switch (notification->notif_type) {
+	case DRM_PANEL_EVENT_UNBLANK:
+		charger->screen_state = 1;
+		break;
+	case DRM_PANEL_EVENT_BLANK:
+		charger->screen_state = 0;
+		break;
+	default:
+		pr_debug("notification serviced :%d\n", notification->notif_type);
+		break;
+	}
+
+	somc_sm5038_apply_thermal_mitigation(charger);
+}
+
+static void somc_sm5038_register_for_panel_events(struct sm5038_charger_data *charger)
+{
+	void *cookie;
+	cookie = panel_event_notifier_register(
+			PANEL_EVENT_NOTIFICATION_PRIMARY,
+			PANEL_EVENT_NOTIFIER_CLIENT_BATTERY_CHARGER,
+			charger->active_panel,
+			&somc_sm5038_apply_thermal_mitigation_cb,
+			charger);
+	if (!cookie) {
+		pr_err("sm5038-charger: %s: Failed to register for panel events\n",
+							__func__);
+		return;
+	}
+	charger->notifier_cookie = cookie;
+	pr_debug("sm5038-charger: %s: Registered for panel notifications on panel: %s\n",
+						__func__, charger->active_panel->dev->of_node->name);
 }
 
 static int somc_sm5038_set_batt_aging_level(
@@ -4878,6 +4917,14 @@ int sm5038_charger_probe(struct platform_device *pdev)
 		pr_err("sm5038-charger: %s: failed to find charger dt \n", __func__);
 		goto err_parse_dt;
 	}
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	ret = somc_sm5038_get_active_panel(charger);
+	if (ret < 0)
+		goto err_panel_register;
+	somc_sm5038_register_for_panel_events(charger);
+#endif
+
 	platform_set_drvdata(pdev, charger);
 
 	static_charger_data = charger;
@@ -5066,20 +5113,6 @@ int sm5038_charger_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
-	somc_sm5038_get_active_panel(charger);
-
-	charger->fb_notifier.notifier_call =
-				somc_sm5038_apply_thermal_mitigation_cb;
-	if (charger->active_panel) {
-		ret = drm_panel_notifier_register(charger->active_panel,
-							&charger->fb_notifier);
-		if (ret < 0) {
-			pr_err("sm5038-charger: %s: failed to register panel notifier (ret=%d)\n",
-								__func__, ret);
-			goto err_panel_register;
-		}
-	}
-
 	/* register input device */
 	charger->unplug_key = input_allocate_device();
 	if (!charger->unplug_key) {
@@ -5124,7 +5157,6 @@ int sm5038_charger_probe(struct platform_device *pdev)
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 err_class_register:
 	class_unregister(&charger->bcext_class);
-err_panel_register:
 err_input_device_register:
 	if (charger->unplug_key) {
 		input_free_device(charger->unplug_key);
@@ -5142,6 +5174,11 @@ err_power_supply_register:
 err_create_votables:
 	somc_sm5038_destroy_votables(charger);
 #endif
+err_panel_register:
+	if (charger->active_panel) {
+		pr_debug("sm5038-charger: %s: unregistering panel notifications\n", __func__);
+		panel_event_notifier_unregister(charger->notifier_cookie);
+	}
 err_parse_dt:
 err_parse_dt_nomem:
 	mutex_destroy(&charger->charger_mutex);
@@ -5188,6 +5225,14 @@ int sm5038_charger_remove(struct platform_device *pdev)
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	somc_sm5038_destroy_votables(charger);
 #endif
+
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	if (charger->active_panel) {
+		pr_debug("sm5038-charger: %s: unregistering panel notifications\n", __func__);
+		panel_event_notifier_unregister(charger->notifier_cookie);
+	}
+#endif
+
 	mutex_destroy(&charger->charger_mutex);
 
 #if !defined(CONFIG_SOMC_CHARGER_EXTENSION)

@@ -438,7 +438,7 @@ struct sm5038_charger_data {
 	/* thermal mitigation */
 	struct somc_thermal_mitigation	therm_mitig[NUM_THERM_MITIG_STEPS];
 	struct drm_panel	*active_panel;
-	struct notifier_block	fb_notifier;
+	void		*notifier_cookie;
 	int			screen_state;
 
 	/* smart charge */
