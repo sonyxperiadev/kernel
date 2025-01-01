@@ -57,10 +57,12 @@
 &lpass_cdc {
 	qcom,num-macros = <3>;
 
-	clock-names = "tx_core_clk", "rx_core_clk",
-		"va_core_clk", "rx_tx_core_clk";
-	clocks = <&clock_audio_tx_1 0>, <&clock_audio_rx_1 0>,
-		<&clock_audio_va_1 0>, <&clock_audio_rx_tx 0>;
+	lpass-cdc-clk-rsc-mngr {
+		clock-names = "tx_core_clk", "rx_core_clk",
+			"va_core_clk", "rx_tx_core_clk";
+		clocks = <&clock_audio_tx_1 0>, <&clock_audio_rx_1 0>,
+			<&clock_audio_va_1 0>, <&clock_audio_rx_tx 0>;
+	};
 };
 
 &waipio_snd {
