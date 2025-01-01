@@ -13,16 +13,16 @@
 		compatible = "qcom,lpass-cdc-clk-rsc-mngr";
 		qcom,fs-gen-sequence = <0x3000 0x1 0x1>, <0x3004 0x3 0x3>,
 					<0x3004 0x3 0x1>, <0x3080 0x2 0x2>;
-	qcom,rx_mclk_mode_muxsel = <0x033A40D8>;
-	qcom,wsa_mclk_mode_muxsel = <0x033A20E0>;
-	qcom,va_mclk_mode_muxsel = <0x03420000>;
-	clock-names = "tx_core_clk", "rx_core_clk", "wsa_core_clk",
-		"va_core_clk", "wsa2_core_clk", "rx_tx_core_clk",
-		"wsa_tx_core_clk", "wsa2_tx_core_clk";
-	clocks = <&clock_audio_tx_1 0>, <&clock_audio_rx_1 0>,
-		<&clock_audio_wsa_1 0>, <&clock_audio_va_1 0>,
-		<&clock_audio_wsa_2 0>, <&clock_audio_rx_tx 0>,
-		<&clock_audio_wsa_tx 0>, <&clock_audio_wsa2_tx 0>;
+		qcom,rx_mclk_mode_muxsel = <0x033A40D8>;
+		qcom,wsa_mclk_mode_muxsel = <0x033A20E0>;
+		qcom,va_mclk_mode_muxsel = <0x03420000>;
+		clock-names = "tx_core_clk", "rx_core_clk", "wsa_core_clk",
+			"va_core_clk", "wsa2_core_clk", "rx_tx_core_clk",
+			"wsa_tx_core_clk", "wsa2_tx_core_clk";
+		clocks = <&clock_audio_tx_1 0>, <&clock_audio_rx_1 0>,
+			<&clock_audio_wsa_1 0>, <&clock_audio_va_1 0>,
+			<&clock_audio_wsa_2 0>, <&clock_audio_rx_tx 0>,
+			<&clock_audio_wsa_tx 0>, <&clock_audio_wsa2_tx 0>;
 	};
 
 	va_macro: va-macro@33F0000 {
