@@ -3722,6 +3722,10 @@
 
 };
 
+&pm8350b_haptics {
+	status = "disabled";
+};
+
 &pm8350c_rgb {
 	red {
 		somc,color_variation_max_num = <4>;
