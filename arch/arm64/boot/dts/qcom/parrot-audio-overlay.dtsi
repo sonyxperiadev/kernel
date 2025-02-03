@@ -34,7 +34,7 @@
 		qcom,va-clk-mux-select = <1>;
 		qcom,va-island-mode-muxsel = <0x03420000>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
-		qcom,is-used-swr-gpio = <1>;
+		qcom,swr-gpio-is-used = <1>;
 		qcom,va-swr-gpios = <&va_swr_gpios>;
 		swr2: va_swr_master {
 			compatible = "qcom,swr-mstr";
@@ -82,7 +82,7 @@
 		reg = <0x3220000 0x0>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
 		qcom,tx-dmic-sample-rate = <2400000>;
-		qcom,is-used-swr-gpio = <0>;
+		qcom,swr-gpio-is-used = <0>;
 	};
 
 	rx_macro: rx-macro@3200000 {
