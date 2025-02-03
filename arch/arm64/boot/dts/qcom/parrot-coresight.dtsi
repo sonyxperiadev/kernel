@@ -2077,7 +2077,7 @@
 				};
 			};
 
-			port@c {
+			port@b {
 				reg = <11>;
 				tpda_dl_center_11_in_funnel_ddr: endpoint {
 					remote-endpoint =
@@ -2085,7 +2085,7 @@
 				};
 			};
 
-			port@d {
+			port@c {
 				reg = <12>;
 				tpda_dl_center_12_in_funnel_ddr: endpoint {
 					remote-endpoint =
@@ -2519,7 +2519,7 @@ funnel_dl_center2: funnel@10ac4000 {
 				};
 			};
 
-			port@10 {
+			port@a {
 				reg = <10>;
 				tpda_dl_lpass_10_in_tpdm_dl_lpass: endpoint {
 					remote-endpoint =

@@ -382,6 +382,9 @@
 			compatible = "qcom,qpnp-amoled-regulator";
 			status = "disabled";
 
+			#address-cells = <1>;
+			#size-cells = <0>;
+
 			oledb_vreg: oledb@e000 {
 				reg = <0xe000>;
 				reg-names = "oledb_base";
