@@ -1,6 +1,9 @@
 &qupv3_se0_i2c {
 	status = "okay";
 
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	aw882xx_smartpa@34 {
 		compatible = "awinic,aw882xx_smartpa";
 		reg = <0x34>;
@@ -22,6 +25,9 @@
 
 &qupv3_se2_i2c {
 	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	aw882xx_smartpa@34 {
 		compatible = "awinic,aw882xx_smartpa";

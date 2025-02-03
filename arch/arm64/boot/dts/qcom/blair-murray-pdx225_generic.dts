@@ -3,6 +3,7 @@
 #include "blair.dtsi"
 #include "blair-qrd.dtsi"
 #include "blair-murray-pdx225_generic.dtsi"
+#include "pm7250b.dtsi"
 
 / {
 	model = "Sony Corporation. PDX225(BLAIR v4)";

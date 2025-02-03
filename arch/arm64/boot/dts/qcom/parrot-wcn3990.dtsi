@@ -2,6 +2,9 @@
 #include <dt-bindings/gpio/gpio.h>
 
 &reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
 	wlan_fw_mem: wlan_fw_region@82a00000 {
 		no-map;
 		reg = <0x0 0x82a00000 0x0 0x300000>;
@@ -9,6 +12,9 @@
 };
 
 &soc {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	wpss_pas: remoteproc-wpss@8a00000 {
 		firmware-name = "adrastea/wpss.mdt";
 	};
@@ -19,6 +25,7 @@
 		reg-names = "membase";
 		qcom,rproc-handle = <&wpss_pas>;
 		iommus = <&apps_smmu 0x4c0 0x1>;
+		interrupt-parent = <&intc>;
 		interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH /* CE0 */ >,
 			     <GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH /* CE1 */ >,
 			     <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH /* CE2 */ >,

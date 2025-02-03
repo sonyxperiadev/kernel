@@ -94,6 +94,9 @@
 &spmi0_debug_bus {
 	depends-on2-supply = <&smb1394_glink_debug>;
 
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	qcom,pm7250b-debug@8 {
 		compatible = "qcom,spmi-pmic";
 		reg = <8 SPMI_USID>;

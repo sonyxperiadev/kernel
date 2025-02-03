@@ -21,11 +21,17 @@
 };
 
 &glink_edge {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	audio_gpr: qcom,gpr {
 		compatible = "qcom,gpr";
 		qcom,glink-channels = "adsp_apps";
 		qcom,intents = <0x200 20>;
 		reg = <GPR_DOMAIN_ADSP>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
 
 		spf_core {
 			compatible = "qcom,spf_core";
@@ -46,6 +52,8 @@
 };
 
 &spf_core_platform {
+	#address-cells = <1>;
+	#size-cells = <1>;
 
 	msm_audio_ion: qcom,msm-audio-ion {
 		compatible = "qcom,msm-audio-ion";

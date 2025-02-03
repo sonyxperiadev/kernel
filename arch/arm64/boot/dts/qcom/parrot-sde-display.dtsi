@@ -2,6 +2,9 @@
 #include "parrot-sde-display-common.dtsi"
 
 &soc {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	sde_wb: qcom,wb-display@0 {
 		compatible = "qcom,wb-display";
 		cell-index = <0>;
@@ -79,6 +82,9 @@
 };
 
 &reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
 	splash_memory: splash_region {
 		reg = <0x0 0xb8000000 0x0 0x02b00000>;
 		label = "cont_splash_region";
