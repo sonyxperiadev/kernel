@@ -5,6 +5,8 @@
 
 #include "somc-columbia-audio-common.dtsi"
 #include "somc-columbia-audio-pdx246.dtsi"
+#include "somc-columbia-camera-common.dtsi"
+#include "somc-columbia-camera-pdx246.dtsi"
 #include "somc-columbia-charger-common.dtsi"
 #include "somc-columbia-charger-pdx246.dtsi"
 #include "somc-columbia-display-common.dtsi"
