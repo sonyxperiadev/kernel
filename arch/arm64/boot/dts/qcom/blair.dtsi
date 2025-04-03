@@ -3236,14 +3236,6 @@
 		qcom,ipa-napi-enable;
 	};
 
-	qcom,ipa_fws {
-		compatible = "qcom,pil-tz-generic";
-		qcom,pas-id = <0xf>;
-		qcom,firmware-name = "ipa_fws";
-		qcom,pil-force-shutdown;
-		memory-region = <&pil_ipa_fw_mem>;
-	};
-
 	ipa_hw: qcom,ipa@0x5800000 {
 		compatible = "qcom,ipa";
 		reg = <0x5800000 0x84000>,
@@ -3252,6 +3244,9 @@
 		interrupts = <GIC_SPI 257 IRQ_TYPE_LEVEL_HIGH>,
 			<GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "ipa-irq", "gsi-irq";
+		pas-ids = <0xf>;
+		firmware-names = "ipa_fws";
+		memory-regions = <&pil_ipa_fw_mem>;
 		qcom,ipa-hw-ver = <20>; /* IPA core version = IPAv4.11 */
 		qcom,ipa-hw-mode = <0>;
 		qcom,platform-type = <1>; /* MSM platform */
