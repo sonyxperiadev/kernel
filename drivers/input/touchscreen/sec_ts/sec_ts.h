@@ -331,6 +331,17 @@
 #define SEC_TS_CMD_GRIP_REJECTION	0xBF
 #define SEC_TS_GRIP_REJECTION_BORDER_NUM	4
 
+#define KEY_SIDE_GESTURE		0x1c6
+#define KEY_BLACK_UI_GESTURE		0x1c7
+
+#define KEY_SIDE_GESTURE_RIGHT		0x1ca
+#define KEY_SIDE_GESTURE_LEFT		0x1cb
+
+#define ABS_MT_CUSTOM			0x3e	/* custom event */
+#define ABS_MT_GRIP			0x3f	/* grip touch */
+
+#define SW_GLOVE			0x0f	/* set = glove mode */
+
 #ifdef TP_DEBUG_LOG
 #define	TP_LOG_DBG(fmt, arg...)	printk("[SEC_TS][%s:%d] "fmt"\n", __func__, __LINE__, ##arg)
 #else
