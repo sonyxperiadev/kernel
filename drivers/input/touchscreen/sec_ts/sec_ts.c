@@ -38,9 +38,12 @@ static int sec_ts_input_open(struct input_dev *dev);
 static void sec_ts_input_close(struct input_dev *dev);
 #endif
 
-static int sec_ts_dsi_panel_notifier_cb(struct notifier_block *self, unsigned long event, void *data);
+static void sec_ts_dsi_panel_notifier_cb(
+		enum panel_event_notifier_tag tag,
+		struct panel_event_notification *notification,
+		void *client_data);
 
-	int sec_ts_read_information(struct sec_ts_data *ts);
+int sec_ts_read_information(struct sec_ts_data *ts);
 
 void sec_ts_set_irq(struct sec_ts_data *ts, bool enable)
 {
@@ -1752,6 +1755,27 @@ static void sec_ts_set_input_prop(struct sec_ts_data *ts, struct input_dev *dev,
 	input_set_drvdata(dev, ts);
 }
 
+static void sec_ts_register_for_panel_events(struct sec_ts_data *ts)
+{
+	void *cookie;
+
+	cookie = panel_event_notifier_register(
+			PANEL_EVENT_NOTIFICATION_PRIMARY,
+			PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH,
+			sec_ts_active_panel,
+			&sec_ts_dsi_panel_notifier_cb,
+			ts);
+	if (!cookie) {
+		input_err(true, &ts->client->dev, "%s: Failed to register for panel events\n", __func__);
+		return;
+	}
+
+	ts->notifier_cookie = cookie;
+
+	input_info(true, &ts->client->dev, "%s: Registered for panel notifications on panel: %s\n",
+			__func__, sec_ts_active_panel->dev->of_node->name);
+}
+
 static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct sec_ts_data *ts;
@@ -1977,12 +2001,13 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_info(true, &ts->client->dev, "%s: fw update on probe disabled!\n", __func__);
 #endif
 
-	ts->fb_notifier.notifier_call = sec_ts_dsi_panel_notifier_cb;
 	if (sec_ts_active_panel) {
-		ret = drm_panel_notifier_register(sec_ts_active_panel,  &ts->fb_notifier);
-		if(ret < 0){
-			input_err(true, &ts->client->dev, "%s: register notify panel err!\n", __func__);
-		}
+		input_dbg(true, &ts->client->dev, "%s: panel detected, registering notifier\n", __func__);
+		sec_ts_register_for_panel_events(ts);
+	} else {
+		input_err(true, &ts->client->dev, "%s: panel not detected, freeing data\n", __func__);
+		ret = -1;
+		goto err_init;
 	}
 
 	ts->touch_functions |= SEC_TS_DEFAULT_ENABLE_BIT_SETFUNC;
@@ -2098,6 +2123,10 @@ err_input_pad_register_device:
 	ts->input_dev = NULL;
 	ts->input_dev_touch = NULL;
 err_input_register_device:
+	if (sec_ts_active_panel) {
+		input_dbg(true, &ts->client->dev, "%s: unregistering panel notifications\n", __func__);
+		panel_event_notifier_unregister(ts->notifier_cookie);
+	}
 	kfree(ts->pFrame);
 err_allocate_frame:
 err_init:
@@ -2549,6 +2578,11 @@ static int sec_ts_remove(struct i2c_client *client)
 	ts_dup = NULL;
 	ts->plat_data->power(ts, false);
 
+	if (sec_ts_active_panel) {
+		input_dbg(true, &ts->client->dev, "%s: unregistering panel notifications\n", __func__);
+		panel_event_notifier_unregister(ts->notifier_cookie);
+	}
+
 	kfree(ts);
 	return 0;
 }
@@ -2704,37 +2738,39 @@ out:
 	return ret;
 }
 
-static int sec_ts_dsi_panel_notifier_cb(struct notifier_block *self, unsigned long event, void *data)
+static void sec_ts_dsi_panel_notifier_cb(
+		enum panel_event_notifier_tag tag,
+		struct panel_event_notification *notification,
+		void *client_data)
 {
-	int transition;
-	struct drm_panel_notifier *evdata = data;
-	struct sec_ts_data *ts =
-		container_of(self, struct sec_ts_data, fb_notifier);
+	struct sec_ts_data *ts = client_data;
 
-	if (!evdata)
-		return 0;
-
-	if (evdata && evdata->data && ts) {
-		if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
-			transition = *(int *)evdata->data;
-			if (transition == DRM_PANEL_BLANK_POWERDOWN) {
-				input_err(true, &ts->client->dev, "%s: power down\n",  __func__);
-				sec_ts_stop_device(ts);
-			}
-		}
+	if (!notification) {
+		input_err(true, &ts->client->dev, "%s: Invalid notification\n", __func__);
+		return;
 	}
 
-	if (evdata && evdata->data && ts) {
-		if (event == DRM_PANEL_EVENT_BLANK) {
-			transition = *(int *)evdata->data;
-			if (transition == DRM_PANEL_BLANK_UNBLANK) {
-				input_err(true, &ts->client->dev,  "%s: power up\n", __func__);
-				sec_ts_start_device(ts);
-			}
-		}
+	input_dbg(true, &ts->client->dev, "%s: Notification type: %d, early trigger:%d\n", __func__,
+			notification->notif_type,
+			notification->notif_data.early_trigger);
+
+	if (!client_data) {
+		input_err(true, &ts->client->dev, "%s: No client data\n", __func__);
+		return;
 	}
 
-	return 0;
+	switch (notification->notif_type) {
+	case DRM_PANEL_EVENT_UNBLANK:
+			input_err(true, &ts->client->dev, "%s: Power up\n", __func__);
+			sec_ts_start_device(ts);
+		break;
+	case DRM_PANEL_EVENT_BLANK:
+			input_err(true, &ts->client->dev, "%s: Power down\n",  __func__);
+			sec_ts_stop_device(ts);
+		break;
+	default:
+		break;
+	}
 }
 
 static void sec_ts_firmware_update_work(struct work_struct *work)

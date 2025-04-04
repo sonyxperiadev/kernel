@@ -36,6 +36,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/soc/qcom/panel_event_notifier.h>
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/uaccess.h>
@@ -615,7 +616,7 @@ struct sec_ts_data {
 	u32 flash_page_size;
 	u8 boot_ver[3];
 
-	struct notifier_block fb_notifier;
+	void *notifier_cookie;			/* touch notifier for panel events */
 
 	struct device *dev;
 	struct i2c_client *client;
