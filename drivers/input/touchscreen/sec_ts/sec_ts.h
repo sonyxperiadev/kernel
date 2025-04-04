@@ -614,8 +614,8 @@ struct sec_ts_data {
 	struct sec_ts_plat_data *plat_data;
 	struct sec_ts_coordinate coord[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 
-	struct timeval time_pressed[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
-	struct timeval time_released[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
+	struct timespec64 time_pressed[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
+	struct timespec64 time_released[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 	long time_longest;
 
 	u8 lowpower_mode;
@@ -865,14 +865,4 @@ extern unsigned int lpcharge;
 
 extern void set_grip_data_to_ic(struct sec_ts_data *ts, u8 flag);
 extern void sec_ts_set_grip_type(struct sec_ts_data *ts, u8 set_type);
-
-//add by xiaojun
-static inline void do_gettimeofday(struct timeval *tv)
-{
-        struct timespec64 now;
-
-        ktime_get_real_ts64(&now);
-        tv->tv_sec = now.tv_sec;
-        tv->tv_usec = now.tv_nsec/1000;
-}
 #endif
