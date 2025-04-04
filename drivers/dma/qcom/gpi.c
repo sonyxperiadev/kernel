@@ -9,6 +9,7 @@
 #include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
+#include <linux/dma-map-ops.h>
 #include <linux/dmaengine.h>
 #include <linux/io.h>
 #include <linux/iommu.h>
@@ -3170,9 +3171,14 @@ static int gpi_probe(struct platform_device *pdev)
 		struct gpii *gpii = &gpi_dev->gpiis[i];
 		int chan;
 
-		gpii->gpii_chan = dmam_alloc_coherent(gpi_dev->dev,
-				MAX_CHANNELS_PER_GPII*sizeof(struct gpii_chan),
-				&gpii->gpii_chan_dma, GFP_KERNEL);
+		if (dev_is_dma_coherent(gpi_dev->dev))
+			gpii->gpii_chan = dmam_alloc_coherent(gpi_dev->dev,
+					MAX_CHANNELS_PER_GPII * sizeof(struct gpii_chan),
+					&gpii->gpii_chan_dma, GFP_KERNEL);
+		else
+			gpii->gpii_chan = devm_kzalloc(gpi_dev->dev,
+					MAX_CHANNELS_PER_GPII * sizeof(struct gpii_chan),
+					GFP_KERNEL);
 
 		if (!gpii->gpii_chan) {
 			GPI_ERR(gpi_dev,
