@@ -1345,4 +1345,6 @@ source "drivers/input/touchscreen/nt36xxx/Kconfig"
 
 source "drivers/input/touchscreen/goodix_berlin_driver/Kconfig"
 
+source "drivers/input/touchscreen/sec_ts/Kconfig"
+
 endif
