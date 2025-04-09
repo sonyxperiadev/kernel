@@ -1359,7 +1359,7 @@ static void psy_chg_set_online(struct sm5038_charger_data *charger, int cable_ty
 			if (!is_client_vote_enabled(charger->usb_icl_votable,
 								PD_VOTER)) {
 				vote(charger->usb_icl_votable, PD_VOTER,
-							true, MICRO_CURR_0P5A);
+							true, MICRO_CURR_3P0A);
 				vote(charger->usb_icl_votable, USB_PSY_VOTER,
 								false, 0);
 			}
