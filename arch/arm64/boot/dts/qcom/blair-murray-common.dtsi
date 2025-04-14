@@ -178,6 +178,8 @@
 };
 
 &tlmm {
+	qcom,gpios-reserved = <13 14 15 16>;
+
 	pmx_sde_en: pmx_sde_en {
 		vci_en_active: vci_en_active {
 			mux {
