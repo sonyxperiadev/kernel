@@ -3,6 +3,8 @@
 &soc {
 };
 
+#include "somc-murray-audio-common.dtsi"
+#include "somc-murray-audio-pdx225.dtsi"
 #include "somc-murray-camera.dtsi"
 #include "somc-murray-display.dtsi"
 #include "somc-murray-display-pdx225.dtsi"
