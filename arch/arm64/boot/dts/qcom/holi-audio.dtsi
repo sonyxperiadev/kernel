@@ -1,5 +1,5 @@
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
-#include "msm-audio-lpass.dtsi"
+#include "msm-audio-lpass-holi.dtsi"
 
 &msm_audio_ion {
 	iommus = <&apps_smmu 0x00A1 0x0>;
@@ -157,9 +157,10 @@
 				<&dai_mi2s1_rx>, <&dai_mi2s1_tx>,
 				<&dai_mi2s2_rx>, <&dai_mi2s2_tx>,
 				<&dai_mi2s3_rx>, <&dai_mi2s3_tx>,
-				<&dai_pri_auxpcm>,
-				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
-				<&dai_quat_auxpcm>,
+				<&dai_pri_auxpcm_rx>, <&dai_pri_auxpcm_tx>,
+				<&dai_sec_auxpcm_rx>, <&dai_sec_auxpcm_tx>,
+				<&dai_tert_auxpcm_rx>, <&dai_tert_auxpcm_tx>,
+				<&dai_quat_auxpcm_rx>, <&dai_quat_auxpcm_tx>,
 				<&afe_pcm_rx>, <&afe_pcm_tx>, <&afe_proxy_rx>,
 				<&afe_proxy_tx>, <&incall_record_rx>,
 				<&incall_record_tx>, <&incall_music_rx>,
@@ -185,9 +186,10 @@
 				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
 				"msm-dai-q6-mi2s.4", "msm-dai-q6-mi2s.5",
 				"msm-dai-q6-mi2s.6", "msm-dai-q6-mi2s.7",
-				"msm-dai-q6-auxpcm.1",
-				"msm-dai-q6-auxpcm.2", "msm-dai-q6-auxpcm.3",
-				"msm-dai-q6-auxpcm.4",
+				"msm-dai-q6-auxpcm.1", "msm-dai-q6-auxpcm.2",
+				"msm-dai-q6-auxpcm.3", "msm-dai-q6-auxpcm.4",
+				"msm-dai-q6-auxpcm.5", "msm-dai-q6-auxpcm.6",
+				"msm-dai-q6-auxpcm.7", "msm-dai-q6-auxpcm.8",
 				"msm-dai-q6-dev.224",
 				"msm-dai-q6-dev.225", "msm-dai-q6-dev.241",
 				"msm-dai-q6-dev.240", "msm-dai-q6-dev.32771",
