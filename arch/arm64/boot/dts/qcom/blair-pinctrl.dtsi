@@ -8,6 +8,7 @@
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		wakeup-parent = <&wakegic>;
+		qcom,gpios-reserved = <13 14 15 16 17 45 46 48 56 57>;
 
 		qupv3_se0_i2c_pins: qupv3_se0_i2c_pins {
 			qupv3_se0_i2c_active: qupv3_se0_i2c_active {
