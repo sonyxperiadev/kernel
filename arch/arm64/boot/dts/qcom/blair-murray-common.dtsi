@@ -166,15 +166,6 @@
 		compatible = "sony,ext-uim-ctrl";
 		uim2_detect_en_gpio = <&tlmm 85 GPIO_ACTIVE_HIGH>;
 	};
-
-	cdc_sec_mi2s_gpios: msm_cdc_pinctrl_sec {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&lpi_i2s2_sck_active &lpi_i2s2_ws_active &lpi_i2s2_sd0_active &lpi_i2s2_sd1_active>;
-		pinctrl-1 = <&lpi_i2s2_sck_sleep &lpi_i2s2_ws_sleep &lpi_i2s2_sd0_sleep &lpi_i2s2_sd1_sleep>;
-		qcom,lpi-gpios;
-		#gpio-cells = <0>;
-	};
 };
 
 &tlmm {
@@ -244,23 +235,6 @@
 	#size-cells = <0>;
 	status = "okay";
 
-	aw882xx_smartpa@34 {
-		compatible = "awinic,aw882xx_smartpa";
-		reg = <0x34>;
-		irq-gpio = <&tlmm 60 0>;
-		dc-flag = <0>;
-		sound-channel = <0>;
-		rename-flag = <1>;
-		aw-tx-topo-id = <0x1000ff00>;
-		aw-rx-topo-id = <0x1000ff01>;
-		aw-tx-port-id = <0x1003>;
-		aw-rx-port-id = <0x1002>;
-		aw-re-min = <4000>;
-		aw-re-max= <30000>;
-		aw-cali-mode = "aw_attr";
-		status = "okay";
-	};
-
 	awinic_haptic@58 {
 		compatible = "awinic,haptic_nv";
 		reg = <0x58>;
@@ -318,74 +292,6 @@
 
 &sdhc_2 {
 	cd-gpios = <&tlmm 94 GPIO_ACTIVE_HIGH>;
-};
-
-&wsa881x_i2c_44 {
-	status = "disabled";
-};
-
-&wsa881x_i2c_e {
-	status = "disabled";
-};
-
-&cdc_dmic23_gpios {
-	qcom,tlmm-pins = <135 136>;
-};
-
-&holi_snd {
-	qcom,model = "holi-qrdsku1-snd-card";
-	qcom,sku-model = "holi-qrdsku1-snd-card";
-	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>;
-	qcom,sec-mi2s-gpios =<&cdc_sec_mi2s_gpios>;
-	qcom,wcn-btfm = <1>;
-	qcom,audio-routing =
-		"AMIC1", "Analog Mic1",
-		"Analog Mic1", "MIC BIAS1",
-		"AMIC2", "Analog Mic2",
-		"Analog Mic2", "MIC BIAS2",
-		"AMIC3", "Analog Mic3",
-		"Analog Mic3", "MIC BIAS3",
-		"TX DMIC0", "Digital Mic0",
-		"TX DMIC0", "MIC BIAS3",
-		"TX DMIC1", "Digital Mic1",
-		"TX DMIC1", "MIC BIAS3",
-		"TX DMIC2", "Digital Mic2",
-		"TX DMIC2", "MIC BIAS1",
-		"TX DMIC3", "Digital Mic3",
-		"TX DMIC3", "MIC BIAS1",
-		"IN1_HPHL", "HPHL_OUT",
-		"IN2_HPHR", "HPHR_OUT",
-		"IN3_AUX", "AUX_OUT",
-		"RX_TX DEC0_INP", "TX DEC0 MUX",
-		"RX_TX DEC1_INP", "TX DEC1 MUX",
-		"RX_TX DEC2_INP", "TX DEC2 MUX",
-		"RX_TX DEC3_INP", "TX DEC3 MUX",
-		"TX SWR_INPUT", "WCD_TX_OUTPUT",
-		"VA SWR_INPUT", "VA_SWR_CLK",
-		"VA SWR_INPUT", "WCD_TX_OUTPUT",
-		"VA_AIF1 CAP", "VA_SWR_CLK",
-		"VA_AIF2 CAP", "VA_SWR_CLK",
-		"VA_AIF3 CAP", "VA_SWR_CLK",
-		"VA DMIC0", "Digital Mic0",
-		"VA DMIC1", "Digital Mic1",
-		"VA DMIC2", "Digital Mic2",
-		"VA DMIC3", "Digital Mic3",
-		"VA DMIC4", "Digital Mic4",
-		"VA DMIC5", "Digital Mic5",
-		"VA DMIC0", "VA MIC BIAS1",
-		"VA DMIC1", "VA MIC BIAS1",
-		"VA DMIC2", "VA MIC BIAS3",
-		"VA DMIC3", "VA MIC BIAS3";
-	qcom,msm-mbhc-hphl-swh = <1>;
-	qcom,msm-mbhc-gnd-swh = <1>;
-	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
-	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
-	asoc-codec  = <&stub_codec>, <&bolero>,
-		      <&wcd937x_codec>;
-	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
-			   "wcd937x_codec";
-	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
-				  <&bolero>;
 };
 
 &usb0 {
