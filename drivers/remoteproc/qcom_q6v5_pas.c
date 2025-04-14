@@ -374,9 +374,11 @@ static int adsp_start(struct rproc *rproc)
 	if (ret < 0)
 		goto disable_active_pds;
 
-	ret = adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, true);
-	if (ret)
-		goto disable_proxy_pds;
+	if (adsp->qmp) {
+		ret = adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, true);
+		if (ret)
+			goto disable_proxy_pds;
+	}
 
 	ret = clk_prepare_enable(adsp->xo);
 	if (ret)
@@ -417,7 +419,8 @@ disable_aggre2_clk:
 disable_xo_clk:
 	clk_disable_unprepare(adsp->xo);
 disable_load_state:
-	adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, false);
+	if (adsp->qmp)
+		adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, false);
 disable_proxy_pds:
 	adsp_pds_disable(adsp, adsp->proxy_pds, adsp->proxy_pd_count);
 disable_active_pds:
@@ -467,7 +470,8 @@ static int adsp_stop(struct rproc *rproc)
 
 	scm_pas_disable_bw();
 	adsp_pds_disable(adsp, adsp->active_pds, adsp->active_pd_count);
-	adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, false);
+	if (adsp->qmp)
+		adsp_toggle_load_state(adsp->qmp, adsp->qmp_name, false);
 	handover = qcom_q6v5_unprepare(&adsp->q6v5);
 	if (handover)
 		qcom_pas_handover(&adsp->q6v5);
@@ -809,8 +813,11 @@ static int adsp_probe(struct platform_device *pdev)
 	adsp->proxy_pd_count = ret;
 
 	adsp->qmp = qmp_get(adsp->dev);
-	if (IS_ERR_OR_NULL(adsp->qmp))
-		goto detach_proxy_pds;
+	if (IS_ERR_OR_NULL(adsp->qmp)) {
+		if (PTR_ERR(adsp->qmp) != -ENODEV)
+			goto detach_proxy_pds;
+		adsp->qmp = NULL;
+	}
 
 	ret = qcom_q6v5_init(&adsp->q6v5, pdev, rproc, desc->crash_reason_smem,
 			     qcom_pas_handover);
