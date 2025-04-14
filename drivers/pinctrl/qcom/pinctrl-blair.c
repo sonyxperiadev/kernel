@@ -1592,16 +1592,6 @@ static const struct msm_pingroup blair_groups[] = {
 	[163] = SDC_QDSD_PINGROUP(sdc2_data, 0x1a2000, 9, 0),
 };
 
-static const int blair_reserved_gpios[] = {
-#if defined(CONFIG_ARCH_SONY_MURRAY)
-	13, 14, 15, 16, -1
-#elif defined(CONFIG_ARCH_SONY_ZAMBEZI)
-	13, 14, 15, 16, 48, -1
-#else
-	13, 14, 15, 16, 17, 45, 46, 48, 56, 57, -1
-#endif
-};
-
 static const struct msm_gpio_wakeirq_map blair_mpm_map[] = {
 	{0, 84},
 	{3, 6},
@@ -1679,7 +1669,6 @@ static const struct msm_pinctrl_soc_data blair_pinctrl = {
 	.nfunctions = ARRAY_SIZE(blair_functions),
 	.groups = blair_groups,
 	.ngroups = ARRAY_SIZE(blair_groups),
-	.reserved_gpios = blair_reserved_gpios,
 	.ngpios = 157,
 	.wakeirq_map = blair_mpm_map,
 	.nwakeirq_map = ARRAY_SIZE(blair_mpm_map),
