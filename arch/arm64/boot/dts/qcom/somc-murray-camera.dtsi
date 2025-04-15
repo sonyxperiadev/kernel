@@ -80,7 +80,7 @@
 	};
 
 	cam0_ois_vreg: cam0_ois_vreg {
-		compatible = "regulator-fixed";
+		compatible = "qti-regulator-fixed";
 		regulator-name = "cam0_ois_vreg";
 		gpio = <&tlmm 33 0>;
 		startup-delay-us = <0>;
