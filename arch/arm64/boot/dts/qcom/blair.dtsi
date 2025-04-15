@@ -3877,6 +3877,7 @@
 		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
 		qcom,wlan-msa-fixed-region = <&pil_wlan_mem>;
+		qcom,wlan;
 		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
 		qcom,iommu-geometry = <0xa0000000 0x10010000>;
 		vdd-cx-mx-supply = <&L2E>;
