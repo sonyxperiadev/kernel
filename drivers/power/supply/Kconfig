@@ -826,6 +826,7 @@ config CHARGER_BQ256XX
 config IFPM_SM5038
 	tristate "Siliconmitus SM5038 IFPM Support"
 	depends on I2C
+	select MFD_CORE
 	help
 	  Say Y here to enable support for Siliconmitus SM5038.
 	  This is a Power Management IC with Single Flash, Charger, Type-C,
