@@ -970,6 +970,7 @@ config SERIAL_MSM_GENI
 	tristate "MSM on-chip GENI HW based serial port support"
 	depends on ARCH_QCOM
 	depends on MSM_GENI_SE
+	select SERIAL_CORE
 
 config SERIAL_MSM_GENI_CONSOLE_DEFAULT_ENABLED
 	bool "Enable MSM on-chip GENI serial port for kernel console usage"
