@@ -1,6 +1,6 @@
 &soc {
 	fpc_vdig_vreg: fpc_vdig_vreg {
-		compatible = "regulator-fixed";
+		compatible = "qti-regulator-fixed";
 		regulator-name = "fpc_vdig_fixed_reg";
 		regulator-min-microvolt = <3000000>;
 		regulator-max-microvolt = <3000000>;
@@ -10,7 +10,7 @@
 	};
 
 	fpc_vana_vreg: fpc_vana_vreg {
-		compatible = "regulator-fixed";
+		compatible = "qti-regulator-fixed";
 		regulator-name = "fpc_vana_fixed_reg";
 		regulator-min-microvolt = <3000000>;
 		regulator-max-microvolt = <3000000>;
