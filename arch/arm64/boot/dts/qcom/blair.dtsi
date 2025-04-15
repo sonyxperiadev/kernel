@@ -569,26 +569,40 @@
 		};
 	};
 
-	slim_aud: slim@a5c0000 {
-		cell-index = <1>;
-		compatible = "qcom,slim-ngd";
-		reg = <0xa5c0000 0x2c000>,
-			<0xa584000 0x20000>, <0xa66e000 0x2000>;
-		reg-names = "slimbus_physical",
-				"slimbus_bam_physical", "slimbus_lpass_mem";
-		interrupts = <GIC_SPI 283 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 284 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
+	slimbam: bamdma@a584000 {
+		compatible = "qcom,bam-v1.7.0";
+		reg = <0xa584000 0x20000>, <0xa66f000 0x1000>;
+		reg-names = "bam", "bam_remote_mem";
+		num-channels  = <31>;
+		interrupts = <0 284 IRQ_TYPE_LEVEL_HIGH>;
+		#dma-cells = <1>;
+		qcom,controlled-remotely;
+		qcom,ee = <1>;
+		qcom,num-ees = <2>;
+	};
+
+	slim_msm: slim@a5c0000 {
+		compatible = "qcom,slim-ngd-v1.5.0";
+		reg = <0xa5c0000 0x2c000>, <0xa66e000 0x1000>;
+		reg-names = "ctrl", "slimbus_remote_mem";
+		interrupts = <0 283 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,apps-ch-pipes = <0x0>;
 		qcom,ea-pc = <0x3b0>;
-		status = "ok";
+		dmas = <&slimbam 3>, <&slimbam 4>;
+		dma-names = "rx", "tx";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-		/* Slimbus Slave DT for WCN3990 */
-		btfmslim_codec: wcn3990 {
-			compatible = "qcom,btfmslim_slave";
-			elemental-addr = [00 01 20 02 17 02];
-			qcom,btfm-slim-ifd = "btfmslim_slave_ifd";
-			qcom,btfm-slim-ifd-elemental-addr = [00 00 20 02 17 02];
+		ngd@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* slimbus child nodes */
+			slimbus: btfmslim-driver {
+				compatible = "slim217,221";
+				reg = <1 0>;
+			};
 		};
 	};
 
