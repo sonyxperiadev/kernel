@@ -46,6 +46,14 @@ config REGULATOR_FIXED_VOLTAGE
 	  useful for systems which use a combination of software
 	  managed regulators and simple non-configurable regulators.
 
+config REGULATOR_MULTI_INPUT
+	tristate "Multi-input regulator support"
+	help
+	  This driver provides a regulator with multiple inputs,
+	  useful to control multiple voltages with a single consumer.
+
+	  If unsure, say no.
+
 config REGULATOR_QTI_FIXED_VOLTAGE
 	tristate "QTI fixed voltage regulator support"
 	help
