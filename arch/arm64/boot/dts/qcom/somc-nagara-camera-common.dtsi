@@ -1,0 +1,169 @@
+&soc {
+	qcom,cam-res-mgr {
+		compatible = "qcom,cam-res-mgr";
+		status = "ok";
+	};
+
+	led_flash_rear: qcom,camera-flash0 {
+		cell-index = <0>;
+		compatible = "qcom,camera-flash";
+		flash-source = <&pm8350c_flash0 &pm8350c_flash3>;
+		torch-source = <&pm8350c_torch0 &pm8350c_torch3>;
+		switch-source = <&pm8350c_switch0>;
+		status = "ok";
+	};
+
+	camera1_vana_supply: camera1_vana_supply {
+		compatible = "qti-regulator-fixed";
+		regulator-name = "camera1_vana_supply";
+		startup-delay-us = <0>;
+		enable-active-high;
+		gpio = <&tlmm 23 0>;
+	};
+
+	camera1_vana_vreg: camera1_vana_vreg {
+		compatible = "regulator-multi";
+		cam_vana-supply = <&slg51000_ldo2>;
+		cam_vana2-supply = <&camera1_vana_supply>;
+		supply-names = "cam_vana", "cam_vana2";
+		min-microvolt = <2800000>, <0>;
+		max-microvolt = <2800000>, <0>;
+	};
+
+	camera3_vana_vreg: camera3_vana_vreg {
+		compatible = "regulator-multi";
+		cam_vana-supply = <&L6I>;
+		cam_vana2-supply = <&L7I>;
+		supply-names = "cam_vana", "cam_vana2";
+		min-microvolt = <2800000>, <1800000>;
+		max-microvolt = <2800000>, <1800000>;
+	};
+};
+
+&cam_csiphy_tpg13 {
+	status = "disabled";
+};
+
+&cam_csiphy_tpg14 {
+	status = "disabled";
+};
+
+&cam_csiphy_tpg15 {
+	status = "disabled";
+};
+
+&i2c_freq_400Khz_cci0 {
+	hw-thigh = <43>;
+	hw-tlow = <64>;
+	hw-tsu-sto = <41>;
+	hw-tsu-sta = <41>;
+	hw-thd-dat = <25>;
+	hw-thd-sta = <35>;
+	hw-tbuf = <64>;
+	hw-scl-stretch-en = <0>;
+	hw-trdhld = <6>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};
+
+&i2c_freq_1Mhz_cci0 {
+	hw-thigh = <16>;
+	hw-tlow = <22>;
+	hw-tsu-sto = <17>;
+	hw-tsu-sta = <18>;
+	hw-thd-dat = <16>;
+	hw-thd-sta = <15>;
+	hw-tbuf = <19>;
+	hw-scl-stretch-en = <1>;
+	hw-trdhld = <3>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};
+
+&i2c_freq_400Khz_cci1 {
+	hw-thigh = <43>;
+	hw-tlow = <64>;
+	hw-tsu-sto = <41>;
+	hw-tsu-sta = <41>;
+	hw-thd-dat = <25>;
+	hw-thd-sta = <35>;
+	hw-tbuf = <64>;
+	hw-scl-stretch-en = <0>;
+	hw-trdhld = <6>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};
+
+&i2c_freq_1Mhz_cci1 {
+	hw-thigh = <16>;
+	hw-tlow = <22>;
+	hw-tsu-sto = <17>;
+	hw-tsu-sta = <18>;
+	hw-thd-dat = <16>;
+	hw-thd-sta = <15>;
+	hw-tbuf = <19>;
+	hw-scl-stretch-en = <1>;
+	hw-trdhld = <3>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};
+
+&qupv3_se5_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	slg51000@75 {
+		compatible = "dlg,slg51000";
+		reg = <0x75>;
+		dlg,cs-gpios = <&pm8350b_gpios 1 0>;
+		status = "ok";
+
+		regulators {
+			slg51000_ldo1: ldo1 {
+				regulator-name = "slg51000_ldo1";
+				regulator-min-microvolt = <2400000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			slg51000_ldo2: ldo2 {
+				regulator-name = "slg51000_ldo2";
+				regulator-min-microvolt = <2400000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			slg51000_ldo3: ldo3 {
+				regulator-name = "slg51000_ldo3";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3750000>;
+			};
+
+			slg51000_ldo4: ldo4 {
+				regulator-name = "slg51000_ldo4";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3750000>;
+			};
+
+			slg51000_ldo5: ldo5 {
+				regulator-name = "slg51000_ldo5";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1200000>;
+			};
+
+			slg51000_ldo6: ldo6 {
+				regulator-name = "slg51000_ldo6";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1200000>;
+			};
+
+			slg51000_ldo7: ldo7 {
+				regulator-name = "slg51000_ldo7";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3750000>;
+			};
+		};
+	};
+};
