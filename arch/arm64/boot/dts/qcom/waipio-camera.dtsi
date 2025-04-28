@@ -2493,10 +2493,10 @@
 
 	qcom,cam-icp {
 		compatible = "qcom,cam-icp";
-		compat-hw-name = "qcom,lx7",
+		compat-hw-name = "qcom,icp",
 			"qcom,ipe0",
 			"qcom,bps";
-		num-lx7 = <1>;
+		num-icp = <1>;
 		num-ipe = <1>;
 		num-bps = <1>;
 		status = "ok";
@@ -2505,15 +2505,16 @@
 		ipe_bps_pc_en;
 	};
 
-	cam_lx7: qcom,lx7 {
+	cam_icp: qcom,icp {
 		cell-index = <0>;
-		compatible = "qcom,cam-lx7";
+		compatible = "qcom,cam-icp_v2";
+		icp-version = <0x0200>;
 		reg = <0xac01000 0x400>,
 			<0xac01800 0x400>,
 			<0x0ac04000 0x1000>;
-		reg-names = "lx7_csr", "lx7_cirq", "lx7_wd0";
+		reg-names = "icp_csr", "icp_cirq", "icp_wd0";
 		reg-cam-base = <0x1000 0x1800 0x4000>;
-		interrupt-names = "lx7";
+		interrupt-names = "icp";
 		interrupts = <GIC_SPI 463 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "gdsc";
 		gdsc-supply = <&cam_cc_titan_top_gdsc>;
