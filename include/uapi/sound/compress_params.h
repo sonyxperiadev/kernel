@@ -82,12 +82,7 @@
 #define SND_AUDIOCODEC_BESPOKE               ((__u32) 0x0000000E)
 #define SND_AUDIOCODEC_ALAC                  ((__u32) 0x0000000F)
 #define SND_AUDIOCODEC_APE                   ((__u32) 0x00000010)
-#define SND_AUDIOCODEC_TRUEHD                ((__u32) 0x00001001)
-#define SND_AUDIOCODEC_MP2                   ((__u32) 0x00001006)
-#define SND_AUDIOCODEC_AC3                   ((__u32) 0x00001008)
-#define SND_AUDIOCODEC_DTS                   ((__u32) 0x0000100A)
-#define SND_AUDIOCODEC_EAC3                  ((__u32) 0x0000100B)
-#define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_EAC3
+#define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_APE
 
 /*
  * Profile and modes are listed with bit masks. This allows for a
