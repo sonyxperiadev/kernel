@@ -2637,10 +2637,11 @@
 
 	cam_jpeg_enc: qcom,jpegenc@ac2a000 {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_enc";
-		reg-names = "jpege_hw";
-		reg = <0xac2a000 0x1000>;
-		reg-cam-base = <0x2a000>;
+		compatible = "qcom,cam_jpeg_enc_680";
+		reg-names = "jpege_hw", "cam_camnoc";
+		reg = <0xac2a000 0x1000>,
+			<0x0ac19000 0x9000>;
+		reg-cam-base = <0x2a000 0x19000>;
 		interrupt-names = "jpeg";
 		interrupts = <GIC_SPI 474 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "gdsc";
@@ -2664,10 +2665,11 @@
 
 	cam_jpeg_dma: qcom,jpegdma@ac2b000 {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_dma";
-		reg-names = "jpegdma_hw";
-		reg = <0xac2b000 0x1000>;
-		reg-cam-base = <0x2b000>;
+		compatible = "qcom,cam_jpeg_dma_680";
+		reg-names = "jpegdma_hw", "cam_camnoc";
+		reg = <0xac2b000 0x1000>,
+			<0x0ac19000 0x9000>;
+		reg-cam-base = <0x2b000 0x19000>;
 		interrupt-names = "jpegdma";
 		interrupts = <GIC_SPI 475 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "gdsc";
