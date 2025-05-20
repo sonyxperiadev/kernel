@@ -192,12 +192,6 @@
 	};
 };
 
-&qupv3_se8_i2c_sleep {
-	config {
-		drive-strength = <0>;
-	};
-};
-
 &qupv3_se0_i2c {
 	nq@28 {
 		status = "disabled";
