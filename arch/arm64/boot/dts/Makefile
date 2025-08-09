@@ -19,7 +19,6 @@ subdir-y += marvell
 subdir-y += mediatek
 subdir-y += microchip
 subdir-y += nvidia
-subdir-y += qcom
 subdir-y += realtek
 subdir-y += renesas
 subdir-y += rockchip
@@ -35,4 +34,6 @@ dtstree	:= $(srctree)/$(src)
 vendor  := $(dtstree)/vendor
 ifneq "$(wildcard $(vendor)/Makefile)" ""
     subdir-y += vendor
+else
+    subdir-y += qcom
 endif

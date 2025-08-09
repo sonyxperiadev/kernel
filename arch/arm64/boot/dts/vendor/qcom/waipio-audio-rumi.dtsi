@@ -1,0 +1,7 @@
+#include "waipio-audio-overlay.dtsi"
+
+&waipio_snd {
+	compatible = "qcom,waipio-asoc-snd-stub";
+	asoc-codec = <&stub_codec>;
+	asoc-codec-names = "msm-stub-codec.1";
+ };

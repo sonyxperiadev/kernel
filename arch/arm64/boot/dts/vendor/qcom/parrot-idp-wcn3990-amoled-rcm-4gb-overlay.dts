@@ -1,0 +1,13 @@
+/dts-v1/;
+/plugin/;
+
+#include "parrot-wcn3990.dtsi"
+#include "parrot-idp-wcn3990-amoled-rcm-4gb.dtsi"
+#include "parrot-idp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot WCN3990 IDP 4GB DDR + AMOLED + RCM";
+	compatible = "qcom,parrot-idp", "qcom,parrot", "qcom,idp";
+	qcom,msm-id = <537 0x10000>;
+	qcom,board-id = <34 0x603>;
+};

@@ -1,0 +1,11 @@
+&pmic_glink {
+	somc_battchg_ext: somc,battchg_ext {
+		compatible = "somc,battery-charger-extension";
+	};
+};
+
+&pmic_glink_log {
+	somc_battman_log {
+		compatible = "somc,battman-log";
+	};
+};

@@ -1,0 +1,71 @@
+%YAML 1.2
+---
+$id: "http://devicetree.org/schemas/arm/msm/msm_hang_detect.yaml#"
+$schema: "http://devicetree.org/meta-schemas/core.yaml#"
+
+title: QTI MSM Core Hang Detection
+
+maintainers:
+  - Elliot Berman <eberman@quicinc.com>
+
+description: |
+  Core Hang Detection provides the three sysfs entries for configuring
+  threshold, PMU event mux select and to enable hang detection.
+
+  If core is hung for threshold time (value X 10ns) and no
+  heart beat event from pmu to core hang monitor detection, core hang
+  interrupt would be generated to reset the SOC via secure watchdog
+  to collect all cores context.
+
+  PMU event mux select can be programmed to one of the supported
+  events, for example-
+  1) Load Instruction executed,
+  2) Store Instructions executed
+  3) Instruction architecturally executed and etc.
+
+  Writing 1 into enable sysfs entry, enables core hang detection and
+  if there is no selected PMU mux event for 10ns core hang counter
+  gets incremented. Once counter reaches the programmed threshold value,
+  core hang interrupts generated to reset the SOC.
+
+properties:
+  compatible:
+    const: qcom,core-hang-detect
+
+  label:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: unique name used to create sysfs entry
+
+  qcom,chd-percpu-info:
+    $ref: /schemas/types.yaml#/definitions/phandle-array
+    Value type: <prop-encoded-array>
+    description: |
+      Set of <&CPUx_Phandle CPUx_Threshold CPUx_Config>, where
+      CPUx_Phandle is the physical CPU,
+      CPUx_Threshold is APCS_ALIAS*_CORE_HANG_THRESHOLD register address,
+      CPUx_Config is APCS_ALIAS*_CORE_HANG_CONFIG register address,
+      all corresponding to the physical CPU.
+    minItems: 1
+
+required:
+  - compatible
+  - label
+  - qcom,chd-percpu-info
+
+additionalProperties: false
+
+examples:
+  - |
+    //For kalama:
+    qcom,chd {
+      compatible = "qcom,core-hang-detect";
+      label = "core";
+      qcom,chd-percpu-info = <&CPU0 0x17800058 0x17800060>,
+                             <&CPU1 0x17810058 0x17810060>,
+                             <&CPU2 0x17820058 0x17820060>,
+                             <&CPU3 0x17830058 0x17830060>,
+                             <&CPU4 0x17840058 0x17840060>,
+                             <&CPU5 0x17850058 0x17850060>,
+                             <&CPU6 0x17860058 0x17860060>,
+                             <&CPU7 0x17870058 0x17870060>;
+    };

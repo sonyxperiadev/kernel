@@ -1,0 +1,17 @@
+Qualcomm Technologies, Inc. ISL97900 Driver
+
+ISL97900 Device
+
+This device is used to support the current adjustment for R/G/B LED.
+By changing the current through I2C registers, user can see different
+brightness of R/G/B LED device.
+
+Required properties:
+ - compatible:          "qcom,isl97900-led"
+ - reg:                 I2C address of the device
+
+Example:
+        isl97900_left: isl97900_left@28 {
+                compatible = "qcom,isl97900-led";
+                reg = <0x28>;
+        };

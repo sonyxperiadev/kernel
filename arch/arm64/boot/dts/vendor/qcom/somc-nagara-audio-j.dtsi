@@ -1,0 +1,25 @@
+&cdc_tert_mi2s_gpios {
+	status = "ok";
+};
+
+&waipio_snd {
+	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
+};
+
+&tert_mi2s_sck_active  {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tert_mi2s_ws_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tert_mi2s_sd0_active {
+	config {
+		drive-strength = <2>;
+	};
+};

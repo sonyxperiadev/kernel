@@ -1,0 +1,12 @@
+&fm_i2s0_gpios {
+	status = "ok";
+};
+
+&waipio_snd {
+	qcom,pri-mi2s-gpios = <&fm_i2s0_gpios>;
+};
+
+&wsa_spkr_en1 {
+	pinctrl-0 = <&spkr_1_1_sd_n_active>;
+	pinctrl-1 = <&spkr_1_1_sd_n_sleep>;
+};

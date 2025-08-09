@@ -1,0 +1,45 @@
+#include "waipio-sde-display-mtp.dtsi"
+
+&sde_dsi {
+	extvdd-supply = <&L1D>;
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_120hz_cmd_cphy>;
+};
+
+&qupv3_se4_i2c {
+	status= "disabled";
+};
+
+&qupv3_se4_spi {
+	status = "ok";
+	qcom,spi-touch-active = "focaltech,fts_ts";
+	qcom,la-vm;
+
+	focaltech@0 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x0>;
+		spi-max-frequency = <6000000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <21 0x2008>;
+		focaltech,reset-gpio = <&tlmm 20 0x00>;
+		focaltech,irq-gpio = <&tlmm 21 0x2008>;
+		focaltech,display-coords = <0 0 1080 2340>;
+		focaltech,max-touch-number = <5>;
+		focaltech,ic-type = <0x3658D488>;
+		focaltech,touch-type = "primary";
+
+		vdd-supply = <&L3C>;
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+		panel = <&dsi_r66451_amoled_120hz_cmd_cphy>;
+
+		focaltech,trusted-touch-mode = "vm_mode";
+		focaltech,touch-environment = "pvm";
+		focaltech,trusted-touch-type = "primary";
+		focaltech,trusted-touch-spi-irq = <754>;
+		focaltech,trusted-touch-io-bases = <0xF110000 0xF111000 0xF112000 0xF113000 0xF114000 0xF115000 0x990000 0x00910000>;
+		focaltech,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
+	};
+};

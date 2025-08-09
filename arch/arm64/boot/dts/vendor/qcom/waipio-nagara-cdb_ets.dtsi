@@ -1,0 +1,10 @@
+/* arch/arm64/boot/dts/qcom/waipio-nagara-cdb_ets.dtsi */
+#include "waipio-nagara-cdb.dtsi"
+
+/*
+ * ETS common dtsi
+ */
+#include "waipio-nagara-common_ets.dtsi"
+
+&soc {
+};

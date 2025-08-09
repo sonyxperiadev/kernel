@@ -1,0 +1,190 @@
+#include "waipio-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Waipio LE";
+	compatible = "qcom,waipio";
+	qcom,msm-id = <457 0x10000>;
+};
+
+&ipa_hw {
+	status = "disabled";
+};
+
+&pri_aux_pcm_clk {
+	status = "disabled";
+};
+
+&pri_aux_pcm_sync {
+	status = "disabled";
+};
+
+&pri_aux_pcm_din {
+	status = "disabled";
+};
+
+&pri_aux_pcm_dout {
+	status = "disabled";
+};
+
+&tert_aux_pcm {
+	status = "disabled";
+};
+
+&tert_aux_pcm_din {
+	status = "disabled";
+};
+
+&tert_aux_pcm_dout {
+	status = "disabled";
+};
+
+&pri_tdm_clk {
+	status = "disabled";
+};
+
+&pri_tdm_sync {
+	status = "disabled";
+};
+
+&pri_tdm_din {
+	status = "disabled";
+};
+
+&pri_tdm_dout {
+	status = "disabled";
+};
+
+&tert_tdm {
+	status = "disabled";
+};
+
+&tert_tdm_din {
+	status = "disabled";
+};
+
+&tert_tdm_dout {
+	status = "disabled";
+};
+
+&pri_mi2s_mclk {
+	status = "disabled";
+};
+
+&pri_mi2s_sck {
+	status = "disabled";
+};
+
+&pri_mi2s_ws {
+	status = "disabled";
+};
+
+&pri_mi2s_sd0 {
+	status = "disabled";
+};
+
+&pri_mi2s_sd1 {
+	status = "disabled";
+};
+
+&sec_mi2s_mclk {
+	status = "disabled";
+};
+
+&tert_mi2s_sck {
+	status = "disabled";
+};
+
+&tert_mi2s_ws {
+	status = "disabled";
+};
+
+&tert_mi2s_sd0 {
+	status = "disabled";
+};
+
+&tert_mi2s_sd1 {
+	status = "disabled";
+};
+
+&spkr_1_sd_n {
+	status = "disabled";
+};
+
+&spkr_2_sd_n {
+	status = "disabled";
+};
+
+&spkr2_1_sd_n {
+	status = "disabled";
+};
+
+&spkr2_2_sd_n {
+	status = "disabled";
+};
+
+&wcd938x_reset_active {
+	status = "disabled";
+};
+
+&wcd938x_reset_sleep {
+	status = "disabled";
+};
+
+&audio_ml_cma {
+	status = "disabled";
+};
+
+&audio_cma_mem {
+	status = "disabled";
+};
+
+&cnss_pci {
+	status = "disabled";
+	/delete-property/ memory-region;
+};
+
+&wlan {
+	status = "disabled";
+};
+
+&slim_msm {
+	status = "disabled";
+};
+
+&bluetooth {
+	status = "disabled";
+};
+
+&msm_fastrpc {
+	qcom,unsigned-support-domains = <0x09>;
+
+	qcom,msm_fastrpc_compute_cb20 {
+		compatible = "qcom,msm-fastrpc-compute-cb";
+		label = "adsprpc-smd";
+		iommus = <&apps_smmu 0x1806 0x0>;
+		qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+		qcom,iommu-faults = "stall-disable", "HUPCF";
+		dma-coherent;
+	};
+
+	qcom,msm_fastrpc_compute_cb21 {
+		compatible = "qcom,msm-fastrpc-compute-cb";
+		label = "adsprpc-smd";
+		iommus = <&apps_smmu 0x1807 0x0>;
+		qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+		qcom,iommu-faults = "stall-disable", "HUPCF";
+		dma-coherent;
+	};
+};
+
+&msm_gpu {
+	status = "disabled";
+};
+
+&kgsl_msm_iommu {
+	status = "disabled";
+};
+
+&gmu {
+	status = "disabled";
+};

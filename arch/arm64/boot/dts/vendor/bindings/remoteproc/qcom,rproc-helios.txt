@@ -1,0 +1,16 @@
+* Helios Remoteproc Driver
+
+qcom_rproc_helios driver is responsible for loading helios firmware image,
+crashdump collection and recovery.
+
+Required properties:
+- compatible:           Must be "qcom,rproc-helios"
+- qcom,firmware-name:   Helios Firmware Image name
+- qcom,ssr-name:        Must be "helios"
+
+Example:
+    qcom,rproc-helios {
+        compatible = "qcom,rproc-helios";
+        qcom,firmware-name = "XRC130.elf";
+        qcom,ssr-name = "helios";
+    }

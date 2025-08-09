@@ -1,0 +1,32 @@
+* Qualcomm Technologies, Inc. MSM MMRM
+
+[Root level node]
+MMRM
+=====
+Required properties:
+- compatible : one of:
+	- "qcom,msm-mmrm-test"
+	- "qcom,waipio-mmrm-test" : Invokes driver specific data for Waipio.
+- clock-names: an array of clocks that the driver uses for testing.
+	The clocks names here correspond to the clock names used in
+	clk_get.
+- clocks: Must contain an entry for each clock in clock-names.
+
+Example:
+
+	qcom,mmrm-test {
+		compatible = "qcom,msm-mmrm-test";
+
+		clock-names =
+			"cam_cc_ife_0_clk_src",
+			"cam_cc_ife_1_clk_src",
+			"video_cc_mvs1_clk_src",
+			"disp_cc_mdss_mdp_clk_src",
+			"video_cc_mvs0_clk_src";
+		clocks =
+			<&clock_camcc CAM_CC_IFE_0_CLK_SRC>,
+			<&clock_camcc CAM_CC_IFE_1_CLK_SRC>,
+			<&clock_videocc VIDEO_CC_MVS1_CLK_SRC>,
+			<&clock_dispcc DISP_CC_MDSS_MDP_CLK_SRC>,
+			<&clock_videocc VIDEO_CC_MVS0_CLK_SRC>;
+	};

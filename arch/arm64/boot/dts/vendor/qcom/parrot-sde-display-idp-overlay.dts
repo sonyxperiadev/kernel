@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "parrot-sde-display-idp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot IDP";
+	compatible = "qcom,parrot-idp", "qcom,parrot", "qcom,idp";
+	qcom,msm-id = <537 0x10000>;
+	qcom,board-id = <34 0>, <34 1>, <34 0x600>, <34 0x601>;
+};

@@ -1,0 +1,34 @@
+Diodes AP72200 voltage regulator
+
+AP72200 is a high-current synchronous buck-boost converter providing
+high efficiency, excellent transient response, and high DC output accuracy.
+It operates with a 2.3-5.4V Input range and Outputs 2.6-5.14V.
+
+Properties:
+- compatible
+	Usage:      required
+	Value type: <string>
+	Definition: Must be "diodes,ap72200".
+
+- reg
+	Usage:      required
+	Value type: <u32>
+	Definition: I2C slave address.
+
+- enable-gpio:
+	Usage:      required
+	Value type: <phandle>
+	Definition: Phandle to GPIO used to control enable status of regulator.
+
+Example:
+&qupv3_se2_i2c {
+	itof_level: ap72200-regulator@43 {
+		reg = <0x43>;
+		compatible = "diodes,ap72200";
+		enable-gpio = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+		regulator-name = "ap72200-vout";
+		regulator-min-microvolt = <3600000>;
+		regulator-max-microvolt = <3600000>;
+	};
+};
+

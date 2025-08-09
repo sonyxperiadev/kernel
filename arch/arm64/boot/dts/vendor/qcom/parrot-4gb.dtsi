@@ -1,0 +1,47 @@
+#include "parrot.dtsi"
+/ {
+};
+
+&non_secure_display_dma_buf {
+	status = "disabled";
+};
+
+&non_secure_display_memory {
+	status = "disabled";
+};
+
+&mem_client_3_size {
+	qcom,peripheral-size = <0x200000>;
+};
+
+&trust_ui_vm_mem {
+	status = "disabled";
+};
+
+&trust_ui_vm_qrtr {
+	status = "disabled";
+};
+
+&trust_ui_vm_vblk0_ring {
+	status = "disabled";
+};
+
+&trust_ui_vm_swiotlb {
+	status = "disabled";
+};
+
+&soc {
+
+	qcom,guestvm_loader@e0b00000 {
+		status = "disabled";
+	};
+
+	qrtr-gunyah {
+		status = "disabled";
+	};
+
+	qcom,virtio_backend@0 {
+		status = "disabled";
+	};
+
+};

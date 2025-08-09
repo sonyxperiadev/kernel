@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-sde-display-waipio-lemur.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. WAIPIO LEMUR";
+	compatible = "qcom,waipio-mtp", "qcom,waipio", "qcom,mtp";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <0x01010008 0x1>, <0x01010108 0x1>;
+};

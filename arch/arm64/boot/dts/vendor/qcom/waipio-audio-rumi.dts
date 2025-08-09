@@ -1,0 +1,10 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-audio-mtp.dtsi"
+ / {
+	model = "Qualcomm Technologies, Inc. Waipio RUMI";
+	compatible = "qcom,waipio-rumi", "qcom,waipio", "qcom,rumi";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <15 0>;
+};

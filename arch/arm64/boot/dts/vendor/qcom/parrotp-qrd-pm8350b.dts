@@ -1,0 +1,12 @@
+/dts-v1/;
+
+#include "parrotp.dtsi"
+#include "parrot-wcn3990.dtsi"
+#include "parrotp-qrd.dtsi"
+#include "parrot-qrd-pm8350b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. ParrotP QRD";
+	compatible = "qcom,parrotp-qrd", "qcom,parrotp", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+};

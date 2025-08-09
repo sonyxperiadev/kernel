@@ -1,0 +1,32 @@
+Qualcomm Technologies, Inc. Ravelin Network-On-Chip interconnect driver binding
+-----------------------------------------------------------
+
+Ravelin interconnect providers support system bandwidth requirements through
+RPMh hardware accelerators known as Bus Clock Manager (BCM). The provider is
+able to communicate with the BCM through the Resource State Coordinator (RSC)
+associated with each execution environment. Provider nodes must point to at
+least one RPMh device child node pertaining to their RSC and each provider
+can map to multiple RPMh resources.
+
+Required properties :
+- compatible : shall contain only one of the following:
+			"qcom,ravelin-aggre1_noc",
+			"qcom,ravelin-aggre2_noc",
+			"qcom,ravelin-clk_virt",
+			"qcom,ravelin-cnoc2",
+			"qcom,ravelin-cnoc3",
+			"qcom,ravelin-gem_noc",
+			"qcom,ravelin-lpass_ag_noc",
+			"qcom,ravelin-mc_virt",
+			"qcom,ravelin-mmss_noc",
+			"qcom,ravelin-pcie_anoc",
+			"qcom,ravelin-system_noc",
+			"qcom,ravelin-video_aggre_noc",
+- #interconnect-cells : should contain 1
+
+Examples:
+
+system_noc: interconnect@1680000 {
+	compatible = "qcom,ravelin-system_noc";
+	interconnect-cells = <1>;
+};

@@ -1,0 +1,214 @@
+#include "waipio-camera-sensor-nagara-common.dtsi"
+
+#include <dt-bindings/clock/qcom,camcc-waipio.h>
+
+&soc {
+	camera3_vdig_vreg: camera3_vdig_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "camera3_vdig_vreg";
+		startup-delay-us = <0>;
+		enable-active-high;
+		gpio = <&tlmm 22 0>;
+	};
+};
+
+&camera4_lvdd_vreg {
+	status = "disabled";
+};
+
+&rgbcir_vreg {
+	status = "disabled";
+};
+
+&sony_camera_module_4 {
+	status = "disabled";
+};
+
+&tcs3490 {
+	rgbcir_gpio_vdd-supply = <&L5I>;
+};
+
+&sony_camera_module_0 {
+	module_name = "SEM12BC6";
+	cam_vana-supply = <&slg51000_0_ldo1>;
+
+	/delete-node/ SEM12BC4;
+	SEM12BC6 {
+		i2c_freq_mode = <3>;
+		power_off {
+			commands =
+				"gpio_reset",
+				"cam_clk",
+				"cam_vaf",
+				"cam_vdig",
+				"cam_vana",
+				"cam_vio",
+				"cam_gyro",
+				"cam_pmic0",
+				"exit";
+			gpio_reset = <7 0x0 0 5000>;
+			cam_clk = <5 0xffffffff 0 0>;
+			cam_vaf = <3 0xffffffff 0 0>;
+			cam_vdig = <0 0xffffffff 0 0>;
+			cam_vana = <2 0xffffffff 0 0>;
+			cam_vio = <1 0xffffffff 0 1000>;
+			cam_gyro = <9 0xffffffff 0 0>;
+			cam_pmic0 = <40 0xffffffff 0 0>;
+			exit = <99 0x0 0 0>;
+		};
+		power_on {
+			commands =
+				"cam_pmic0",
+				"cam_gyro",
+				"cam_vio",
+				"cam_vana",
+				"cam_vdig",
+				"cam_vaf",
+				"cam_clk",
+				"gpio_reset",
+				"exit";
+			cam_pmic0 = <40 0 0 10000>;
+			cam_gyro = <9 1800 0 1000>;
+			cam_vio = <1 1800 0 1000>;
+			cam_vana = <2 2800 0 1000>;
+			cam_vdig = <0 1100 0 3000>;
+			cam_vaf = <3 2800 0 3000>;
+			cam_clk = <5 24000000 0 1000>;
+			gpio_reset = <7 1 0 10000>;
+			exit = <99 0x0 0 0>;
+		};
+	};
+};
+
+&sony_camera_module_1 {
+	module_name = "SEM12BC7";
+	cam_vio-supply = <&slg51000_0_ldo7>;
+	cam_vana-supply = <&slg51000_0_ldo2>;
+	cam_vana2-supply = <&camera1_vana_vreg>;
+	cam_vdig-supply = <&slg51000_0_ldo5>;
+	cam_vdig2-supply = <&slg51000_0_ldo6>;
+	/delete-property/ cam_vdig3-supply;
+	cam_vaf-supply = <&slg51000_0_ldo3>;
+	/delete-property/ cam_vaf2-supply;
+	/delete-property/ cam_ois-supply;
+	/delete-property/ cam_ois2-supply;
+
+	/delete-node/ LGI12BC0;
+	SEM12BC7 {
+		i2c_freq_mode = <3>;
+		power_off {
+			commands =
+				"gpio_reset",
+				"cam_clk",
+				"cam_vaf",
+				"cam_vdig2",
+				"cam_vdig",
+				"cam_vana2",
+				"cam_vana",
+				"cam_vio",
+				"cam_pmic0",
+				"exit";
+			gpio_reset = <7 0x0 0 5000>;
+			cam_clk = <5 0xffffffff 0 0>;
+			cam_vaf = <3 0xffffffff 0 0>;
+			cam_vdig2 = <20 0xffffffff 0 0>;
+			cam_vdig = <0 0xffffffff 0 0>;
+			cam_vana2 = <30 0xffffffff 0 0>;
+			cam_vana = <2 0xffffffff 0 0>;
+			cam_vio = <1 0xffffffff 0 1000>;
+			cam_pmic0 = <40 0xffffffff 0 0>;
+			exit = <99 0x0 0 0>;
+		};
+		power_on {
+			commands =
+				"cam_pmic0",
+				"cam_vio",
+				"cam_vana",
+				"cam_vana2",
+				"cam_vdig",
+				"cam_vdig2",
+				"cam_vaf",
+				"cam_clk",
+				"gpio_reset",
+				"exit";
+			cam_pmic0 = <40 0 0 10000>;
+			cam_vio = <1 1800 0 1>;
+			cam_vana = <2 2800 0 1>;
+			cam_vana2 = <30 0 0 1>;
+			cam_vdig = <0 810 0 1>;
+			cam_vdig2 = <20 900 0 1>;
+			cam_vaf = <3 2800 0 1>;
+			cam_clk = <5 24000000 0 1000>;
+			gpio_reset = <7 1 0 10000>;
+			exit = <99 0x0 0 0>;
+		};
+	};
+};
+
+&sony_camera_module_3 {
+	module_name = "SEM12BC8";
+	cam_vdig-supply = <&camera3_vdig_vreg>;
+	/delete-node/ SEM12BC5;
+	SEM12BC8 {
+		i2c_freq_mode = <3>;
+		power_off {
+			commands =
+				"cam_clk",
+				"gpio_reset",
+				"cam_vaf",
+				"cam_vdig",
+				"cam_vana2",
+				"cam_vana",
+				"cam_vio",
+				"cam_pmic0",
+				"exit";
+			cam_clk = <5 0xffffffff 0 1000>;
+			gpio_reset = <7 0x0 0 1000>;
+			cam_vaf = <3 0xffffffff 0 1000>;
+			cam_vdig = <0 0xffffffff 0 1000>;
+			cam_vana2 = <30 0xffffffff 0 1000>;
+			cam_vana = <2 0xffffffff 0 1000>;
+			cam_vio = <1 0xffffffff 0 1000>;
+			cam_pmic0 = <40 0xffffffff 0 0>;
+			exit = <99 0x0 0 0>;
+		};
+		power_on {
+			commands =
+				"cam_pmic0",
+				"cam_vio",
+				"cam_vana",
+				"cam_vana2",
+				"cam_vdig",
+				"cam_vaf",
+				"gpio_reset",
+				"cam_clk",
+				"exit";
+			cam_pmic0 = <40 0 0 10000>;
+			cam_vio = <1 1800 0 1000>;
+			cam_vana = <2 2800 0 1000>;
+			cam_vana2 = <30 1800 0 1000>;
+			cam_vdig = <0 0 0 1000>;
+			cam_vaf = <3 2800 0 13500>;
+			gpio_reset = <7 1 0 500>;
+			cam_clk = <5 24000000 0 10000>;
+			exit = <99 0x0 0 0>;
+		};
+	};
+};
+
+&qupv3_se0_spi {
+	spi-max-frequency = <10000000>;
+	status = "okay";
+
+	camera_ois_spi0:camera_subdev@0 {
+		compatible = "sony,camera_subdev";
+		reg = <0>;
+		camera_id = <1>;
+		device_type = <3>;
+		bits_per_word = <8>;
+		max_rx_size = <16>;
+		max_tx_size = <0>;
+		spi-max-frequency = <10000000>;
+		spi-cpol;
+	};
+};

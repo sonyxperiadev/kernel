@@ -1,0 +1,371 @@
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/iio/qcom,spmi-adc7-smb139x.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include <dt-bindings/thermal/thermal_qti.h>
+
+&pm6150a_amoled {
+	/delete-node/ oledb@e000;
+	/delete-node/ ab@de00;
+	/delete-node/ ibb@dc00;
+};
+
+#include "pm8350b.dtsi"
+
+&soc {
+	qcom,pmic_glink {
+		status = "okay";
+	};
+
+	qcom,pmic_glink_log {
+		compatible = "qcom,pmic-glink";
+		qcom,pmic-glink-channel = "PMIC_LOGS_ADSP_APPS";
+
+		qcom,battery_debug {
+			compatible = "qcom,battery-debug";
+		};
+
+		qcom,charger_ulog_glink {
+			compatible = "qcom,charger-ulog-glink";
+		};
+
+		spmi_glink_debug: qcom,spmi_glink_debug {
+			compatible = "qcom,spmi-glink-debug";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			depends-on-supply = <&spmi1_bus>;
+
+			/* Primary SPMI bus */
+			spmi@0 {
+				reg = <0>;
+				#address-cells = <2>;
+				#size-cells = <0>;
+
+				qcom,pm8350b-debug@3 {
+					compatible = "qcom,spmi-pmic";
+					reg = <3 SPMI_USID>;
+					qcom,can-sleep;
+				};
+			};
+
+			/* Secondary SPMI bus */
+			spmi@1 {
+				reg = <1>;
+				#address-cells = <2>;
+				#size-cells = <0>;
+
+				smb1394_glink_debug: qcom,smb1394-debug@9 {
+					compatible = "qcom,spmi-pmic";
+					reg = <9 SPMI_USID>;
+					qcom,can-sleep;
+				};
+
+				qcom,smb1394-debug@b {
+					compatible = "qcom,spmi-pmic";
+					reg = <11 SPMI_USID>;
+					qcom,can-sleep;
+				};
+
+				qcom,smb1394-debug@c {
+					compatible = "qcom,spmi-pmic";
+					reg = <12 SPMI_USID>;
+					qcom,can-sleep;
+				};
+			};
+		};
+	};
+};
+
+&glink_edge {
+	qcom,pmic_glink_rpmsg {
+		qcom,glink-channels = "PMIC_RTR_ADSP_APPS";
+	};
+
+	qcom,pmic_glink_log_rpmsg {
+		qcom,glink-channels = "PMIC_LOGS_ADSP_APPS";
+		qcom,intents = <0x800  5
+			0xc00 3
+			0x2000 1>;
+	};
+};
+
+&battery_charger {
+	status = "okay";
+};
+
+&ucsi {
+	status = "okay";
+};
+
+&altmode {
+	status = "okay";
+};
+
+&spmi0_debug_bus {
+	depends-on2-supply = <&smb1394_glink_debug>;
+
+	qcom,pm8350b-debug@3 {
+		compatible = "qcom,spmi-pmic";
+		reg = <3 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		qcom,can-sleep;
+	};
+};
+
+&apps_rsc {
+	rpmh-regulator-ldod1 {
+		compatible = "qcom,rpmh-vrm-regulator";
+		qcom,resource-name = "ldod1";
+		qcom,regulator-type = "pmic5-ldo";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_LPM
+			 RPMH_REGULATOR_MODE_HPM>;
+		qcom,mode-threshold-currents = <0 30000>;
+		L1D: pm8350b_l1: regulator-pm8350b-l1 {
+			regulator-name = "pm8350b_l1";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1296000>;
+			qcom,init-voltage = <1200000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+};
+
+&pmk8350_sdam_2 {
+	hap_cl_brake: cl_brake@7c {
+		reg = <0x7c 0x1>;
+		bits = <0 8>;
+	};
+};
+
+&pm8350b_haptics {
+	nvmem-cell-names = "hap_cl_brake";
+	nvmem-cells = <&hap_cl_brake>;
+	nvmem-names = "hap_cfg_sdam";
+	nvmem = <&pmk8350_sdam_46>;
+	qcom,pbs-client = <&pm8350b_pbs2>;
+};
+
+&pmk8350_vadc {
+	pm8350b_ref_gnd {
+		reg = <PM8350B_ADC7_REF_GND>;
+		label = "pm8350b_ref_gnd";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_vref_1p25 {
+		reg = <PM8350B_ADC7_1P25VREF>;
+		label = "pm8350b_vref_1p25";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_die_temp {
+		reg = <PM8350B_ADC7_DIE_TEMP>;
+		label = "pm8350b_die_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_vph_pwr {
+		reg = <PM8350B_ADC7_VPH_PWR>;
+		label = "pm8350b_vph_pwr";
+		qcom,pre-scaling = <1 3>;
+	};
+
+	pm8350b_vbat_sns {
+		reg = <PM8350B_ADC7_VBAT_SNS>;
+		label = "pm8350b_vbat_sns";
+		qcom,pre-scaling = <1 3>;
+	};
+
+	pm8350b_chg_temp {
+		reg = <PM8350B_ADC7_CHG_TEMP>;
+		label = "pm8350b_chg_temp";
+		qcom,pre-scaling = <1 1>;
+	};
+
+	pm8350b_iin_fb {
+		reg = <PM8350B_ADC7_IIN_FB>;
+		label = "pm8350b_iin_fb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	pm8350b_ichg_fb {
+		reg = <PM8350B_ADC7_ICHG_FB>;
+		label = "pm8350b_ichg_fb";
+		qcom,pre-scaling = <1000 305185>;
+	};
+
+	pm8350b_usb_in_v_div_16 {
+		reg = <PM8350B_ADC7_USB_IN_V_16>;
+		label = "pm8350b_usb_in_v_div_16";
+		qcom,pre-scaling = <1 16>;
+	};
+
+	smb139x_1_smb_temp {
+		reg = <SMB1394_1_ADC7_SMB_TEMP>;
+		label = "smb139x_1_smb_temp";
+		qcom,hw-settle-time = <200>;
+	};
+
+	smb139x_1_ichg_smb {
+		reg = <SMB1394_1_ADC7_ICHG_SMB>;
+		label = "smb139x_1_ichg_smb";
+		qcom,hw-settle-time = <200>;
+	};
+
+	smb139x_1_iin_smb {
+		reg = <SMB1394_1_ADC7_IIN_SMB>;
+		label = "smb139x_1_iin_smb";
+		qcom,hw-settle-time = <200>;
+	};
+
+	smb139x_2_smb_temp {
+		reg = <SMB1394_2_ADC7_SMB_TEMP>;
+		label = "smb139x_2_smb_temp";
+		qcom,hw-settle-time = <200>;
+	};
+
+	smb139x_2_ichg_smb {
+		reg = <SMB1394_2_ADC7_ICHG_SMB>;
+		label = "smb139x_2_ichg_smb";
+		qcom,hw-settle-time = <200>;
+	};
+
+	smb139x_2_iin_smb {
+		reg = <SMB1394_2_ADC7_IIN_SMB>;
+		label = "smb139x_2_iin_smb";
+		qcom,hw-settle-time = <200>;
+	};
+};
+
+&pm8350b_tz {
+	io-channels = <&pmk8350_vadc PM8350B_ADC7_DIE_TEMP>;
+	io-channel-names = "thermal";
+};
+
+&thermal_zones {
+	socd {
+		trips {
+			socd-trip {
+				temperature = <90>;
+				hysteresis = <1>;
+			};
+		};
+
+		cooling-maps {
+			socd_apc1 {
+				trip = <&socd_trip>;
+				cooling-device = <&APC1_pause 1 1>;
+			};
+
+			socd_cdsp1 {
+				trip = <&socd_trip>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			socd_gpu0 {
+				trip = <&socd_trip>;
+				cooling-device = <&msm_gpu 2 2>;
+			};
+		};
+	};
+
+	pm8350b-ibat-lvl0 {
+		trips {
+			ibat-lvl0 {
+				temperature = <6000>;
+			};
+		};
+	};
+
+	pm8350b-ibat-lvl1 {
+		trips {
+			ibat-lvl1 {
+				temperature = <7500>;
+			};
+		};
+	};
+
+	pm8350b-bcl-lvl0 {
+		cooling-maps {
+			vbat_lte0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&modem_lte_dsc 8 8>;
+			};
+
+			vbat_nr0_scg {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&modem_nr_scg_dsc 3 3>;
+			};
+
+			vbat_nr0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&modem_nr_dsc 6 6>;
+			};
+
+			vbat_cdsp0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&cdsp_sw 2 2>;
+			};
+
+			vbat_cpu_5 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&cpu5_pause 1 1>;
+			};
+
+			vbat_gpu0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&msm_gpu 1 1>;
+			};
+		};
+	};
+
+	pm8350b-bcl-lvl1 {
+		cooling-maps {
+			vbat_lte1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&modem_lte_dsc 10 10>;
+			};
+
+			vbat_nr1_scg {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&modem_nr_scg_dsc 10 10>;
+			};
+
+			vbat_nr1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&modem_nr_dsc 9 9>;
+			};
+
+			vbat_cdsp1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			vbat_cpu_6_7 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&cpu_6_7_pause 1 1>;
+			};
+
+			vbat_gpu1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&msm_gpu 2 2>;
+			};
+		};
+	};
+
+	pm8350b-bcl-lvl2 {
+		cooling-maps {
+			vbat_cdsp2 {
+				trip = <&b_bcl_lvl2>;
+				cooling-device = <&cdsp_sw 5 THERMAL_NO_LIMIT>;
+			};
+
+			vbat_gpu2 {
+				trip = <&b_bcl_lvl2>;
+				cooling-device = <&msm_gpu 3 THERMAL_NO_LIMIT>;
+			};
+		};
+	};
+};

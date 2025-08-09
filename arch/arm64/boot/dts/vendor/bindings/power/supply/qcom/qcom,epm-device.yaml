@@ -1,0 +1,98 @@
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/bindings/thermal/qcom,epm-device.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Qualcomm Technologies, Inc. EPM sdam device
+
+description: |
+  Qualcomm Technologies, Inc. EPM(Embedded Power Measurement) device enables to
+  measure different pmic regulator power consumption data and pmic temperature
+  data. It exposes these data to userspace clients via powercap sysfs interface
+  and thermal zone sysfs interface respectively.
+
+properties:
+  compatible:
+    const: qcom,epm-devices
+
+  nvmem-names:
+    minItems: 2
+    description: Array of  nvmem device name(s) for EPM measurement.
+    items:
+      - const: epm-config-sdam
+      - const: epm-10s-avg-sdam
+    $ref: /schemas/types.yaml#/definitions/string-array
+
+  nvmem:
+    minItems: 2
+    description: Array of phandles of the nvmem device(s) for EPM measurement.
+    $ref: /schemas/nvmem/nvmem.yaml
+
+  interrupts:
+    description: Specifies the interrupt for EPM PBS IRQ used by EPM if enabled.
+    maxItems: 1
+    $ref: /schemas/interrupts.yaml
+
+ qcom,data-sdam-base-id:
+    minItems: 1
+    description: Base pid of epm data 1 second sdam if enabled.
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+ qcom,reg-ppid-ids:
+    minItems: 1
+    description: Array of ppids for different regulator channels that
+      epm device going to measure.
+    $ref: /schemas/types.yaml#/definitions/phandle-array
+
+ qcom,reg-ppid-names:
+    minItems: 1
+    description: Array of strigs for different regulator channels that
+      epm device going to measure. It will be same order as channels
+      mentioned in qcom,reg-ppid-ids.
+    $ref: /schemas/types.yaml#/definitions/string-array
+
+ "#qcom,epm-tz-sensor":
+    description: Number of epm pmic temperature data.
+    $ref: /schemas/types.yaml#/definitions/uint8
+    minimum: 1
+    maximum: 8
+
+ "#thermal-sensor-cells":
+    const: 1
+    description:
+      Number of cells required to uniquely identify the thermal sensors. Since
+      we have multiple sensors this is set to 1
+
+required:
+  - compatible
+  - nvmem-names
+  - nvmem
+  - qcom,reg-ppid-ids
+  - qcom,reg-ppid-names
+
+examples:
+  - |
+    qcom,epm-device {
+        compatible = "qcom,epm-devices";
+        interrupts = <0x0 0xa0 0x0 IRQ_TYPE_EDGE_RISING>;
+        nvmem = <&pmk8550_sdam_49>,
+                <&pmk8550_sdam_53>;
+        nvmem-names = "epm-config-sdam",
+                      "epm-10s-avg-sdam";
+	qcom,data-sdam-base-id = <0xa5>;
+	qcom,reg-ppid-ids = <0x1e4 0x1e6 0x2a4 0x2aa 0x3a4 0x3a7
+                0x4a4 0x4a1 0x4aa 0x4a7 0x49b 0x5a7 0x5a1
+                0x5a4 0x59b 0x5ad 0x6aa 0x6a4 0x69b 0x69e
+                0x6a1 0x6a7>;
+
+        qcom,reg-ppid-names = "lv_battery_support", "2p5v_loads",
+                "apc0", "apps1_gold", "lpi_cx",
+                "gfx", "lv_sub_reg_ldo", "vdd_mxa",
+                "vdd_cx", "lpddr5_vdd2h", "vdd_mm",
+                "vdd_mxc", "vdda_ebi", "ebi_io",
+                "nsp", "modem_ss", "hv_sub_reg",
+                "mv_sub_reg_ldo", "rf_mv_sub_reg",
+                "rf_lv_sub_reg", "ific_cx", "wlan_cx";
+        #qcom,epm-tz-sensor = /bits/ 8 <6>;
+        #thermal-sensor-cells = <1>;
+    };

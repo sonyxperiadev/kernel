@@ -1,0 +1,23 @@
+/* arch/arm64/boot/dts/qcom/sec_touchscreen.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se4_i2c {
+	touchscreen@48 {
+		sec,max_coords = <1080 2520>;   /* x y */
+		sec,firmware_name = "touch_module_id_0x49.img";
+		sec,device_id = /bits/ 8 <0xAC 0x37 0x91>;
+
+		/* feature */
+		sec,rejection_area_portrait = <25 150 60 200>;
+		sec,rejection_area_landscape = <150 20 200 60>;
+	};
+};

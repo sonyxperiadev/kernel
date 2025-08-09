@@ -1,0 +1,12 @@
+#include "parrot.dtsi"
+
+/ {
+
+	model = "Qualcomm Technologies, Inc. ParrotP";
+	compatible = "qcom,parrotp";
+	qcom,msm-id = <583 0x10000>;
+};
+
+&ipa_hw {
+	status = "disabled";
+};

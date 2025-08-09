@@ -1,0 +1,41 @@
+#include "parrot-sde-display.dtsi"
+
+&mdss_mdp {
+	status = "disabled";
+};
+
+&mdss_dsi0 {
+	status = "disabled";
+};
+
+&mdss_dsi_phy0 {
+	status = "disabled";
+};
+
+&ext_disp {
+	status = "disabled";
+};
+
+&qcom_msmhdcp {
+	status = "disabled";
+};
+
+&sde_dp {
+	status = "disabled";
+};
+
+&smmu_sde_unsec {
+	status = "disabled";
+};
+
+&smmu_sde_sec {
+	status = "disabled";
+};
+
+&sde_wb {
+	status = "disabled";
+};
+
+&sde_dsi {
+	status = "disabled";
+};

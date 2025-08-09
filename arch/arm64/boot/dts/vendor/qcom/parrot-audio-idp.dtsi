@@ -1,0 +1,37 @@
+#include "parrot-audio-overlay.dtsi"
+
+&waipio_snd {
+	qcom,sku-model = "parrot-idp-sku1-snd-card";
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	asoc-codec = <&stub_codec>, <&lpass_cdc>,
+		     <&wcd937x_codec>,
+		     <&wsa883x_0221>, <&wsa883x_0222>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc",
+		           "wcd937x_codec",
+		           "wsa-codec1", "wsa-codec2";
+};
+
+&wcd938x_codec {
+	status = "disabled";
+};
+
+&wcd938x_tx_slave {
+	status = "disabled";
+};
+
+&wcd938x_rx_slave {
+	status = "disabled";
+};
+
+&wcd937x_codec {
+	status = "okay";
+};
+
+&wcd937x_tx_slave {
+	status = "okay";
+};
+
+&wcd937x_rx_slave {
+	status = "okay";
+};

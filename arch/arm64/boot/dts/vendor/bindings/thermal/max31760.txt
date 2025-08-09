@@ -1,0 +1,27 @@
+Bindings for the Maxim MAX31760 Intelligent Fan Controller
+==========================================================
+
+The Maxim MAX31760 is a i2c device providing closed-loop, multi-channel fan
+management with temperature. Various fan control features are provided,
+including PWM frequency control, temperature hysteresis, dual tachometer
+measurements, and fan health monitoring.
+
+Required properties:
+- compatible         : should be "maxim,max31760".
+- reg                : I2C address, 0x50.
+
+Optional properties:
+- maxim,driver-en-gpio : fan driver enable gpio
+- maxim,pwr-en-gpio  : fan pwr enable gpio
+
+Example:
+	max31760@50 {
+		compatible = "maxim,max31760";
+		reg = <0x50>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwr_en_gpio_default
+			&driver_en_gpio_default>;
+
+		maxim,driver-en-gpio = <&pm8550ve_f_gpios 5 GPIO_ACTIVE_LOW>;
+		maxim,pwr-en-gpio = <&pm8550ve_f_gpios 6 GPIO_ACTIVE_LOW>;
+	};

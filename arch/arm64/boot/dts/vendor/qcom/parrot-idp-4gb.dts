@@ -1,0 +1,12 @@
+/dts-v1/;
+
+#include "parrot-4gb.dtsi"
+#include "parrot-wcn6750.dtsi"
+#include "parrot-idp-4gb.dtsi"
+#include "parrot-idp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot IDP 4GB DDR";
+	compatible = "qcom,parrot-idp", "qcom,parrot", "qcom,idp";
+	qcom,board-id = <34 0x600>;
+};

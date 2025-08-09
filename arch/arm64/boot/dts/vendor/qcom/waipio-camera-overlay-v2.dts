@@ -1,0 +1,111 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	model = "Qualcomm Technologies, Inc. Waipio v2 SoC";
+	compatible = "qcom,waipio", "qcom,waipiop";
+	qcom,msm-id = <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <8 0>, <0x10008 0>, <0x03010008 0x03>, <0x04010008 0x04>;
+
+	fragment@0 {
+		target = <&cam_sfe0>;
+		__overlay__ {
+			clock-rates =
+				<0 432000000 0 0>,
+				<0 594000000 0 0>,
+				<0 675000000 0 0>,
+				<0 727000000 0 0>,
+				<0 727000000 0 0>;
+		};
+	};
+
+	fragment@1 {
+		target = <&cam_sfe1>;
+		__overlay__ {
+			clock-rates =
+				<0 432000000 0 0>,
+				<0 594000000 0 0>,
+				<0 675000000 0 0>,
+				<0 727000000 0 0>,
+				<0 727000000 0 0>;
+		};
+	};
+
+	fragment@2 {
+		target = <&cam_vfe0>;
+		__overlay__ {
+			clock-rates =
+				<0 432000000 0 0>,
+				<0 594000000 0 0>,
+				<0 675000000 0 0>,
+				<0 727000000 0 0>,
+				<0 727000000 0 0>;
+		};
+	};
+
+	fragment@3 {
+		target = <&cam_vfe1>;
+		__overlay__ {
+			clock-rates =
+				<0 432000000 0 0>,
+				<0 594000000 0 0>,
+				<0 675000000 0 0>,
+				<0 727000000 0 0>,
+				<0 727000000 0 0>;
+		};
+	};
+
+	fragment@4 {
+		target = <&cam_vfe2>;
+		__overlay__ {
+			clock-rates =
+				<0 432000000 0 0>,
+				<0 594000000 0 0>,
+				<0 675000000 0 0>,
+				<0 727000000 0 0>,
+				<0 727000000 0 0>;
+		};
+	};
+
+	fragment@5 {
+		target = <&cam_csiphy0>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+
+	fragment@6 {
+		target = <&cam_csiphy1>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+
+	fragment@7 {
+		target = <&cam_csiphy2>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+
+	fragment@8 {
+		target = <&cam_csiphy3>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+
+	fragment@9 {
+		target = <&cam_csiphy4>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+
+	fragment@10 {
+		target = <&cam_csiphy5>;
+		__overlay__ {
+			rgltr-enable-sync = <0>;
+		};
+	};
+};

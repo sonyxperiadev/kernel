@@ -1,0 +1,4 @@
+/* arch/arm64/boot/dts/qcom/waipio-nagara-common_ets.dtsi */
+
+&soc {
+};

@@ -1,0 +1,18 @@
+Qualcomm Technologies, Inc. Inter-Pupillary Device(IPD) adjuster Device Tree Bindings
+
+Required properties:
+
+- compatible:
+    * "qcom,ipd"
+- reg			: the I2C address of the MAG sensor
+- io-channels 	: Phandle for ADC Channel potentiometer
+- io-channel-names	: IO-Channel name
+
+Example:
+
+k09973: k09973@10 {
+	compatible = "qcom,ipd";
+	reg = <0x10>;
+	io-channels = <&pmk8550_vadc PMXR2230_ADC5_GEN3_AMUX_THM5_100K_PU>;
+	io-channel-names = "ipd";
+};

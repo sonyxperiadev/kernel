@@ -1,0 +1,11 @@
+* Hdcp driver to provide transport between display driver and TZ
+
+Required properties:
+- compatible : Should be "qcom,hdcp"
+- qcom,use-smcinvoke : indicates if driver support smcinvoke for kernel to tz communication.
+
+Example:
+	qcom,hdcp {
+		compatible = "qcom,hdcp";
+		qcom,use-smcinvoke = <1>;
+	};

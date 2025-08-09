@@ -1,0 +1,10 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-audio-qrd.dtsi"
+ / {
+	model = "Qualcomm Technologies, Inc. Waipio QRD";
+	compatible = "qcom,waipio-qrd", "qcom,waipio", "qcom,qrd";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>, <552 0x10000>;
+	qcom,board-id = <0x1000B 0>, <0x2000B 0>;
+};

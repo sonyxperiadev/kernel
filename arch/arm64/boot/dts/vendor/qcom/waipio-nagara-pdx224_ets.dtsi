@@ -1,0 +1,8 @@
+#include "waipio-nagara-pdx224_generic.dtsi"
+
+/*
+ * ETS common dtsi
+ */
+#include "waipio-nagara-common_ets.dtsi"
+&soc {
+};

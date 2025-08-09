@@ -1,0 +1,51 @@
+QTI BWPROF Driver
+
+The QTI BWPROF Driver is responsible for monitoring bandwidth counters on
+Qualcomm Technologies, Inc. (QTI) chipset that represent the read/write traffic
+through different interconnects in the system. The driver provides this data to
+userspace clients at modest time intervals for the purpose of bandwidth
+profiling.
+
+Required properties:
+- compatible:		Must be "qcom,bwprof" or "qcom,bwprof-mon"
+- reg:			Pairs of physical base addresses and region sizes of
+			memory mapped registers.
+- reg-names:		Names of the bases for the above registers. Expected
+			bases are: "base", "llcc-reg", "mem-freq"
+- qcom,bus-width:	The width of the bus in bits.
+- client:		The client of bandwidth monitor, which can be either
+			"total", "cpu", or "gpu".
+
+Example:
+
+    bwprof: qcom,bwprof-ddr@19090000 {
+            compatible = "qcom,bwprof";
+            #address-cells = <1>;
+            #size-cells = <1>;
+            qcom,bus-width = <16>;
+            ranges;
+            reg = <0x190BA050 0x10>;
+            reg-names = "mem-freq";
+
+            bwprof_0: qcom,bwprof0@19092000 {
+                    compatible = "qcom,bwprof-mon";
+                    reg = <0x19092000 0x1000>, <0x1A663000 0x1000>;
+                    reg-names = "base", "llcc-reg";
+                    client = "total";
+            };
+
+            bwprof_1: qcom,bwprof1@19093000 {
+                    compatible = "qcom,bwprof-mon";
+                    reg = <0x19093000 0x1000>, <0x1A664000 0x1000>;
+                    reg-names = "base", "llcc-reg";
+                    client = "cpu";
+            };
+
+            bwprof_2: qcom,bwprof2@19094000 {
+                    compatible = "qcom,bwprof-mon";
+                    reg = <0x19094000 0x1000>, <0x1A665000 0x1000>;
+                    reg-names = "base", "llcc-reg";
+                    client = "gpu";
+            };
+
+    };

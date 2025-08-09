@@ -1,0 +1,38 @@
+Qualcomm Technologies, Inc. SDExpress power control driver for SDX devices.
+
+Required properties:
+- compatible : "qcom,msm-sdexpress".
+- <supply-name>-supply: phandle to the regulator device tree node
+			Required "supply-name" are "vdd1" and "vdd2".
+- sdexpress-gpios: sdexpress card detect gpio for card presence/absence.
+- clkreq-gpios: PCI CLKREQ line gpio, to know its status.
+- qcom,pcie-nvme-instance: The pcie instance number for nvme.
+
+Optional properties:
+In the following, <supply> can be vdd1 or vdd2.
+- qcom,<supply>-always-on - specifies whether supply should be kept "on" always.
+- qcom,<supply>-lpm_sup - specifies whether supply can be kept in low power mode
+			(lpm).
+- qcom,<supply>-voltage_level - specifies voltage levels for supply. Should be
+				specified in pairs (min, max), units uV.
+- qcom,<supply>-current_level - specifies load levels for supply in lpm or
+				high power mode (hpm). Should be specified in
+				pairs (lpm, hpm), units uA.
+
+Examples:
+
+	msm_sdexpress: qcom,msm-sdexpress {
+		compatible = "qcom,msm-sdexpress";
+		qcom,pcie-nvme-instance = <2>;
+
+		vdd1-supply = <&vreg_sdex_vdd1>;
+		qcom,vdd1-voltage-level = <2950000 2950000>;
+		qcom,vdd1-current-level = <0 800000>;
+
+		vdd2-supply = <&vreg_sdex_vdd2>;
+		qcom,vdd2-voltage-level = <1800000 1800000>;
+		qcom,vdd2-current-level = <0 10000>;
+
+		sdexpress-gpios = <&pm8550_gpios 12 0>;
+		clkreq-gpios = <&tlmm 56 0>;
+	};

@@ -1,0 +1,12 @@
+/dts-v1/;
+
+#include "parrotp.dtsi"
+#include "parrot-wcn3990.dtsi"
+#include "parrotp-idp-wcn3990.dtsi"
+#include "parrot-idp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. ParrotP IDP + WCN3990";
+	compatible = "qcom,parrotp-idp", "qcom,parrotp", "qcom,idp";
+	qcom,board-id = <34 1>;
+};

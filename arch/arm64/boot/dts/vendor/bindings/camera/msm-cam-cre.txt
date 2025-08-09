@@ -1,0 +1,163 @@
+* Qualcomm Technologies, Inc. MSM Camera CRE
+
+The cre device node has properties defined to hint the driver
+about the number of CRE nodes available during the
+probe sequence. Each node has multiple properties defined
+for interrupts, clocks and regulators.
+
+=======================
+Required Node Structure
+=======================
+CRE root interface node takes care of the handling account for number
+of CRE devices present on the hardware.
+
+- compatible
+  Usage: required
+  Value type: <string>
+  Definition: Should be "qcom,cam-cre".
+
+- compat-hw-name
+  Usage: required
+  Value type: <string>
+  Definition: Should be "qcom,cre".
+
+- num-cre
+  Usage: required
+  Value type: <u32>
+  Definition: Number of supported CRE HW blocks.
+
+Example:
+	qcom,cam-cre {
+		compatible = "qcom,cam-cre";
+		compat-hw-name = "qcom,cre";
+		num-cre = <2>;
+		status = "ok";
+	};
+
+=======================
+Required Node Structure
+=======================
+CRE Node provides interface for Image Control Processor driver
+about the CRE register map, interrupt map, clocks, regulators.
+
+- cell-index
+  Usage: required
+  Value type: <u32>
+  Definition: Node instance number.
+
+- compatible
+  Usage: required
+  Value type: <string>
+  Definition: Should be "qcom,cre".
+
+- reg-names
+  Usage: optional
+  Value type: <string>
+  Definition: Name of the register resources.
+
+- reg
+  Usage: optional
+  Value type: <u32>
+  Definition: Register values.
+
+- reg-cam-base
+  Usage: optional
+  Value type: <u32>
+  Definition: Register values.
+
+- interrupt-names
+  Usage: optional
+  Value type: <string>
+  Definition: Name of the interrupt.
+
+- interrupts
+  Usage: optional
+  Value type: <u32>
+  Definition: Interrupt associated with CRE HW.
+
+- regulator-names
+  Usage: required
+  Value type: <string>
+  Definition: Name of the regulator resources for CRE HW.
+
+- camss-supply
+  Usage: required
+  Value type: <phandle>
+  Definition: Regulator reference corresponding to the names listed
+              in "regulator-names".
+
+- clock-names
+  Usage: required
+  Value type: <string>
+  Definition: List of clock names required for CDM HW.
+
+- src-clock-name
+  Usage: required
+  Value type: <string>
+  Definition: Source clock name.
+
+- clock-control-debugfs
+  Usage: optional
+  Value type: <string>
+  Definition: Enable/Disable clk rate control.
+
+- clocks
+  Usage: required
+  Value type: <phandle>
+  Definition: List of clocks used for CDM HW.
+
+- clock-cntl-level
+  Usage: required
+  Value type: <string>
+  Definition: List of strings corresponds clock-rates levels.
+  Supported strings: lowsvs, svs, svs_l1, nominal, turbo.
+
+- clock-rates
+  Usage: required
+  Value type: <u32>
+  Definition: List of clocks rates.
+
+Examples:
+qcom,cam-cre {
+	compatible = "qcom,cam-cre";
+	compat-hw-name = "qcom,cre";
+	num-cre = <1>;
+	status = "ok";
+};
+
+cre: qcom,cre@ac00000 {
+	cell-index = <0>;
+	compatible = "qcom,cre";
+	reg =
+		<0xFA000 0x400>,
+		<0xFA400 0xB0>,
+		<0xFAB00 0x300>;
+	reg-names =
+		"cre_top",
+		"cre_bus_rd",
+		"cre_bus_wr";
+	reg-cam-base = <0xFA000 0xFA400 0xFAB00>;
+	interrupts = <GIC_SPI 463 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "cre";
+	regulator-names = "camss-vdd";
+	camss-vdd-supply = <&gcc_camss_top_gdsc>;
+	clock-names =
+		"cre_ahb_clk",
+		"cre_clk_src",
+		"cre_clk";
+	clocks =
+		<&gcc GCC_CAMSS_CRE_AHB_CLK>,
+		<&gcc GCC_CAMSS_CRE_CLK_SRC>,
+		<&gcc GCC_CAMSS_CRE_CLK>;
+
+	clock-rates =
+		<80000000 30000000 30000000>,
+		<80000000 41000000 41000000>,
+		<80000000 46000000 46000000>,
+		<80000000 60000000 60000000>,
+		<80000000 70000000 70000000>;
+
+	clock-cntl-level = "lowsvs", "maxsvs", "svs", "nom", "turbo";
+	src-clock-name = "cre_clk_src";
+	status = "ok";
+};

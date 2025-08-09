@@ -1,0 +1,18 @@
+/dts-v1/;
+/plugin/;
+
+#include "waipio-cdp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Waipio CDP with XR";
+	compatible = "qcom,waipio-cdp", "qcom,waipio", "qcom,cdp";
+	qcom,msm-id = <457 0x10000>;
+	qcom,board-id = <0x10001 3>;
+};
+
+&soc {
+};
+
+&pcie1 {
+	status = "disabled";
+};

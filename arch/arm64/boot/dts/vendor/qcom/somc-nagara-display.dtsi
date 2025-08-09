@@ -1,0 +1,319 @@
+&soc {
+	dsi_panel_oled_ts_pwr_supply: dsi_panel_oled_ts_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vci";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ts_io";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+
+		qcom,panel-supply-entry@3 {
+			reg = <3>;
+			qcom,supply-name = "ts_vddh";
+			qcom,supply-min-voltage = <3296000>;
+			qcom,supply-max-voltage = <3296000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+
+		qcom,panel-supply-entry@4 {
+			reg = <4>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+		};
+
+		qcom,panel-supply-entry@5 {
+			reg = <5>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <5200000>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+	};
+};
+
+&tlmm {
+	somc_vddr_en_active: somc_vddr_en_active {
+		mux {
+			pin = "gpio19";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio19";
+			driver-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_vddr_en_suspend: somc_vddr_en_suspend {
+		mux {
+			pin = "gpio19";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio19";
+			driver-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_sde_dsi_active: somc_sde_dsi_active {
+		mux {
+			pins = "gpio18";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_sde_dsi_suspend: somc_sde_dsi_suspend {
+		mux {
+			pins = "gpio18";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	somc_ts_int_active: somc_ts_int_active {
+		mux {
+			pin = "gpio21";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio21";
+			driver-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
+	somc_ts_int_suspend: somc_ts_int_suspend {
+		mux {
+			pin = "gpio21";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio21";
+			driver-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+&sde_dsi {
+	compatible = "somc,dsi-display";
+	label = "primary";
+
+	qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+
+	clocks = <&mdss_dsi_phy0 0>,
+		 <&mdss_dsi_phy0 1>,
+		 <&mdss_dsi_phy1 2>,
+		 <&mdss_dsi_phy1 3>,
+		 <&clock_dispcc DISP_CC_MDSS_MDP_CLK>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+		      "pll_byte_clk1", "pll_dsi_clk1",
+		      "mdp_core_clk";
+
+	pinctrl-names = "panel_active", "panel_suspend",
+			"somc_ts_int_active", "somc_ts_int_suspend";
+	pinctrl-0 = <&somc_sde_dsi_active &sde_te_active &somc_vddr_en_active>;
+	pinctrl-1 = <&somc_sde_dsi_suspend &sde_te_suspend &somc_vddr_en_suspend>;
+	pinctrl-2 = <&somc_ts_int_active>;
+	pinctrl-3 = <&somc_ts_int_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 86 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&pm8350c_l12>;
+	vci-supply = <&pm8350c_l13>;
+	ts_io-supply = <&pm8350c_l2>;
+	ts_vddh-supply = <&pm8350c_l3>;
+	lab-supply = <&ab_vreg>;
+	ibb-supply = <&ibb_vreg>;
+	/delete-property/vdd-supply;
+	/delete-property/avdd-supply;
+
+	qcom,mdp = <&mdss_mdp>;
+};
+
+&ab_vreg {
+	qcom,aod-pd-control;
+};
+
+&ibb_vreg {
+	qcom,aod-pd-control;
+};
+
+&display_panel_avdd {
+	status = "disabled";
+};
+
+&sde_dsi1 {
+	status = "disabled";
+};
+
+&mdss_mdp {
+	connectors = <&sde_rscc &sde_wb &sde_dp &sde_dsi>;
+};
+
+&dsi_r66451_amoled_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_video {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_sync_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_video {
+	status = "disabled";
+};
+
+&dsi_sharp_1080_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_qsync_wqhd_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_qsync_wqhd_video {
+	status = "disabled";
+};
+
+&dsi_sharp_qhd_plus_dsc_cmd {
+	status = "disabled";
+};
+
+&dsi_nt35695b_truly_fhd_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_nt35597_truly_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_nt35597_truly_video {
+	status = "disabled";
+};
+
+&dsi_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_vid {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_10b_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_vid {
+	status = "disabled";
+};
+
+&dsi_sim_vdc_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_vdc_vid {
+	status = "disabled";
+};
+
+&dsi_dual_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_sec_hd_cmd {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_cmd_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_144hz_video_cphy {
+	status = "disabled";
+};
+
+&dsi_r66451_amoled_120hz_cmd_cphy {
+	status = "disabled";
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&sde_dp {
+	qcom,aux-en-gpio = <&tlmm 50 0>;
+	qcom,aux-sel-gpio = <&tlmm 51 0>;
+	qcom,dp-gpio-aux-switch;
+};

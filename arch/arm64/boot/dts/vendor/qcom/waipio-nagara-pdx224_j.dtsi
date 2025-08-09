@@ -1,0 +1,74 @@
+#include "waipio-nagara-pdx224_common.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	/* If variant specific default setting is needed,
+	fill pinctrl-2 value in <variant>.dtsi */
+	pinctrl-2 = <&sm_gpio_84 &sm_gpio_121 &sm_gpio_122 &sm_gpio_123>;
+};
+
+/* GPIO_84 : FM_INT_N */
+&sm_gpio_84 {
+	mux {
+		pins = "gpio84";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio84";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_121 : FM_I2S_SCK */
+&sm_gpio_121 {
+	mux {
+		pins = "gpio121";
+		function = "mi2s2_sck";
+	};
+
+	config {
+		pins = "gpio121";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_122 : FM_I2S_DATA0 */
+&sm_gpio_122 {
+	mux {
+		pins = "gpio122";
+		function = "mi2s2_data0";
+	};
+
+	config {
+		pins = "gpio122";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_123 : FM_I2S_WS */
+&sm_gpio_123 {
+	mux {
+		pins = "gpio123";
+		function = "mi2s2_ws";
+	};
+
+	config {
+		pins = "gpio123";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};

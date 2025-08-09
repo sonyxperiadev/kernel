@@ -1,0 +1,10 @@
+NORDIC-SPICONTROLLER provides a way to configure nordic spi driver.
+
+Required properties:
+- compatible : should be "nordic,spicontroller"
+
+Optional properties:
+Example:
+	nordic {
+		compatible = "nordic,spicontroller";
+	};

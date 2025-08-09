@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-parrot.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interconnect/qcom,parrot.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "waipio-audio.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot SoC";
+	compatible = "qcom,parrot";
+	qcom,msm-id = <537 0x10000>;
+	qcom,board-id = <0 0>, <0 0x600>;
+};

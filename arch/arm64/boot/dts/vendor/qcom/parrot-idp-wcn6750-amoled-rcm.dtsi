@@ -1,0 +1,43 @@
+#include "parrot-idp.dtsi"
+
+&soc {
+};
+
+&qupv3_se9_i2c {
+	status = "disabled";
+};
+
+&qupv3_se9_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	qcom,touch-active = "goodix,gt9916S";
+
+	goodix-berlin@0 {
+		compatible = "goodix,gt9916S";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+
+		goodix,avdd-name = "avdd";
+		avdd-supply = <&L28B>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <65 0x2008>;
+		goodix,reset-gpio = <&tlmm 64 0x00>;
+		goodix,irq-gpio = <&tlmm 65 0x2008>;
+		goodix,irq-flags = <2>;
+		goodix,panel-max-x = <1080>;
+		goodix,panel-max-y = <2400>;
+		goodix,panel-max-w = <255>;
+		goodix,panel-max-p = <4096>;
+		goodix,firmware-name = "goodix_firmware_spi.bin";
+		goodix,config-name = "goodix_cfg_group_spi.bin";
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
+		pinctrl-0 = <&ts_spi_active>;
+		pinctrl-1 = <&ts_spi_int_suspend &ts_spi_reset_suspend>;
+		pinctrl-2 = <&ts_spi_release>;
+
+		qcom,touch-environment = "pvm";
+	};
+};

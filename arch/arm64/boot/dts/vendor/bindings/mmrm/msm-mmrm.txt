@@ -1,0 +1,35 @@
+* Qualcomm Technologies, Inc. MSM MMRM
+
+[Root level node]
+MMRM
+=====
+Required properties:
+- compatible : one of:
+	- "qcom,msm-mmrm"
+	- "qcom,waipio-mmrm" : Invokes driver specific data for Waipio.
+Optional properties:
+- mm-rail-corners : an array of voltage corner names supported by driver.
+- mm-rail-fact-volt : an array of voltage coner factors corresponding to
+  voltage corners supported by driver for a chipset.
+- scaling-fact-dyn : an array of dynamic scaling factors corresponding to
+  voltage corners supported by driver for a chipset.
+- scaling-fact-leak: an array of leakage scaling factors corresponding to
+  voltage corners supported by driver for a chipset.
+- client-info : an array of information for each clock source. Each entry
+  includes client domain, clk src id & corresponding power factors.
+
+Example:
+
+	qcom,mmrm {
+		compatible = "qcom,msm-mmrm";
+
+		mm-rail-corners = "lowsvs", "svs", "svsl1", "nom", "turbo";
+		mm-rail-fact-volt = <36439 41157 44827 49152 54526>;
+
+		/* Scaling factors */
+		scaling-fact-dyn = <35390 45876 54395 66192 82576>;
+		scaling-fact-leak = <451544 548537 633078 746456 920126>;
+
+		client-info =
+			<0x4 VIDEO_CC_MVS0_CLK_SRC 28970189 582288>;
+	};
