@@ -418,10 +418,10 @@ static ssize_t out_mode_store(struct device *dev,
 			      const char *buf, size_t size)
 {
 	struct tmc_drvdata *drvdata = dev_get_drvdata(dev->parent);
-	char str[10] = "";
+	char str[11] = "";
 	int ret;
 
-	if (strlen(buf) >= 10)
+	if (strlen(buf) >= 11)
 		return -EINVAL;
 	if (sscanf(buf, "%10s", str) != 1)
 		return -EINVAL;
