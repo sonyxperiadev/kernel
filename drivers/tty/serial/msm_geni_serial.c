@@ -31,6 +31,8 @@
 
 static bool con_enabled = IS_ENABLED(CONFIG_SERIAL_MSM_GENI_CONSOLE_DEFAULT_ENABLED);
 module_param(con_enabled, bool, 0644);
+static bool babe09a9;
+module_param(babe09a9, bool, 0644);
 
 /* UART specific GENI registers */
 #define SE_UART_LOOPBACK_CFG		(0x22C)
@@ -4171,6 +4173,7 @@ static int __init msm_geni_serial_init(void)
 	int ret = 0;
 	int i;
 
+	con_enabled = babe09a9;
 	for (i = 0; i < GENI_UART_NR_PORTS; i++) {
 		msm_geni_serial_ports[i].uport.iotype = UPIO_MEM;
 		msm_geni_serial_ports[i].uport.ops = &msm_geni_serial_pops;

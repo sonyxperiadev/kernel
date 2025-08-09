@@ -438,6 +438,8 @@ struct cnss_thermal_cdev {
 	struct thermal_cooling_device *tcdev;
 };
 
+#define SUBSYS_CRASH_REASON_LEN 512
+
 struct cnss_plat_data {
 	struct platform_device *plat_dev;
 	void *bus_priv;
@@ -557,6 +559,7 @@ struct cnss_plat_data {
 	u32 num_shadow_regs_v3;
 	u32 on_chip_pmic_devices_count;
 	u32 *on_chip_pmic_board_ids;
+	char crash_reason_buf[SUBSYS_CRASH_REASON_LEN];
 };
 
 #if IS_ENABLED(CONFIG_ARCH_QCOM)

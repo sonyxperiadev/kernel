@@ -25,7 +25,7 @@
 #define QMP_VERSION	0x1
 #define QMP_FEATURES	0x0
 #define QMP_TOUT_MS	5000
-#define QMP_TX_TOUT_MS	1000
+#define QMP_TX_TOUT_MS	2000
 #define QMP_SMEM_ID	629
 
 #define QMP_MBOX_LINK_DOWN		0xFFFF0000

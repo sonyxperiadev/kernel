@@ -672,4 +672,6 @@ static inline void pwmchip_sysfs_unexport(struct pwm_chip *chip)
 }
 #endif /* CONFIG_PWM_SYSFS */
 
+int pwm_rgbsync_lut(struct pwm_device *pwm, bool sync);
+
 #endif /* __LINUX_PWM_H */

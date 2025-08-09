@@ -527,8 +527,12 @@ static int qpnp_amoled_hw_init(struct qpnp_amoled *chip)
 		return rc;
 	}
 
-	if (is_phase_ctrl_supported(&chip->ibb) && chip->ibb.single_phase) {
-		val = FORCE_SINGLE_PHASE_BIT;
+	if (is_phase_ctrl_supported(&chip->ibb)) {
+		if (chip->ibb.single_phase) {
+			val = FORCE_SINGLE_PHASE_BIT;
+                } else {
+			val = AUTO_DUAL_PHASE_BIT;
+		}
 
 		rc = qpnp_amoled_masked_write(chip, IBB_DUAL_PHASE_CTL(chip),
 			IBB_DUAL_PHASE_CTL_MASK, val);

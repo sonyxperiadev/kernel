@@ -6,6 +6,8 @@
  *  Copyright (c) 2012 Hans de Goede <hdegoede@redhat.com>
  *  Copyright (c) 2018 LG Electronics, Inc.
  *  Copyright (c) 2018 Richwave Technology Co.Ltd
+ *  Copyright (c) 2020 Qualcomm Technolgy, Inc.
+ *  Copyright (c) 2021 Sharp Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +26,7 @@
 /* driver definitions */
 /* #define _RDSDEBUG */
 #define DRIVER_NAME "rtc6226-fmtuner"
+#define fix_bandlimit
 
 /* kernel includes */
 #include <linux/kernel.h>
@@ -53,7 +56,7 @@
 
 #define DEBUG
 #undef FMDBG
-#define FMDBG(fmt, args...) pr_debug("rtc6226: " fmt, ##args)
+#define FMDBG(fmt, args...) pr_err("rtc6226: " fmt, ##args)
 
 #undef FMDERR
 #define FMDERR(fmt, args...) pr_err("rtc6226: " fmt, ##args)
@@ -201,6 +204,9 @@
 #define START_SCAN 1
 #define TUNE_TIMEOUT_MSEC 3000
 #define SEEK_TIMEOUT_MSEC 30000
+/* Extend wait time for 50KHZ spacing */
+#define WAIT_TIMEOUT_MSEC 15000
+#define QUERY_DELAY_MSEC 2000
 
 #define RTC6226_MIN_SRCH_MODE 0x00
 #define RTC6226_MAX_SRCH_MODE 0x02
@@ -506,12 +512,14 @@ struct rtc6226_device {
 	struct workqueue_struct *wqueue;
 	struct workqueue_struct *wqueue_scan;
 	struct workqueue_struct *wqueue_rds;
+	struct workqueue_struct *wqueue_st;
 	struct work_struct rds_worker;
 	struct rtc6226_af_info af_info1;
 	struct rtc6226_af_info af_info2;
 
 	struct delayed_work work;
 	struct delayed_work work_scan;
+	struct delayed_work work_st;
 
 	wait_queue_head_t event_queue;
 	u8 write_buf[WRITE_REG_NUM];
@@ -653,7 +661,8 @@ enum v4l2_cid_private_rtc6226_t {
 	V4L2_CID_PRIVATE_RTC6226_RMSSIFIRSTSTAGE,
 	V4L2_CID_PRIVATE_RTC6226_RXREPEATCOUNT,
 	V4L2_CID_PRIVATE_RTC6226_RSSI_TH, /* 0x800003E */
-	V4L2_CID_PRIVATE_RTC6226_AF_JUMP_RSSI_TH /* 0x800003F */
+	V4L2_CID_PRIVATE_RTC6226_AF_JUMP_RSSI_TH, /* 0x800003F */
+	V4L2_CID_PRIVATE_RTC6226_GET_DEVICEID /* 0x8000040 */
 };
 
 enum FMBAND {FMBAND_87_108_MHZ, FMBAND_76_108_MHZ, FMBAND_76_91_MHZ,
@@ -672,6 +681,7 @@ extern const struct v4l2_ctrl_ops rtc6226_ctrl_ops;
 extern struct tasklet_struct my_tasklet;
 extern int rtc6226_wq_flag;
 extern wait_queue_head_t rtc6226_wq;
+extern int sf_bl_flag;
 extern int rtc6226_get_all_registers(struct rtc6226_device *radio);
 extern int rtc6226_get_register(struct rtc6226_device *radio, int regnr);
 extern int rtc6226_set_register(struct rtc6226_device *radio, int regnr);

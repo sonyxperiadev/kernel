@@ -170,6 +170,37 @@ static int cpufreq_cdev_hp_online(unsigned int online_cpu)
 	return 0;
 }
 
+static bool cpufreq_cdev_check_to_defer_probe(struct platform_device *pdev)
+{
+	struct device_node *cpu_phandle;
+	struct cpufreq_policy *policy;
+	struct of_phandle_iterator it;
+	struct device *cpu_dev;
+	int cpu;
+
+	of_phandle_iterator_init(&it, pdev->dev.of_node, "qcom,cpus", NULL, 0);
+
+	while (of_phandle_iterator_next(&it) == 0) {
+		cpu_phandle = it.node;
+
+		for_each_possible_cpu(cpu) {
+			cpu_dev = get_cpu_device(cpu);
+			if (cpu_dev && cpu_dev->of_node == cpu_phandle) {
+				policy = cpufreq_cpu_get(cpu);
+				if (!policy) {
+					pr_debug("No policy for CPU:%d. Defer.\n", cpu);
+					return true;
+				}
+
+				cpufreq_cpu_put(policy);
+				break;
+			}
+		}
+	}
+
+	return false;
+}
+
 static int cpufreq_cdev_probe(struct platform_device *pdev)
 {
 	struct cpufreq_cdev_device *cdev_data;
@@ -178,6 +209,10 @@ static int cpufreq_cdev_probe(struct platform_device *pdev)
 	struct device *cpu_dev;
 	int cpu = 0, ret = 0;
 	struct of_phandle_iterator it;
+
+	/* Requests a probe retry if needed. */
+	if (cpufreq_cdev_check_to_defer_probe(pdev))
+		return -EPROBE_DEFER;
 
 	mutex_lock(&qti_cpufreq_cdev_lock);
 	of_phandle_iterator_init(&it, np, "qcom,cpus", NULL, 0);

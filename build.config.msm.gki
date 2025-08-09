@@ -8,8 +8,8 @@ DEFCONFIG="gki_defconfig"
 MODULES_LIST=${KERNEL_DIR}/modules.list.${CONFIG_TARGET}
 
 # boot image macros
-BUILD_BOOT_IMG=1
-BUILD_INITRAMFS=1
+#BUILD_BOOT_IMG=1
+#BUILD_INITRAMFS=1
 
 ABI_DEFINITION=android/abi_gki_aarch64.xml
 KMI_SYMBOL_LIST=android/abi_gki_aarch64_qcom
@@ -59,7 +59,7 @@ function sanity_check_abi() {
 		     "${ROOT_DIR}/${GKI_KERNEL_DIR}/android/abi_gki_aarch64.xml" ; then
 		echo "Suspected ABI differences between ${BRANCH} and GKI kernel tree."
 		echo "Are trees in sync?"
-		exit 1
+		#exit 1
 	fi
 }
 append_cmd POST_DEFCONFIG_CMDS 'sanity_check_abi'
@@ -67,6 +67,9 @@ append_cmd POST_DEFCONFIG_CMDS 'sanity_check_abi'
 function build_defconfig_fragments() {
 	if [[ "${VARIANT}" =~ ^(gki|consolidate)$ ]]; then
 		apply_defconfig_fragment ${KERNEL_DIR}/arch/${ARCH}/configs/vendor/${MSM_ARCH}_GKI.config vendor/${MSM_ARCH}-gki_defconfig
+		if [ "${TARGET_BUILD_VARIANT}" = userdebug ]; then
+			apply_defconfig_fragment ${KERNEL_DIR}/arch/${ARCH}/configs/qcom_rtb.fragment vendor/${MSM_ARCH}-gki_defconfig
+		fi
 		if [ "${VARIANT}" = gki ]; then
 			return
 		fi

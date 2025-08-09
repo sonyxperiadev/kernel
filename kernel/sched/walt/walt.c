@@ -56,9 +56,14 @@ static bool walt_ktime_suspended;
 static bool use_cycle_counter;
 static DEFINE_MUTEX(cluster_lock);
 static u64 walt_load_reported_window;
+static DEFINE_PER_CPU(atomic64_t, cycles) = ATOMIC64_INIT(0);
+static DEFINE_PER_CPU(atomic64_t, last_cc_update) = ATOMIC64_INIT(0);
+static DEFINE_PER_CPU(atomic64_t, prev_group_runnable_sum) = ATOMIC64_INIT(0);
 
 static struct irq_work walt_cpufreq_irq_work;
 struct irq_work walt_migration_irq_work;
+static DEFINE_RAW_SPINLOCK(speedchange_cpumask_lock);
+static cpumask_t speedchange_cpumask = CPU_MASK_NONE;
 unsigned int walt_rotation_enabled;
 cpumask_t asym_cap_sibling_cpus = CPU_MASK_NONE;
 
@@ -123,6 +128,21 @@ static struct syscore_ops walt_syscore_ops = {
 	.resume		= walt_resume,
 	.suspend	= walt_suspend
 };
+
+static inline void
+walt_commit_prev_group_run_sum(struct rq *rq)
+{
+	u64 val;
+	val = ((struct walt_rq *)rq->android_vendor_data1)->grp_time.prev_runnable_sum;
+	val = (val << 32) | ((struct walt_rq *)rq->android_vendor_data1)->prev_runnable_sum;
+	atomic64_set(&per_cpu(prev_group_runnable_sum, cpu_of(rq)), val);
+}
+
+u64
+walt_get_prev_group_run_sum(struct rq *rq)
+{
+	return (u64) atomic64_read(&per_cpu(prev_group_runnable_sum, cpu_of(rq)));
+}
 
 static inline void acquire_rq_locks_irqsave(const cpumask_t *cpus,
 				     unsigned long *flags)
@@ -399,20 +419,19 @@ update_window_start(struct rq *rq, u64 wallclock, int event)
 	return old_window_start;
 }
 
-/*
- * Assumes rq_lock is held and wallclock was recorded in the same critical
- * section as this function's invocation.
- */
+#define THRESH_CC_UPDATE (2 * NSEC_PER_USEC)
 static inline u64 read_cycle_counter(int cpu, u64 wallclock)
 {
-	struct walt_rq *wrq = (struct walt_rq *) cpu_rq(cpu)->android_vendor_data1;
+	u64 delta;
 
-	if (wrq->last_cc_update != wallclock) {
-		wrq->cycles = qcom_cpufreq_get_cpu_cycle_counter(cpu);
-		wrq->last_cc_update = wallclock;
+	delta = wallclock - atomic64_read(&per_cpu(last_cc_update, cpu));
+	if (delta > THRESH_CC_UPDATE) {
+		atomic64_set(&per_cpu(cycles, cpu),
+				qcom_cpufreq_get_cpu_cycle_counter(cpu));
+		atomic64_set(&per_cpu(last_cc_update, cpu), wallclock);
 	}
 
-	return wrq->cycles;
+	return atomic64_read(&per_cpu(cycles, cpu));
 }
 
 static void update_task_cpu_cycles(struct task_struct *p, int cpu,
@@ -694,6 +713,8 @@ static inline void account_load_subtractions(struct rq *rq)
 		ls[i].subs = 0;
 		ls[i].new_subs = 0;
 	}
+
+	walt_commit_prev_group_run_sum(rq);
 
 	if ((s64)wrq->prev_runnable_sum < 0) {
 		WALT_BUG(NULL, "wrq->prev_runnable_sum=%llu < 0",
@@ -1044,10 +1065,22 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 
 	migrate_top_tasks(p, src_rq, dest_rq);
 
+	walt_commit_prev_group_run_sum(src_rq);
+	walt_commit_prev_group_run_sum(dest_rq);
+
 	if (!same_freq_domain(new_cpu, task_cpu(p))) {
-		src_wrq->notif_pending = true;
-		dest_wrq->notif_pending = true;
-		walt_irq_work_queue(&walt_migration_irq_work);
+		/*
+		 * If walt_cpufreq_irq_work has been recently queued
+		 * and is in a pending state, do not push a migration
+		 * job, because all magic will have been done anyway.
+		 */
+		if (!(atomic_read(&walt_cpufreq_irq_work.flags) & IRQ_WORK_PENDING)) {
+			raw_spin_lock(&speedchange_cpumask_lock);
+			cpumask_set_cpu(task_cpu(p), &speedchange_cpumask);
+			cpumask_set_cpu(new_cpu, &speedchange_cpumask);
+			raw_spin_unlock(&speedchange_cpumask_lock);
+			walt_irq_work_queue(&walt_migration_irq_work);
+		}
 	}
 
 	if (is_ed_enabled()) {
@@ -1767,7 +1800,7 @@ static void update_cpu_busy_time(struct task_struct *p, struct rq *rq,
 		 */
 		if (mark_start > window_start) {
 			*curr_runnable_sum = scale_exec_time(irqtime, rq);
-			return;
+			goto done;
 		}
 
 		/*
@@ -1788,6 +1821,8 @@ static void update_cpu_busy_time(struct task_struct *p, struct rq *rq,
 	}
 
 done:
+	walt_commit_prev_group_run_sum(rq);
+
 	if (!is_idle_task(p))
 		update_top_tasks(p, rq, old_curr_window,
 					new_window, full_window);
@@ -1859,7 +1894,7 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	u32 *hist = &wts->sum_history[0];
 	int ridx, widx;
 	u32 max = 0, avg, demand, pred_demand;
-	u64 sum = 0;
+	u64 sum = 0, wma = 0, ewma = 0;
 	u16 demand_scaled, pred_demand_scaled;
 	struct walt_rq *wrq = (struct walt_rq *) rq->android_vendor_data1;
 
@@ -1872,6 +1907,9 @@ static void update_history(struct rq *rq, struct task_struct *p,
 	ridx = widx - samples;
 	for (; ridx >= 0; --widx, --ridx) {
 		hist[widx] = hist[ridx];
+
+		wma += hist[widx] * (sched_ravg_hist_size - widx);
+		ewma += hist[widx] << (sched_ravg_hist_size - widx - 1);
 		sum += hist[widx];
 		if (hist[widx] > max)
 			max = hist[widx];
@@ -1879,6 +1917,9 @@ static void update_history(struct rq *rq, struct task_struct *p,
 
 	for (widx = 0; widx < samples && widx < sched_ravg_hist_size; widx++) {
 		hist[widx] = runtime;
+
+		wma += hist[widx] * (sched_ravg_hist_size - widx);
+		ewma += hist[widx] << (sched_ravg_hist_size - widx - 1);
 		sum += hist[widx];
 		if (hist[widx] > max)
 			max = hist[widx];
@@ -1890,6 +1931,31 @@ static void update_history(struct rq *rq, struct task_struct *p,
 		demand = runtime;
 	} else if (sysctl_sched_window_stats_policy == WINDOW_STATS_MAX) {
 		demand = max;
+	} else if (sysctl_sched_window_stats_policy == WINDOW_STATS_WMA) {
+		/*
+		 * WMA stands for weighted moving average. It helps to
+		 * smooth load curve and react faster while ramping down
+		 * comparing with basic average policy. When ramping up
+		 * it prevents from a spurious big "recent" sample that
+		 * may lead to overshooting if it is bigger then AVG of
+		 * history demand.
+		 *
+		 * See below example (4 HS):
+		 *
+		 * WMA = (P0 * 4 + P1 * 3 + P2 * 2 + P3 * 1) / (4 + 3 + 2 + 1)
+		 *
+		 * This is done for power saving. Means when load disappears
+		 * or becomes low, this algorithm caches a real bottom load
+		 * faster (because of weights) then taking AVG values.
+		 */
+		wma = div64_u64(wma, (sched_ravg_hist_size * (sched_ravg_hist_size + 1)) / 2);
+		demand = (u32) wma;
+	} else if (sysctl_sched_window_stats_policy == WINDOW_STATS_EWMA) {
+		/*
+		 * EWMA is an exponential version of the WMA algorithm.
+		 */
+		ewma = div64_u64(ewma, (1 << sched_ravg_hist_size) - 1);
+		demand = (u32) ewma;
 	} else {
 		avg = div64_u64(sum, sched_ravg_hist_size);
 		if (sysctl_sched_window_stats_policy == WINDOW_STATS_AVG)
@@ -2128,6 +2194,26 @@ update_task_rq_cpu_cycles(struct task_struct *p, struct rq *rq, int event,
 					 p->pid, rq->cpu, wallclock, wallclock,
 					 wts->mark_start, wts->mark_start, event, irqtime);
 			WALT_PANIC((s64)time_delta < 0);
+		}
+
+		/*
+		 * It can happen when a time between two updates
+		 * (for example TASK_UPDATE) is very short. The reason
+		 * is a read_cycle_counter function now can return
+		 * a previous/same CC value if a last read was within
+		 * a THRESH_CC_UPDATE threshold.
+		 *
+		 * In that particular scenario use current CPU OPP
+		 * to scale such task's delta contributions which
+		 * are smaller than THRESH_CC_UPDATE interval.
+		 *
+		 * The aim of using a current frequency is because:
+		 *   - an estimated one can be zero;
+		 *   - we do not want to lose samples due to that.
+		 */
+		if (unlikely(!cycles_delta)) {
+			cycles_delta = sched_cpu_legacy_freq(cpu);
+			time_delta = 1;
 		}
 
 		wrq->task_exec_scale = DIV64_U64_ROUNDUP(cycles_delta *
@@ -3305,6 +3391,7 @@ static void transfer_busy_time(struct rq *rq,
 	wts->curr_window_cpu[cpu] = wts->curr_window;
 	wts->prev_window_cpu[cpu] = wts->prev_window;
 
+	walt_commit_prev_group_run_sum(rq);
 	trace_sched_migration_update_sum(p, migrate_type, rq);
 }
 
@@ -3327,6 +3414,109 @@ u64 get_rtgb_active_time(void)
 		return now - grp->start_ktime_ts;
 
 	return 0;
+}
+
+static inline void
+walt_irq_work_migration(struct irq_work *irq_work)
+{
+	struct walt_sched_cluster *cluster;
+	bool is_asym_migration = false;
+	cpumask_t tmp_mask;
+	u64 total_grp_load = 0, min_cluster_grp_load = 0;
+	int cpu;
+
+	raw_spin_lock(&speedchange_cpumask_lock);
+	tmp_mask = speedchange_cpumask;
+	cpumask_clear(&speedchange_cpumask);
+	raw_spin_unlock(&speedchange_cpumask_lock);
+
+	/*
+	 * walt_irq_work_migration can be run simultaneously
+	 * on different cores. That is why a tmp_mask may become
+	 * empty for one of them. Thus, if there are no CPUs
+	 * to check than we are done.
+	 */
+	if (!cpumask_weight(&tmp_mask))
+		return;
+
+	for_each_sched_cluster(cluster) {
+		u64 aggr_grp_load = 0;
+		u64 wc;
+		cpumask_t cluster_online_cpus;
+		unsigned int num_cpus, i = 1;
+		struct rq *rq;
+		int level;
+
+		level = 0;
+		for_each_cpu(cpu, &cluster->cpus) {
+			if (level == 0)
+				raw_spin_lock(&cpu_rq(cpu)->lock);
+			else
+				raw_spin_lock_nested(&cpu_rq(cpu)->lock, level);
+			level++;
+		}
+
+		wc = walt_ktime_get_ns();
+		raw_spin_lock(&cluster->load_lock);
+
+		for_each_cpu(cpu, &cluster->cpus) {
+			rq = cpu_rq(cpu);
+			if (rq->curr) {
+				walt_update_task_ravg(rq->curr, rq,
+						TASK_UPDATE, wc, 0);
+				account_load_subtractions(rq);
+				aggr_grp_load += ((struct walt_rq *)rq->android_vendor_data1)->grp_time.prev_runnable_sum;
+			}
+
+			if (cpumask_test_cpu(cpu, &asym_cap_sibling_cpus) &&
+				cpumask_test_cpu(cpu, &tmp_mask)) {
+					is_asym_migration = true;
+					cpumask_clear_cpu(cpu, &tmp_mask);
+			}
+		}
+
+		cluster->aggr_grp_load = aggr_grp_load;
+		total_grp_load += aggr_grp_load;
+
+		if (is_min_capacity_cluster(cluster))
+			min_cluster_grp_load = aggr_grp_load;
+		raw_spin_unlock(&cluster->load_lock);
+
+		if (total_grp_load) {
+			if (cpumask_weight(&asym_cap_sibling_cpus)) {
+				u64 big_grp_load =
+					  total_grp_load - min_cluster_grp_load;
+
+				for_each_cpu(cpu, &asym_cap_sibling_cpus)
+					cpu_cluster(cpu)->aggr_grp_load = big_grp_load;
+			}
+			rtgb_active = is_rtgb_active();
+		} else {
+			rtgb_active = false;
+		}
+
+		cpumask_and(&cluster_online_cpus, &cluster->cpus, cpu_online_mask);
+		num_cpus = cpumask_weight(&cluster_online_cpus);
+
+		for_each_cpu(cpu, &cluster->cpus) {
+			int flag = 0;
+
+			if (cpumask_test_cpu(cpu, &tmp_mask))
+				flag |= WALT_CPUFREQ_IC_MIGRATION;
+
+			if (is_asym_migration && cpumask_test_cpu(cpu, &asym_cap_sibling_cpus))
+				flag |= WALT_CPUFREQ_IC_MIGRATION;
+
+			if (i != num_cpus)
+				flag |= WALT_CPUFREQ_CONTINUE;
+
+			cpufreq_update_util(cpu_rq(cpu), flag);
+			i++;
+		}
+
+		for_each_cpu(cpu, &cluster->cpus)
+			raw_spin_unlock(&cpu_rq(cpu)->lock);
+	}
 }
 
 static void walt_init_window_dep(void);
@@ -3373,21 +3563,16 @@ static void walt_update_irqload(struct rq *rq)
  * Runs in hard-irq context. This should ideally run just after the latest
  * window roll-over.
  */
-static void walt_irq_work(struct irq_work *irq_work)
+static void walt_irq_work_roll_over(struct irq_work *irq_work)
 {
 	struct walt_sched_cluster *cluster;
 	struct rq *rq;
 	int cpu;
 	u64 wc;
-	bool is_migration = false, is_asym_migration = false;
 	u64 total_grp_load = 0, min_cluster_grp_load = 0;
 	int level = 0;
 	unsigned long flags;
 	struct walt_rq *wrq;
-
-	/* Am I the window rollover work or the migration work? */
-	if (irq_work == &walt_migration_irq_work)
-		is_migration = true;
 
 	for_each_cpu(cpu, cpu_possible_mask) {
 		if (level == 0)
@@ -3414,11 +3599,6 @@ static void walt_irq_work(struct irq_work *irq_work)
 				aggr_grp_load +=
 					wrq->grp_time.prev_runnable_sum;
 			}
-			if (is_migration && wrq->notif_pending &&
-			    cpumask_test_cpu(cpu, &asym_cap_sibling_cpus)) {
-				is_asym_migration = true;
-				wrq->notif_pending = false;
-			}
 		}
 
 		cluster->aggr_grp_load = aggr_grp_load;
@@ -3442,7 +3622,7 @@ static void walt_irq_work(struct irq_work *irq_work)
 		rtgb_active = false;
 	}
 
-	if (!is_migration && sysctl_sched_user_hint && time_after(jiffies,
+	if (sysctl_sched_user_hint && time_after(jiffies,
 						sched_user_hint_reset_time))
 		sysctl_sched_user_hint = 0;
 
@@ -3454,35 +3634,17 @@ static void walt_irq_work(struct irq_work *irq_work)
 						cpu_online_mask);
 		num_cpus = cpumask_weight(&cluster_online_cpus);
 		for_each_cpu(cpu, &cluster_online_cpus) {
-			int wflag = 0;
-
 			rq = cpu_rq(cpu);
 			wrq = (struct walt_rq *) rq->android_vendor_data1;
 
-			if (is_migration) {
-				if (wrq->notif_pending) {
-					wrq->notif_pending = false;
-
-					wflag |= WALT_CPUFREQ_IC_MIGRATION;
-				}
-			} else {
-				wflag |= WALT_CPUFREQ_ROLLOVER;
-			}
-
-			if (is_asym_migration && cpumask_test_cpu(cpu,
-							&asym_cap_sibling_cpus)) {
-				wflag |= WALT_CPUFREQ_IC_MIGRATION;
-			}
-
 			if (i == num_cpus)
-				waltgov_run_callback(cpu_rq(cpu), wflag);
+				waltgov_run_callback(cpu_rq(cpu), 0);
 			else
-				waltgov_run_callback(cpu_rq(cpu), wflag |
+				waltgov_run_callback(cpu_rq(cpu),
 							WALT_CPUFREQ_CONTINUE);
 			i++;
 
-			if (!is_migration)
-				walt_update_irqload(rq);
+			walt_update_irqload(rq);
 		}
 	}
 
@@ -3497,28 +3659,24 @@ static void walt_irq_work(struct irq_work *irq_work)
 	 * window roll over. Otherwise the CPU counters (prs and crs) are
 	 * not rolled over properly as mark_start > window_start.
 	 */
-	if (!is_migration) {
-		spin_lock_irqsave(&sched_ravg_window_lock, flags);
-		wrq = (struct walt_rq *) this_rq()->android_vendor_data1;
-		if ((sched_ravg_window != new_sched_ravg_window) &&
-		    (wc < wrq->window_start + new_sched_ravg_window)) {
-			sched_ravg_window_change_time = walt_ktime_get_ns();
-			trace_sched_ravg_window_change(sched_ravg_window,
-					new_sched_ravg_window,
-					sched_ravg_window_change_time);
-			sched_ravg_window = new_sched_ravg_window;
-			walt_tunables_fixup();
-		}
-		spin_unlock_irqrestore(&sched_ravg_window_lock, flags);
+	spin_lock_irqsave(&sched_ravg_window_lock, flags);
+
+	wrq = (struct walt_rq *) this_rq()->android_vendor_data1;
+	if ((sched_ravg_window != new_sched_ravg_window) &&
+		(wc < wrq->window_start + new_sched_ravg_window)) {
+		sched_ravg_window_change_time = walt_ktime_get_ns();
+		trace_sched_ravg_window_change(sched_ravg_window,
+				new_sched_ravg_window,
+				sched_ravg_window_change_time);
+		sched_ravg_window = new_sched_ravg_window;
+		walt_tunables_fixup();
 	}
+	spin_unlock_irqrestore(&sched_ravg_window_lock, flags);
 
 	for_each_cpu(cpu, cpu_possible_mask)
 		raw_spin_unlock(&cpu_rq(cpu)->lock);
 
-	if (!is_migration) {
-		wrq = (struct walt_rq *) this_rq()->android_vendor_data1;
-		core_ctl_check(wrq->window_start);
-	}
+	core_ctl_check(wrq->window_start);
 }
 
 void walt_rotation_checkpoint(int nr_big)
@@ -3610,8 +3768,8 @@ static void walt_init_window_dep(void)
 
 static void walt_init_once(void)
 {
-	init_irq_work(&walt_migration_irq_work, walt_irq_work);
-	init_irq_work(&walt_cpufreq_irq_work, walt_irq_work);
+	init_irq_work(&walt_migration_irq_work, walt_irq_work_migration);
+	init_irq_work(&walt_cpufreq_irq_work, walt_irq_work_roll_over);
 	walt_init_window_dep();
 }
 
@@ -3654,8 +3812,6 @@ static void walt_sched_init_rq(struct rq *rq)
 	wrq->curr_table = 0;
 	wrq->prev_top = 0;
 	wrq->curr_top = 0;
-	wrq->last_cc_update = 0;
-	wrq->cycles = 0;
 	for (j = 0; j < NUM_TRACKED_WINDOWS; j++) {
 		memset(&wrq->load_subs[j], 0,
 				sizeof(struct load_subtractions));

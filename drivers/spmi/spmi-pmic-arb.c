@@ -573,6 +573,7 @@ static void pmic_arb_chained_irq(struct irq_desc *desc)
 	/* status based dispatch */
 	bool acc_valid = false;
 	u32 irq_status = 0;
+	u16 ppid;
 
 	chained_irq_enter(chip, desc);
 
@@ -604,6 +605,12 @@ static void pmic_arb_chained_irq(struct irq_desc *desc)
 		for (i = pmic_arb->min_apid; i <= pmic_arb->max_apid; i++) {
 			/* skip if APPS is not irq owner */
 			if (pmic_arb->apid_data[i].irq_ee != pmic_arb->ee)
+				continue;
+			ppid = pmic_arb->apid_data[i].ppid;
+			if (ppid >= PMIC_ARB_MAX_PPID) //validate ppid range
+				continue;
+			apid = pmic_arb->ppid_to_apid[ppid] & (~PMIC_ARB_APID_VALID);
+			if (i != apid) //only read status when apid map to ppid
 				continue;
 
 			irq_status = readl_relaxed(
