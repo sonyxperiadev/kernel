@@ -1,0 +1,12 @@
+prebuilt_etc {
+    name: "init.qti.ufs.rc",
+    src: "init.qti.ufs.rc",
+    vendor: true,
+    sub_dir: "init/hw",
+}
+
+sh_binary {
+    name: "init.qti.ufs.debug.sh",
+    src: "init.qti.ufs.debug.sh",
+    vendor: true,
+}

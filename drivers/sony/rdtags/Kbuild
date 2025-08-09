@@ -1,0 +1,3 @@
+#Rules to build rdtags driver
+
+obj-m := rdtags.o

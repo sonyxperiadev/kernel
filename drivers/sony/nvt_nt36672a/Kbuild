@@ -1,0 +1,8 @@
+MODULE_NAME = nt36xxx_driver
+
+obj-m := $(MODULE_NAME).o
+
+$(MODULE_NAME)-objs := nt36xxx.o
+$(MODULE_NAME)-objs += nt36xxx_fw_update.o
+$(MODULE_NAME)-objs += nt36xxx_ext_proc.o
+$(MODULE_NAME)-objs += nt36xxx_mp_ctrlram.o

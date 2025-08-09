@@ -1,0 +1,7 @@
+#
+# Kernel module make instructions go here.
+#
+obj-m += nxp_sn1x0_i2c.o
+nxp_sn1x0_i2c-objs := common.o common_ese.o i2c_drv.o
+ccflags-$(CONFIG_NFC_ENABLE_G7_COLD_RESET) := -DHW_COLD_RESET
+#ccflags-y := -DDEBUG

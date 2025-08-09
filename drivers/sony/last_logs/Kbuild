@@ -1,0 +1,3 @@
+#Rules to build last_logs driver
+
+obj-m := last_logs.o

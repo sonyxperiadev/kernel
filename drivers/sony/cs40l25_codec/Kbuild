@@ -1,0 +1,17 @@
+# add -Wall to try to catch everything we can.
+EXTRA_CFLAGS += -Wall
+
+ifneq ($(TOP), )
+LOCAL_DIR := $(TOP)/$(subst ../,,$(src))
+else ifneq ($(ANDROID_BUILD_TOP), )
+LOCAL_DIR := $(ANDROID_BUILD_TOP)/$(subst ../,,$(src))
+else
+$(warning "Can't find Android build top")
+endif
+
+KBUILD_EXTRA_SYMBOLS := $(src)/../../../drivers/misc/Module.symvers
+
+cirrus_cs40l2x_codec-objs = cs40l2x.o
+obj-m += cirrus_cs40l2x_codec.o
+ccflags-y := -I $(LOCAL_DIR)/../../../include
+ccflags-y += -I $(src)/../../../include

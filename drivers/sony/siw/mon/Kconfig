@@ -1,0 +1,14 @@
+menu "SiW Touch Monitor"
+	depends on TOUCHSCREEN_SIW
+
+config TOUCHSCREEN_SIWMON
+	tristate "Silicon Works Touch Driver Monitor"
+	depends on TOUCHSCREEN_SIW
+	default y
+	help
+	  If you select this option,
+	  a component which captures the SiW operation traffic such as bus, input
+	  will be build.
+
+endmenu
+

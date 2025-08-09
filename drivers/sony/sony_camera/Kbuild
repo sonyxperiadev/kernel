@@ -1,0 +1,22 @@
+CAMERA_KERNEL_ROOT := $(srctree)/techpack/camera
+SONY_CAMERA_ROOT := $(srctree)/drivers/sony/sony_camera
+EXTRA_CFLAGS += -I$(SONY_CAMERA_ROOT)/include
+ccflags-y += ${ccflags-m}
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/include
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/include/uapi
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/include/uapi/camera
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_utils
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_core
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_cpas/include
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_presil/inc
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_sensor_module/cam_cci
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_sensor_module/cam_csiphy
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_sensor_module/cam_sensor_io
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_sensor_module/cam_sensor_utils
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_smmu
+ccflags-y += -I$(CAMERA_KERNEL_ROOT)/drivers/cam_req_mgr
+ccflags-y += -DCONFIG_SPECTRA_CAMERA=y
+ccflags-y += -DUSE_CAMERA_4
+
+obj-m += sony_camera.o

@@ -1,0 +1,1 @@
+obj-m := atmel_mxt640u.o

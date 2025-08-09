@@ -1,0 +1,7 @@
+obj-m := et603-int.o
+
+ifeq (,$(filter nagara, $(SOMC_TARGET_PLATFORM)))
+et603-int-objs := etxxx_fp.o
+else
+et603-int-objs := etxxx_fp.o navi_input.o
+endif

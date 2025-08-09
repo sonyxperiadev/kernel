@@ -1,0 +1,70 @@
+#
+# Makefile for SiW touch test driver
+#
+
+BASE_DIR = $(shell pwd)
+
+INSTALL_DIR = ./mod
+
+CC=arm-eabi-gcc
+#CC=arm-linux-gnueabihf-gcc
+
+KERNEL_DIR = /home/kh2/work_od_and/kernel/samsung/exynos5422
+
+BUILD_FLAGS = -I$(KERNEL_DIR)
+
+EXTRA_CFLAGS = -D__KERNEL__ -DLINUX
+
+CONFIG_TOUCHSCREEN_SIW_SW49501=y
+
+feq ($(CONFIG_TOUCHSCREEN_SIW_SW49501), y)
+EXTRA_CFLAGS += -DCONFIG_TOUCHSCREEN_SIW_SW49501
+endif
+
+CONFIG_TOUCHSCREEN_SIWMON=y
+ifeq ($(CONFIG_TOUCHSCREEN_SIWMON), y)
+EXTRA_CFLAGS += -DCONFIG_TOUCHSCREEN_SIWMON
+endif
+
+LIBS=-lm
+
+
+ifeq ($(CONFIG_TOUCHSCREEN_SIW_SW49501), y)
+MODULE_NAME = ssw49501
+endif
+
+
+obj-m := $(MODULE_NAME).o
+$(MODULE_NAME)-objs := siw_touch.o
+$(MODULE_NAME)-objs += siw_touch_hal.o siw_touch_hal_sysfs.o
+$(MODULE_NAME)-objs += siw_touch_hal_abt.o
+$(MODULE_NAME)-objs += siw_touch_hal_prd.o
+$(MODULE_NAME)-objs += siw_touch_hal_watch.o
+$(MODULE_NAME)-objs += siw_touch_bus.o
+$(MODULE_NAME)-objs += siw_touch_bus_i2c.o siw_touch_bus_spi.o
+$(MODULE_NAME)-objs += siw_touch_of.o
+$(MODULE_NAME)-objs += siw_touch_irq.o siw_touch_gpio.o
+$(MODULE_NAME)-objs += siw_touch_event.o siw_touch_notify.o
+$(MODULE_NAME)-objs += siw_touch_sys.o siw_touch_sysfs.o
+$(MODULE_NAME)-objs += siw_touch_misc.o
+
+ifeq ($(CONFIG_TOUCHSCREEN_SIW_SW49501), y)
+$(MODULE_NAME)-objs += touch_sw49501.o
+endif
+
+
+module:
+	$(MAKE) -C $(KERNEL_DIR) M=$(BASE_DIR) modules ARCH=arm
+
+clean:
+	rm -rf .tmp_versions
+	rm -f *.ko
+	rm -f *.mod.*
+	rm -f .*.cmd
+	rm -f *.o
+	rm -f *.order
+	rm -f *.symvers
+	rm -f modules.builtin
+	rm -f $(MODULE_NAME)
+
+

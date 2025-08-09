@@ -1,0 +1,1 @@
+obj-m := clearpad_rmi_dev.o

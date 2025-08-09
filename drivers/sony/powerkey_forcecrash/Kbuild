@@ -1,0 +1,3 @@
+#Rule to build powerkey_forcecrash module
+
+obj-m := powerkey_forcecrash.o

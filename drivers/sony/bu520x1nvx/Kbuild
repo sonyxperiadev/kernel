@@ -1,0 +1,5 @@
+obj-m := bu520x1nvx.o
+
+ifneq ($(CONFIG_ARCH_LAHAINA), y)
+  include $(srctree)/$(src)/config/waipio.mk
+endif

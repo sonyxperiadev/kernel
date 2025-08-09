@@ -1,0 +1,19 @@
+menu "LXS Touch Support"
+
+config TOUCHSCREEN_LXS
+	tristate "LX Semicon Touch Driver Core"
+	depends on SPI_MASTER || I2C
+	default n
+	help
+	  Say Y here if you have a touchscreen interface using
+	  the LX Semicon touch device.
+
+config TOUCHSCREEN_LXS_SW82907
+	bool "LX Semicon Touch Driver for SW82907"
+	depends on TOUCHSCREEN_LXS
+	default n
+	help
+	  If your device is SW82907, say Y
+
+endmenu
+

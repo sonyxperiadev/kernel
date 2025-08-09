@@ -1,0 +1,1 @@
+obj-m := somc_battman_dbg.o

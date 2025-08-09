@@ -1,0 +1,7 @@
+config RAMDUMP_LAST_LOGS
+	bool "support last logs for system"
+	depends on DEBUG_FS
+	help
+	  When a fatal error is encountered on system, system reboots and
+	  saves the logs in last logs memory. This driver supports the mechanism
+	  to read these logs and exports them via debugfs.
