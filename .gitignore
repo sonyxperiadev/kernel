@@ -160,3 +160,4 @@ arch/*/configs/vendor/*_defconfig
 arch/*/configs/nagara_gki_defconfig
 # Documentation toolchain
 sphinx_*/
+drivers/staging/wlan-qc/
