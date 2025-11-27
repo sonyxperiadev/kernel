@@ -28,6 +28,7 @@
 #include <linux/phy_fixed.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/string.h>
 #include "lan78xx.h"
 
 #define DRIVER_AUTHOR	"WOOJUNG HUH <woojung.huh@microchip.com>"
@@ -68,6 +69,7 @@
 #define DEFAULT_VLAN_FILTER_ENABLE	(true)
 #define DEFAULT_VLAN_RX_OFFLOAD		(true)
 #define TX_OVERHEAD			(8)
+#define TX_ALIGNMENT			(4)
 #define RXW_PADDING			2
 
 #define LAN78XX_USB_VENDOR_ID		(0x0424)
@@ -91,6 +93,11 @@
 #define WAKE_ALL			(WAKE_PHY | WAKE_UCAST | \
 					 WAKE_MCAST | WAKE_BCAST | \
 					 WAKE_ARP | WAKE_MAGIC)
+
+#define TX_URB_NUM			10
+#define TX_SS_URB_NUM			TX_URB_NUM
+#define TX_HS_URB_NUM			TX_URB_NUM
+#define TX_FS_URB_NUM			TX_URB_NUM
 
 /* USB related defines */
 #define BULK_IN_PIPE			1
@@ -403,7 +410,7 @@ struct lan78xx_net {
 	struct usb_anchor	deferred;
 
 	struct mutex		dev_mutex; /* serialise open/stop wrt suspend/resume */
-	struct mutex		phy_mutex; /* for phy access */
+	struct mutex		mdiobus_mutex; /* for MDIO bus access */
 	unsigned int		pipe_in, pipe_out, pipe_intr;
 
 	u32			hard_mtu;	/* count any extra framing */
@@ -445,85 +452,128 @@ static int msg_level = -1;
 module_param(msg_level, int, 0);
 MODULE_PARM_DESC(msg_level, "Override default message level");
 
+/* Maximum number of retries for register operations that timeout */
+#define LAN78XX_USB_RETRIES 5
+
 static int lan78xx_read_reg(struct lan78xx_net *dev, u32 index, u32 *data)
 {
 	u32 *buf;
 	int ret;
+	int retries;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (test_bit(EVENT_DEV_DISCONNECT, &dev->flags))
 		return -ENODEV;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	buf = kmalloc(sizeof(u32), GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
-	ret = usb_control_msg(dev->udev, usb_rcvctrlpipe(dev->udev, 0),
-			      USB_VENDOR_REQUEST_READ_REGISTER,
-			      USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-			      0, index, buf, 4, USB_CTRL_GET_TIMEOUT);
-	if (likely(ret >= 0)) {
-		le32_to_cpus(buf);
-		*data = *buf;
-	} else if (net_ratelimit()) {
-		netdev_warn(dev->net,
-			    "Failed to read register index 0x%08x. ret = %d",
-			    index, ret);
+	/* Retry on timeout to handle transient USB issues */
+	for (retries = 0; retries < LAN78XX_USB_RETRIES; retries++) {
+		pr_debug(" SOFTING  %d", __LINE__);
+		ret = usb_control_msg(dev->udev, usb_rcvctrlpipe(dev->udev, 0),
+				      USB_VENDOR_REQUEST_READ_REGISTER,
+				      USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+				      0, index, buf, 4, USB_CTRL_GET_TIMEOUT);
+		if (likely(ret >= 0)) {
+			pr_debug(" SOFTING  %d", __LINE__);
+			le32_to_cpus(buf);
+			*data = *buf;
+			break;
+		} else if (ret != -ETIMEDOUT) {
+			/* Don't retry non-timeout errors */
+			break;
+		}
+		/* Brief delay before retry (exponential backoff) */
+		if (retries < LAN78XX_USB_RETRIES - 1)
+			usleep_range(100 << retries, 200 << retries);
 	}
 
+	if (unlikely(ret < 0) && net_ratelimit()) {
+		pr_debug(" SOFTING  %d", __LINE__);
+		netdev_warn(dev->net,
+			    "Failed to read register index 0x%08x after %d attempts. ret = %pe",
+			    index, retries + 1, ERR_PTR(ret));
+	}
+
+	pr_debug(" SOFTING  %d", __LINE__);
 	kfree(buf);
 
-	return ret;
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	return ret < 0 ? ret : 0;
 }
 
 static int lan78xx_write_reg(struct lan78xx_net *dev, u32 index, u32 data)
 {
 	u32 *buf;
-	int ret;
+	int ret = 0;
+	int retries;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (test_bit(EVENT_DEV_DISCONNECT, &dev->flags))
 		return -ENODEV;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	buf = kmalloc(sizeof(u32), GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	*buf = data;
 	cpu_to_le32s(buf);
 
-	ret = usb_control_msg(dev->udev, usb_sndctrlpipe(dev->udev, 0),
-			      USB_VENDOR_REQUEST_WRITE_REGISTER,
-			      USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-			      0, index, buf, 4, USB_CTRL_SET_TIMEOUT);
-	if (unlikely(ret < 0) &&
-	    net_ratelimit()) {
+	/* Retry on timeout to handle transient USB issues */
+	for (retries = 0; retries < LAN78XX_USB_RETRIES; retries++) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
+		ret = usb_control_msg(dev->udev, usb_sndctrlpipe(dev->udev, 0),
+				      USB_VENDOR_REQUEST_WRITE_REGISTER,
+				      USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+				      0, index, buf, 4, USB_CTRL_SET_TIMEOUT);
+
+		if (likely(ret >= 0)) {
+			break;
+		} else if (ret != -ETIMEDOUT) {
+			/* Don't retry non-timeout errors */
+			break;
+		}
+		/* Brief delay before retry (exponential backoff) */
+		if (retries < LAN78XX_USB_RETRIES - 1)
+			usleep_range(100 << retries, 200 << retries);
+	}
+
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (unlikely(ret < 0) && net_ratelimit()) {
 		netdev_warn(dev->net,
-			    "Failed to write register index 0x%08x. ret = %d",
-			    index, ret);
+			    "Failed to write register index 0x%08x after %d attempts. ret = %pe",
+			    index, retries + 1, ERR_PTR(ret));
 	}
 
 	kfree(buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
-	return ret;
+	return ret < 0 ? ret : 0;
 }
 
 static int lan78xx_update_reg(struct lan78xx_net *dev, u32 reg, u32 mask,
 			      u32 data)
 {
-	int ret;
+	int ret = 0;
 	u32 buf;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, reg, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	buf &= ~mask;
 	buf |= (mask & data);
 
-	ret = lan78xx_write_reg(dev, reg, buf);
-	if (ret < 0)
-		return ret;
-
-	return 0;
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	return lan78xx_write_reg(dev, reg, buf);
 }
 
 static int lan78xx_read_stats(struct lan78xx_net *dev,
@@ -535,10 +585,13 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 	u32 *src;
 	u32 *dst;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	stats = kmalloc(sizeof(*stats), GFP_KERNEL);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (!stats)
 		return -ENOMEM;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = usb_control_msg(dev->udev,
 			      usb_rcvctrlpipe(dev->udev, 0),
 			      USB_VENDOR_REQUEST_GET_STATS,
@@ -548,7 +601,9 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 			      (void *)stats,
 			      sizeof(*stats),
 			      USB_CTRL_SET_TIMEOUT);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (likely(ret >= 0)) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		src = (u32 *)stats;
 		dst = (u32 *)data;
 		for (i = 0; i < sizeof(*stats) / sizeof(u32); i++) {
@@ -556,12 +611,14 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 			dst[i] = src[i];
 		}
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_warn(dev->net,
 			    "Failed to read stat ret = %d", ret);
 	}
 
 	kfree(stats);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -574,6 +631,7 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 static void lan78xx_check_stat_rollover(struct lan78xx_net *dev,
 					struct lan78xx_statstage *stats)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	check_counter_rollover(stats, dev->stats, rx_fcs_errors);
 	check_counter_rollover(stats, dev->stats, rx_alignment_errors);
 	check_counter_rollover(stats, dev->stats, rx_fragment_errors);
@@ -622,6 +680,7 @@ static void lan78xx_check_stat_rollover(struct lan78xx_net *dev,
 	check_counter_rollover(stats, dev->stats, eee_tx_lpi_transitions);
 	check_counter_rollover(stats, dev->stats, eee_tx_lpi_time);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	memcpy(&dev->stats.saved, stats, sizeof(struct lan78xx_statstage));
 }
 
@@ -632,41 +691,51 @@ static void lan78xx_update_stats(struct lan78xx_net *dev)
 	int i;
 	struct lan78xx_statstage lan78xx_stats;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (usb_autopm_get_interface(dev->intf) < 0)
 		return;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	p = (u32 *)&lan78xx_stats;
 	count = (u32 *)&dev->stats.rollover_count;
 	max = (u32 *)&dev->stats.rollover_max;
 	data = (u64 *)&dev->stats.curr_stat;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	mutex_lock(&dev->stats.access_lock);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (lan78xx_read_stats(dev, &lan78xx_stats) > 0)
 		lan78xx_check_stat_rollover(dev, &lan78xx_stats);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	for (i = 0; i < (sizeof(lan78xx_stats) / (sizeof(u32))); i++)
 		data[i] = (u64)p[i] + ((u64)count[i] * ((u64)max[i] + 1));
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	mutex_unlock(&dev->stats.access_lock);
 
 	usb_autopm_put_interface(dev->intf);
 }
 
-/* Loop until the read is completed with timeout called with phy_mutex held */
-static int lan78xx_phy_wait_not_busy(struct lan78xx_net *dev)
+/* Loop until the read is completed with timeout called with mdiobus_mutex held */
+static int lan78xx_mdiobus_wait_not_busy(struct lan78xx_net *dev)
 {
 	unsigned long start_time = jiffies;
 	u32 val;
-	int ret;
+	int ret = 0;
 
 	do {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, MII_ACC, &val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0))
 			return -EIO;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!(val & MII_ACC_MII_BUSY_))
 			return 0;
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	} while (!time_after(jiffies, start_time + HZ));
 
 	return -EIO;
@@ -674,16 +743,20 @@ static int lan78xx_phy_wait_not_busy(struct lan78xx_net *dev)
 
 static inline u32 mii_access(int id, int index, int read)
 {
-	u32 ret;
+	u32 ret = 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = ((u32)id << MII_ACC_PHY_ADDR_SHIFT_) & MII_ACC_PHY_ADDR_MASK_;
 	ret |= ((u32)index << MII_ACC_MIIRINDA_SHIFT_) & MII_ACC_MIIRINDA_MASK_;
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (read)
 		ret |= MII_ACC_MII_READ_;
 	else
 		ret |= MII_ACC_MII_WRITE_;
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret |= MII_ACC_MII_BUSY_;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -691,24 +764,31 @@ static int lan78xx_wait_eeprom(struct lan78xx_net *dev)
 {
 	unsigned long start_time = jiffies;
 	u32 val;
-	int ret;
+	int ret = 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	do {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, E2P_CMD, &val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0))
 			return -EIO;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!(val & E2P_CMD_EPC_BUSY_) ||
 		    (val & E2P_CMD_EPC_TIMEOUT_))
 			break;
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		usleep_range(40, 100);
 	} while (!time_after(jiffies, start_time + HZ));
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (val & (E2P_CMD_EPC_TIMEOUT_ | E2P_CMD_EPC_BUSY_)) {
 		netdev_warn(dev->net, "EEPROM read operation timeout");
 		return -EIO;
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -716,19 +796,25 @@ static int lan78xx_eeprom_confirm_not_busy(struct lan78xx_net *dev)
 {
 	unsigned long start_time = jiffies;
 	u32 val;
-	int ret;
+	int ret = 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	do {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, E2P_CMD, &val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0))
 			return -EIO;
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 		if (!(val & E2P_CMD_EPC_BUSY_))
 			return 0;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		usleep_range(40, 100);
 	} while (!time_after(jiffies, start_time + HZ));
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netdev_warn(dev->net, "EEPROM is busy");
 	return -EIO;
 }
@@ -738,51 +824,68 @@ static int lan78xx_read_raw_eeprom(struct lan78xx_net *dev, u32 offset,
 {
 	u32 val;
 	u32 saved;
-	int i, ret;
+	int i, ret=0;
 	int retval;
 
 	/* depends on chip, some EEPROM pins are muxed with LED function.
 	 * disable & restore LED function to access EEPROM.
 	 */
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, HW_CFG, &val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	saved = val;
 	if (dev->chipid == ID_REV_CHIP_ID_7800_) {
 		val &= ~(HW_CFG_LED1_EN_ | HW_CFG_LED0_EN_);
 		ret = lan78xx_write_reg(dev, HW_CFG, val);
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	retval = lan78xx_eeprom_confirm_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, retval);
 	if (retval)
 		return retval;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < length; i++) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		val = E2P_CMD_EPC_BUSY_ | E2P_CMD_EPC_CMD_READ_;
 		val |= (offset & E2P_CMD_EPC_ADDR_MASK_);
 		ret = lan78xx_write_reg(dev, E2P_CMD, val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			retval = -EIO;
 			goto exit;
 		}
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		retval = lan78xx_wait_eeprom(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, retval);
 		if (retval < 0)
 			goto exit;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, E2P_DATA, &val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			retval = -EIO;
 			goto exit;
 		}
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		data[i] = val & 0xFF;
 		offset++;
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	retval = 0;
 exit:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (dev->chipid == ID_REV_CHIP_ID_7800_)
 		ret = lan78xx_write_reg(dev, HW_CFG, saved);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, retval);
 	return retval;
 }
 
@@ -790,14 +893,17 @@ static int lan78xx_read_eeprom(struct lan78xx_net *dev, u32 offset,
 			       u32 length, u8 *data)
 {
 	u8 sig;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_raw_eeprom(dev, 0, 1, &sig);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if ((ret == 0) && (sig == EEPROM_INDICATOR))
 		ret = lan78xx_read_raw_eeprom(dev, offset, length, data);
 	else
 		ret = -EINVAL;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -806,40 +912,52 @@ static int lan78xx_write_raw_eeprom(struct lan78xx_net *dev, u32 offset,
 {
 	u32 val;
 	u32 saved;
-	int i, ret;
+	int i, ret=0;
 	int retval;
 
 	/* depends on chip, some EEPROM pins are muxed with LED function.
 	 * disable & restore LED function to access EEPROM.
 	 */
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, HW_CFG, &val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	saved = val;
 	if (dev->chipid == ID_REV_CHIP_ID_7800_) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		val &= ~(HW_CFG_LED1_EN_ | HW_CFG_LED0_EN_);
 		ret = lan78xx_write_reg(dev, HW_CFG, val);
 	}
 
 	retval = lan78xx_eeprom_confirm_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, retval);
 	if (retval)
 		goto exit;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* Issue write/erase enable command */
 	val = E2P_CMD_EPC_BUSY_ | E2P_CMD_EPC_CMD_EWEN_;
 	ret = lan78xx_write_reg(dev, E2P_CMD, val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (unlikely(ret < 0)) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		retval = -EIO;
 		goto exit;
 	}
 
 	retval = lan78xx_wait_eeprom(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, retval);
 	if (retval < 0)
 		goto exit;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < length; i++) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		/* Fill data register */
 		val = data[i];
 		ret = lan78xx_write_reg(dev, E2P_DATA, val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			retval = -EIO;
 			goto exit;
 		}
@@ -848,23 +966,31 @@ static int lan78xx_write_raw_eeprom(struct lan78xx_net *dev, u32 offset,
 		val = E2P_CMD_EPC_BUSY_ | E2P_CMD_EPC_CMD_WRITE_;
 		val |= (offset & E2P_CMD_EPC_ADDR_MASK_);
 		ret = lan78xx_write_reg(dev, E2P_CMD, val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			retval = -EIO;
 			goto exit;
 		}
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		retval = lan78xx_wait_eeprom(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (retval < 0)
 			goto exit;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		offset++;
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	retval = 0;
 exit:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (dev->chipid == ID_REV_CHIP_ID_7800_)
 		ret = lan78xx_write_reg(dev, HW_CFG, saved);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return retval;
 }
 
@@ -875,17 +1001,23 @@ static int lan78xx_read_raw_otp(struct lan78xx_net *dev, u32 offset,
 	u32 buf;
 	unsigned long timeout;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_read_reg(dev, OTP_PWR_DN, &buf);
 
 	if (buf & OTP_PWR_DN_PWRDN_N_) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		/* clear it and wait to be cleared */
 		lan78xx_write_reg(dev, OTP_PWR_DN, 0);
 
+		pr_debug(" SOFTING  %d ", __LINE__);
 		timeout = jiffies + HZ;
 		do {
 			usleep_range(1, 10);
+			pr_debug(" SOFTING  %d ", __LINE__);
 			lan78xx_read_reg(dev, OTP_PWR_DN, &buf);
+			pr_debug(" SOFTING  %d ", __LINE__);
 			if (time_after(jiffies, timeout)) {
+				pr_debug(" SOFTING  %d ", __LINE__);
 				netdev_warn(dev->net,
 					    "timeout on OTP_PWR_DN");
 				return -EIO;
@@ -894,6 +1026,7 @@ static int lan78xx_read_raw_otp(struct lan78xx_net *dev, u32 offset,
 	}
 
 	for (i = 0; i < length; i++) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		lan78xx_write_reg(dev, OTP_ADDR1,
 				  ((offset + i) >> 8) & OTP_ADDR1_15_11);
 		lan78xx_write_reg(dev, OTP_ADDR2,
@@ -904,8 +1037,10 @@ static int lan78xx_read_raw_otp(struct lan78xx_net *dev, u32 offset,
 
 		timeout = jiffies + HZ;
 		do {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			udelay(1);
 			lan78xx_read_reg(dev, OTP_STATUS, &buf);
+			pr_debug(" SOFTING  %d ", __LINE__);
 			if (time_after(jiffies, timeout)) {
 				netdev_warn(dev->net,
 					    "timeout on OTP_STATUS");
@@ -918,6 +1053,7 @@ static int lan78xx_read_raw_otp(struct lan78xx_net *dev, u32 offset,
 		data[i] = (u8)(buf & 0xFF);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -928,17 +1064,22 @@ static int lan78xx_write_raw_otp(struct lan78xx_net *dev, u32 offset,
 	u32 buf;
 	unsigned long timeout;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_read_reg(dev, OTP_PWR_DN, &buf);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (buf & OTP_PWR_DN_PWRDN_N_) {
 		/* clear it and wait to be cleared */
 		lan78xx_write_reg(dev, OTP_PWR_DN, 0);
 
+		pr_debug(" SOFTING  %d ", __LINE__);
 		timeout = jiffies + HZ;
 		do {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			udelay(1);
 			lan78xx_read_reg(dev, OTP_PWR_DN, &buf);
 			if (time_after(jiffies, timeout)) {
+				pr_debug(" SOFTING  %d ", __LINE__);
 				netdev_warn(dev->net,
 					    "timeout on OTP_PWR_DN completion");
 				return -EIO;
@@ -946,10 +1087,13 @@ static int lan78xx_write_raw_otp(struct lan78xx_net *dev, u32 offset,
 		} while (buf & OTP_PWR_DN_PWRDN_N_);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* set to BYTE program mode */
 	lan78xx_write_reg(dev, OTP_PRGM_MODE, OTP_PRGM_MODE_BYTE_);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	for (i = 0; i < length; i++) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		lan78xx_write_reg(dev, OTP_ADDR1,
 				  ((offset + i) >> 8) & OTP_ADDR1_15_11);
 		lan78xx_write_reg(dev, OTP_ADDR2,
@@ -960,9 +1104,11 @@ static int lan78xx_write_raw_otp(struct lan78xx_net *dev, u32 offset,
 
 		timeout = jiffies + HZ;
 		do {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			udelay(1);
 			lan78xx_read_reg(dev, OTP_STATUS, &buf);
 			if (time_after(jiffies, timeout)) {
+				pr_debug(" SOFTING  %d ", __LINE__);
 				netdev_warn(dev->net,
 					    "Timeout on OTP_STATUS completion");
 				return -EIO;
@@ -970,6 +1116,7 @@ static int lan78xx_write_raw_otp(struct lan78xx_net *dev, u32 offset,
 		} while (buf & OTP_STATUS_BUSY_);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -977,11 +1124,14 @@ static int lan78xx_read_otp(struct lan78xx_net *dev, u32 offset,
 			    u32 length, u8 *data)
 {
 	u8 sig;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_raw_otp(dev, 0, 1, &sig);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret == 0) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (sig == OTP_INDICATOR_2)
 			offset += 0x100;
 		else if (sig != OTP_INDICATOR_1)
@@ -990,28 +1140,35 @@ static int lan78xx_read_otp(struct lan78xx_net *dev, u32 offset,
 			ret = lan78xx_read_raw_otp(dev, offset, length, data);
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
 static int lan78xx_dataport_wait_not_busy(struct lan78xx_net *dev)
 {
-	int i, ret;
+	int i, ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < 100; i++) {
 		u32 dp_sel;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, DP_SEL, &dp_sel);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (unlikely(ret < 0))
 			return -EIO;
 
 		if (dp_sel & DP_SEL_DPRDY_)
 			return 0;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		usleep_range(40, 100);
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netdev_warn(dev->net, "%s timed out", __func__);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return -EIO;
 }
 
@@ -1020,24 +1177,32 @@ static int lan78xx_dataport_write(struct lan78xx_net *dev, u32 ram_select,
 {
 	struct lan78xx_priv *pdata = (struct lan78xx_priv *)(dev->data[0]);
 	u32 dp_sel;
-	int i, ret;
+	int i, ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (usb_autopm_get_interface(dev->intf) < 0)
 		return 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&pdata->dataport_mutex);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_dataport_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, DP_SEL, &dp_sel);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	dp_sel &= ~DP_SEL_RSEL_MASK_;
 	dp_sel |= ram_select;
 	ret = lan78xx_write_reg(dev, DP_SEL, dp_sel);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < length; i++) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_write_reg(dev, DP_ADDR, addr + i);
 
 		ret = lan78xx_write_reg(dev, DP_DATA, buf[i]);
@@ -1045,14 +1210,18 @@ static int lan78xx_dataport_write(struct lan78xx_net *dev, u32 ram_select,
 		ret = lan78xx_write_reg(dev, DP_CMD, DP_CMD_WRITE_);
 
 		ret = lan78xx_dataport_wait_not_busy(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto done;
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 done:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_unlock(&pdata->dataport_mutex);
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1061,7 +1230,9 @@ static void lan78xx_set_addr_filter(struct lan78xx_priv *pdata,
 {
 	u32 temp;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if ((pdata) && (index > 0) && (index < NUM_OF_MAF)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		temp = addr[3];
 		temp = addr[2] | (temp << 8);
 		temp = addr[1] | (temp << 8);
@@ -1072,11 +1243,13 @@ static void lan78xx_set_addr_filter(struct lan78xx_priv *pdata,
 		temp |= MAF_HI_VALID_ | MAF_HI_TYPE_DST_;
 		pdata->pfilter_table[index][0] = temp;
 	}
+	pr_debug(" SOFTING  %d ", __LINE__);
 }
 
 /* returns hash bit number for given MAC address */
 static inline u32 lan78xx_hash(char addr[ETH_ALEN])
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return (ether_crc(ETH_ALEN, addr) >> 23) & 0x1ff;
 }
 
@@ -1087,13 +1260,17 @@ static void lan78xx_deferred_multicast_write(struct work_struct *param)
 	struct lan78xx_net *dev = pdata->dev;
 	int i;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	netif_dbg(dev, drv, dev->net, "deferred multicast write 0x%08x\n",
 		  pdata->rfe_ctl);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_dataport_write(dev, DP_SEL_RSEL_VLAN_DA_, DP_SEL_VHF_VLAN_LEN,
 			       DP_SEL_VHF_HASH_LEN, pdata->mchash_table);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	for (i = 1; i < NUM_OF_MAF; i++) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		lan78xx_write_reg(dev, MAF_HI(i), 0);
 		lan78xx_write_reg(dev, MAF_LO(i),
 				  pdata->pfilter_table[i][1]);
@@ -1101,6 +1278,7 @@ static void lan78xx_deferred_multicast_write(struct work_struct *param)
 				  pdata->pfilter_table[i][0]);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_write_reg(dev, RFE_CTL, pdata->rfe_ctl);
 }
 
@@ -1111,37 +1289,47 @@ static void lan78xx_set_multicast(struct net_device *netdev)
 	unsigned long flags;
 	int i;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	spin_lock_irqsave(&pdata->rfe_ctl_lock, flags);
 
 	pdata->rfe_ctl &= ~(RFE_CTL_UCAST_EN_ | RFE_CTL_MCAST_EN_ |
 			    RFE_CTL_DA_PERFECT_ | RFE_CTL_MCAST_HASH_);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	for (i = 0; i < DP_SEL_VHF_HASH_LEN; i++)
 		pdata->mchash_table[i] = 0;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* pfilter_table[0] has own HW address */
 	for (i = 1; i < NUM_OF_MAF; i++) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		pdata->pfilter_table[i][0] = 0;
 		pdata->pfilter_table[i][1] = 0;
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	pdata->rfe_ctl |= RFE_CTL_BCAST_EN_;
 
 	if (dev->net->flags & IFF_PROMISC) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		netif_dbg(dev, drv, dev->net, "promiscuous mode enabled");
 		pdata->rfe_ctl |= RFE_CTL_MCAST_EN_ | RFE_CTL_UCAST_EN_;
 	} else {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		if (dev->net->flags & IFF_ALLMULTI) {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			netif_dbg(dev, drv, dev->net,
 				  "receive all multicast enabled");
 			pdata->rfe_ctl |= RFE_CTL_MCAST_EN_;
 		}
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (netdev_mc_count(dev->net)) {
 		struct netdev_hw_addr *ha;
 		int i;
 
+		pr_debug(" SOFTING  %d ", __LINE__);
 		netif_dbg(dev, drv, dev->net, "receive multicast hash filter");
 
 		pdata->rfe_ctl |= RFE_CTL_DA_PERFECT_;
@@ -1160,18 +1348,72 @@ static void lan78xx_set_multicast(struct net_device *netdev)
 			}
 			i++;
 		}
+		pr_debug(" SOFTING  %d ", __LINE__);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	spin_unlock_irqrestore(&pdata->rfe_ctl_lock, flags);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* defer register writes to a sleepable context */
 	schedule_work(&pdata->set_multicast);
+}
+
+/**
+ * lan78xx_configure_flowcontrol - Set MAC and FIFO flow control configuration
+ * @dev: pointer to the LAN78xx device structure
+ * @tx_pause: enable transmission of pause frames
+ * @rx_pause: enable reception of pause frames
+ *
+ * This function configures the LAN78xx flow control settings by writing
+ * to the FLOW and FCT_FLOW registers. The pause time is set to the
+ * maximum allowed value (65535 quanta). FIFO thresholds are selected
+ * based on USB speed.
+ *
+ * Return: 0 on success or a negative error code on failure.
+ */
+static int lan78xx_configure_flowcontrol(struct lan78xx_net *dev,
+					 bool tx_pause, bool rx_pause)
+{
+	/* Use maximum pause time: 65535 quanta (512-bit times) */
+	const u32 pause_time_quanta = 65535;
+	u32 fct_flow = 0;
+	u32 flow = 0;
+	int ret;
+
+	/* Prepare MAC flow control bits */
+	if (tx_pause)
+		flow |= FLOW_CR_TX_FCEN_ | pause_time_quanta;
+
+	if (rx_pause)
+		flow |= FLOW_CR_RX_FCEN_;
+
+	/* Select RX FIFO thresholds based on USB speed */
+	switch (dev->udev->speed) {
+	case USB_SPEED_SUPER:
+		fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_SS, FLOW_OFF_SS);
+		break;
+	case USB_SPEED_HIGH:
+		fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_HS, FLOW_OFF_HS);
+		break;
+	default:
+		netdev_warn(dev->net, "Unsupported USB speed: %d\n",
+			    dev->udev->speed);
+		return -EINVAL;
+	}
+
+	/* Step 1: Write FIFO thresholds before enabling pause frames */
+	ret = lan78xx_write_reg(dev, FCT_FLOW, fct_flow);
+	if (ret < 0)
+		return ret;
+
+	/* Step 2: Enable MAC pause functionality */
+	return lan78xx_write_reg(dev, FLOW, flow);
 }
 
 static int lan78xx_update_flowcontrol(struct lan78xx_net *dev, u8 duplex,
 				      u16 lcladv, u16 rmtadv)
 {
-	u32 flow = 0, fct_flow = 0;
 	u8 cap;
 
 	if (dev->fc_autoneg)
@@ -1179,94 +1421,218 @@ static int lan78xx_update_flowcontrol(struct lan78xx_net *dev, u8 duplex,
 	else
 		cap = dev->fc_request_control;
 
-	if (cap & FLOW_CTRL_TX)
-		flow |= (FLOW_CR_TX_FCEN_ | 0xFFFF);
-
-	if (cap & FLOW_CTRL_RX)
-		flow |= FLOW_CR_RX_FCEN_;
-
-	if (dev->udev->speed == USB_SPEED_SUPER)
-		fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_SS, FLOW_OFF_SS);
-	else if (dev->udev->speed == USB_SPEED_HIGH)
-		fct_flow = FLOW_CTRL_THRESHOLD(FLOW_ON_HS, FLOW_OFF_HS);
-
 	netif_dbg(dev, link, dev->net, "rx pause %s, tx pause %s",
 		  (cap & FLOW_CTRL_RX ? "enabled" : "disabled"),
 		  (cap & FLOW_CTRL_TX ? "enabled" : "disabled"));
 
-	lan78xx_write_reg(dev, FCT_FLOW, fct_flow);
-
-	/* threshold value should be set before enabling flow */
-	lan78xx_write_reg(dev, FLOW, flow);
-
-	return 0;
+	return lan78xx_configure_flowcontrol(dev,
+					     cap & FLOW_CTRL_TX,
+					     cap & FLOW_CTRL_RX);
 }
 
 static int lan78xx_mac_reset(struct lan78xx_net *dev)
 {
 	unsigned long start_time = jiffies;
 	u32 val;
-	int ret;
+	int ret=0;
 
-	mutex_lock(&dev->phy_mutex);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_lock(&dev->mdiobus_mutex);
 
 	/* Resetting the device while there is activity on the MDIO
 	 * bus can result in the MAC interface locking up and not
 	 * completing register access transactions.
 	 */
-	ret = lan78xx_phy_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	ret = lan78xx_mdiobus_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, MAC_CR, &val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 	val |= MAC_CR_RST_;
 	ret = lan78xx_write_reg(dev, MAC_CR, val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* Wait for the reset to complete before allowing any further
 	 * MAC register accesses otherwise the MAC may lock up.
 	 */
 	do {
 		ret = lan78xx_read_reg(dev, MAC_CR, &val);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto done;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!(val & MAC_CR_RST_)) {
 			ret = 0;
 			goto done;
 		}
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	} while (!time_after(jiffies, start_time + HZ));
 
 	ret = -ETIMEDOUT;
 done:
-	mutex_unlock(&dev->phy_mutex);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_unlock(&dev->mdiobus_mutex);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
+}
+
+/**
+ * lan78xx_phy_int_ack - Acknowledge PHY interrupt
+ * @dev: pointer to the LAN78xx device structure
+ *
+ * This function acknowledges the PHY interrupt by setting the
+ * INT_STS_PHY_INT_ bit in the interrupt status register (INT_STS).
+ *
+ * Return: 0 on success or a negative error code on failure.
+ */
+static int lan78xx_phy_int_ack(struct lan78xx_net *dev)
+{
+	return lan78xx_write_reg(dev, INT_STS, INT_STS_PHY_INT_);
+}
+
+/**
+ * lan78xx_configure_usb - Configure USB link power settings
+ * @dev: pointer to the LAN78xx device structure
+ * @speed: negotiated Ethernet link speed (in Mbps)
+ *
+ * This function configures U1/U2 link power management for SuperSpeed
+ * USB devices based on the current Ethernet link speed. It uses the
+ * USB_CFG1 register to enable or disable U1 and U2 low-power states.
+ *
+ * Note: Only LAN7800 and LAN7801 support SuperSpeed (USB 3.x).
+ *       LAN7850 is a High-Speed-only (USB 2.0) device and is skipped.
+ *
+ * Return: 0 on success or a negative error code on failure.
+ */
+static int lan78xx_configure_usb(struct lan78xx_net *dev, int speed)
+{
+	u32 mask, val;
+	int ret;
+
+	/* Only configure USB settings for SuperSpeed devices */
+	if (dev->udev->speed != USB_SPEED_SUPER)
+		return 0;
+
+	/* LAN7850 does not support USB 3.x */
+	if (dev->chipid == ID_REV_CHIP_ID_7850_) {
+		netdev_warn_once(dev->net, "Unexpected SuperSpeed for LAN7850 (USB 2.0 only)\n");
+		return 0;
+	}
+
+	switch (speed) {
+	case SPEED_1000:
+		/* Disable U2, enable U1 */
+		ret = lan78xx_update_reg(dev, USB_CFG1,
+					 USB_CFG1_DEV_U2_INIT_EN_, 0);
+		if (ret < 0)
+			return ret;
+
+		return lan78xx_update_reg(dev, USB_CFG1,
+					  USB_CFG1_DEV_U1_INIT_EN_,
+					  USB_CFG1_DEV_U1_INIT_EN_);
+
+	case SPEED_100:
+	case SPEED_10:
+		/* Enable both U1 and U2 */
+		mask = USB_CFG1_DEV_U1_INIT_EN_ | USB_CFG1_DEV_U2_INIT_EN_;
+		val = mask;
+		return lan78xx_update_reg(dev, USB_CFG1, mask, val);
+
+	default:
+		netdev_warn(dev->net, "Unsupported link speed: %d\n", speed);
+		return -EINVAL;
+	}
 }
 
 static int lan78xx_link_reset(struct lan78xx_net *dev)
 {
 	struct phy_device *phydev = dev->net->phydev;
 	struct ethtool_link_ksettings ecmd;
-	int ladv, radv, ret, link;
-	u32 buf;
+	int ladv, radv, ret = 0, link;
 
-	/* clear LAN78xx interrupt status */
-	ret = lan78xx_write_reg(dev, INT_STS, INT_STS_PHY_INT_);
-	if (unlikely(ret < 0))
-		return ret;
+	pr_debug(" SOFTING LINK RESET %d %d", __LINE__, ret);
+	
+	/* If PHY hasn't been started yet (interface not opened), start it now
+	 * to enable link detection during boot-time initialization.
+	 * This is safe here because we're in work queue context.
+	 */
+	if (phydev) {
+		switch (phydev->state) {
+		case PHY_DOWN:
+		case PHY_READY:
+		case PHY_HALTED:
+			if (net_ratelimit()) {
+				netdev_info(dev->net,
+					    "Link reset: starting PHY for boot-time link detection (state: %d)\n",
+					    phydev->state);
+			}
+			phy_start(phydev);
+			/* Give PHY a moment to initialize before reading status */
+			msleep(100);
+			break;
+		default:
+			if (net_ratelimit()) {
+				netdev_dbg(dev->net,
+					   "Link reset: PHY already active (state: %d)\n",
+					   phydev->state);
+			}
+			break;
+		}
+	}
+	
+	/* clear LAN78xx interrupt status - continue even if this fails
+	 * to avoid getting stuck in an interrupt storm
+	 */
+	ret = lan78xx_phy_int_ack(dev);
+	if (unlikely(ret < 0)) {
+		netdev_warn(dev->net,
+			    "Failed to ack PHY interrupt: %pe - continuing anyway\n",
+			    ERR_PTR(ret));
+		/* Don't return here - continue with link status check */
+	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	
+	/* Safety check: ensure PHY is valid before accessing */
+	if (!phydev) {
+		netdev_warn(dev->net, "Link reset: PHY not available\n");
+		return -ENODEV;
+	}
+	
 	mutex_lock(&phydev->lock);
 	phy_read_status(phydev);
 	link = phydev->link;
 	mutex_unlock(&phydev->lock);
 
+	/* If PHY status read failed due to timeouts, be conservative:
+	 * - If we think we have a link but PHY says no link, trust the PHY
+	 * - If we think we have no link but PHY says link, trust the PHY
+	 * - This allows proper recovery when cable is connected
+	 */
+	if (unlikely(!phydev->link && dev->link_on)) {
+		netdev_dbg(dev->net, "PHY reports no link, forcing carrier off\n");
+		link = 0;
+	} else if (unlikely(phydev->link && !dev->link_on)) {
+		netdev_dbg(dev->net, "PHY reports link up, enabling carrier\n");
+		link = 1;
+	}
+
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (!link && dev->link_on) {
 		dev->link_on = false;
+		netif_carrier_off(dev->net);
 
 		/* reset MAC */
 		ret = lan78xx_mac_reset(dev);
@@ -1274,47 +1640,28 @@ static int lan78xx_link_reset(struct lan78xx_net *dev)
 			return ret;
 
 		del_timer(&dev->stat_monitor);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
+		
+		/* Schedule periodic link check to recover from NO-CARRIER state */
+		mod_timer(&dev->stat_monitor, jiffies + STAT_UPDATE_TIMER);
 	} else if (link && !dev->link_on) {
 		dev->link_on = true;
+		netif_carrier_on(dev->net);
 
 		phy_ethtool_ksettings_get(phydev, &ecmd);
 
-		if (dev->udev->speed == USB_SPEED_SUPER) {
-			if (ecmd.base.speed == 1000) {
-				/* disable U2 */
-				ret = lan78xx_read_reg(dev, USB_CFG1, &buf);
-				if (ret < 0)
-					return ret;
-				buf &= ~USB_CFG1_DEV_U2_INIT_EN_;
-				ret = lan78xx_write_reg(dev, USB_CFG1, buf);
-				if (ret < 0)
-					return ret;
-				/* enable U1 */
-				ret = lan78xx_read_reg(dev, USB_CFG1, &buf);
-				if (ret < 0)
-					return ret;
-				buf |= USB_CFG1_DEV_U1_INIT_EN_;
-				ret = lan78xx_write_reg(dev, USB_CFG1, buf);
-				if (ret < 0)
-					return ret;
-			} else {
-				/* enable U1 & U2 */
-				ret = lan78xx_read_reg(dev, USB_CFG1, &buf);
-				if (ret < 0)
-					return ret;
-				buf |= USB_CFG1_DEV_U2_INIT_EN_;
-				buf |= USB_CFG1_DEV_U1_INIT_EN_;
-				ret = lan78xx_write_reg(dev, USB_CFG1, buf);
-				if (ret < 0)
-					return ret;
-			}
-		}
+		ret = lan78xx_configure_usb(dev, ecmd.base.speed);
+		if (ret < 0)
+			return ret;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ladv = phy_read(phydev, MII_ADVERTISE);
+		pr_debug(" SOFTING  %d %d", __LINE__, ladv);
 		if (ladv < 0)
 			return ladv;
 
 		radv = phy_read(phydev, MII_LPA);
+		pr_debug(" SOFTING  %d %d", __LINE__, radv);
 		if (radv < 0)
 			return radv;
 
@@ -1322,20 +1669,26 @@ static int lan78xx_link_reset(struct lan78xx_net *dev)
 			  "speed: %u duplex: %d anadv: 0x%04x anlpa: 0x%04x",
 			  ecmd.base.speed, ecmd.base.duplex, ladv, radv);
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_update_flowcontrol(dev, ecmd.base.duplex, ladv,
 						 radv);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!timer_pending(&dev->stat_monitor)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			dev->delta = 1;
 			mod_timer(&dev->stat_monitor,
 				  jiffies + STAT_UPDATE_TIMER);
 		}
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		tasklet_schedule(&dev->bh);
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -1346,33 +1699,65 @@ static int lan78xx_link_reset(struct lan78xx_net *dev)
  */
 static void lan78xx_defer_kevent(struct lan78xx_net *dev, int work)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	set_bit(work, &dev->flags);
-	if (!schedule_delayed_work(&dev->wq, 0))
-		netdev_err(dev->net, "kevent %d may have been dropped\n", work);
+	
+	/* For critical events like LINK_RESET, try to wake up the USB interface
+	 * to ensure the event is not silently dropped due to autosuspend
+	 */
+	if (work == EVENT_LINK_RESET) {
+		usb_autopm_get_interface_async(dev->intf);
+	}
+	
+	if (!schedule_delayed_work(&dev->wq, 0)) {
+		/* Work queue is busy, but the flag is set so the event will be
+		 * processed when the work queue runs. This is normal for frequently
+		 * scheduled events like EVENT_LINK_RESET and EVENT_STAT_UPDATE.
+		 * The stat monitor timer (runs every 1s) ensures the work queue
+		 * will process all flags regularly.
+		 */
+		if (work != EVENT_LINK_RESET && work != EVENT_STAT_UPDATE) {
+			/* Only log for less frequent events that might indicate a real issue */
+			if (net_ratelimit()) {
+				netdev_warn(dev->net, "kevent %d work queue busy (flag set, will be processed)\n", work);
+			}
+		} else if (net_ratelimit()) {
+			/* Debug level for frequently scheduled events */
+			netdev_dbg(dev->net, "kevent %d work queue busy (flag set, will be processed)\n", work);
+		}
+	}
 }
 
 static void lan78xx_status(struct lan78xx_net *dev, struct urb *urb)
 {
 	u32 intdata;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (urb->actual_length != 4) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		netdev_warn(dev->net,
 			    "unexpected urb length %d", urb->actual_length);
 		return;
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	intdata = get_unaligned_le32(urb->transfer_buffer);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (intdata & INT_ENP_PHY_INT) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		netif_dbg(dev, link, dev->net, "PHY INTR: 0x%08x\n", intdata);
 		lan78xx_defer_kevent(dev, EVENT_LINK_RESET);
 
+		pr_debug(" SOFTING  %d ", __LINE__);
 		if (dev->domain_data.phyirq > 0) {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			local_irq_disable();
 			generic_handle_irq(dev->domain_data.phyirq);
 			local_irq_enable();
 		}
 	} else {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		netdev_warn(dev->net,
 			    "unexpected interrupt: 0x%08x\n", intdata);
 	}
@@ -1380,6 +1765,7 @@ static void lan78xx_status(struct lan78xx_net *dev, struct urb *urb)
 
 static int lan78xx_ethtool_get_eeprom_len(struct net_device *netdev)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return MAX_EEPROM_SIZE;
 }
 
@@ -1390,15 +1776,19 @@ static int lan78xx_ethtool_get_eeprom(struct net_device *netdev,
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ee->magic = LAN78XX_EEPROM_MAGIC;
 
 	ret = lan78xx_read_raw_eeprom(dev, ee->offset, ee->len, data);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1409,9 +1799,11 @@ static int lan78xx_ethtool_set_eeprom(struct net_device *netdev,
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* Invalid EEPROM_INDICATOR at offset zero will result in a failure
 	 * to load data from EEPROM
 	 */
@@ -1423,20 +1815,24 @@ static int lan78xx_ethtool_set_eeprom(struct net_device *netdev,
 		 (data[0] == OTP_INDICATOR_1))
 		ret = lan78xx_write_raw_otp(dev, ee->offset, ee->len, data);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
 static void lan78xx_get_strings(struct net_device *netdev, u32 stringset,
 				u8 *data)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (stringset == ETH_SS_STATS)
 		memcpy(data, lan78xx_gstrings, sizeof(lan78xx_gstrings));
 }
 
 static int lan78xx_get_sset_count(struct net_device *netdev, int sset)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (sset == ETH_SS_STATS)
 		return ARRAY_SIZE(lan78xx_gstrings);
 	else
@@ -1448,6 +1844,7 @@ static void lan78xx_get_stats(struct net_device *netdev,
 {
 	struct lan78xx_net *dev = netdev_priv(netdev);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_update_stats(dev);
 
 	mutex_lock(&dev->stats.access_lock);
@@ -1459,27 +1856,34 @@ static void lan78xx_get_wol(struct net_device *netdev,
 			    struct ethtool_wolinfo *wol)
 {
 	struct lan78xx_net *dev = netdev_priv(netdev);
-	int ret;
+	int ret=0;
 	u32 buf;
 	struct lan78xx_priv *pdata = (struct lan78xx_priv *)(dev->data[0]);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (usb_autopm_get_interface(dev->intf) < 0)
 		return;
 
 	ret = lan78xx_read_reg(dev, USB_CFG0, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (unlikely(ret < 0)) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		wol->supported = 0;
 		wol->wolopts = 0;
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (buf & USB_CFG_RMT_WKP_) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			wol->supported = WAKE_ALL;
 			wol->wolopts = pdata->wol;
 		} else {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			wol->supported = 0;
 			wol->wolopts = 0;
 		}
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	usb_autopm_put_interface(dev->intf);
 }
 
@@ -1491,12 +1895,15 @@ static int lan78xx_set_wol(struct net_device *netdev,
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (wol->wolopts & ~WAKE_ALL)
 		return -EINVAL;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	pdata->wol = wol->wolopts;
 
 	device_set_wakeup_enable(&dev->udev->dev, (bool)wol->wolopts);
@@ -1505,6 +1912,7 @@ static int lan78xx_set_wol(struct net_device *netdev,
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1516,15 +1924,19 @@ static int lan78xx_get_eee(struct net_device *net, struct ethtool_eee *edata)
 	u32 buf;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = phy_ethtool_get_eee(phydev, edata);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto exit;
 
 	ret = lan78xx_read_reg(dev, MAC_CR, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (buf & MAC_CR_EEE_EN_) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		edata->eee_enabled = true;
 		edata->eee_active = !!(edata->advertised &
 				       edata->lp_advertised);
@@ -1533,6 +1945,7 @@ static int lan78xx_get_eee(struct net_device *net, struct ethtool_eee *edata)
 		ret = lan78xx_read_reg(dev, EEE_TX_LPI_REQ_DLY, &buf);
 		edata->tx_lpi_timer = buf;
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		edata->eee_enabled = false;
 		edata->eee_active = false;
 		edata->tx_lpi_enabled = false;
@@ -1543,6 +1956,7 @@ static int lan78xx_get_eee(struct net_device *net, struct ethtool_eee *edata)
 exit:
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1553,10 +1967,13 @@ static int lan78xx_set_eee(struct net_device *net, struct ethtool_eee *edata)
 	u32 buf;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (edata->eee_enabled) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, MAC_CR, &buf);
 		buf |= MAC_CR_EEE_EN_;
 		ret = lan78xx_write_reg(dev, MAC_CR, buf);
@@ -1566,6 +1983,7 @@ static int lan78xx_set_eee(struct net_device *net, struct ethtool_eee *edata)
 		buf = (u32)edata->tx_lpi_timer;
 		ret = lan78xx_write_reg(dev, EEE_TX_LPI_REQ_DLY, buf);
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, MAC_CR, &buf);
 		buf &= ~MAC_CR_EEE_EN_;
 		ret = lan78xx_write_reg(dev, MAC_CR, buf);
@@ -1573,6 +1991,7 @@ static int lan78xx_set_eee(struct net_device *net, struct ethtool_eee *edata)
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -1585,6 +2004,7 @@ static u32 lan78xx_get_link(struct net_device *net)
 	link = net->phydev->link;
 	mutex_unlock(&net->phydev->lock);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, link);
 	return link;
 }
 
@@ -1593,6 +2013,7 @@ static void lan78xx_get_drvinfo(struct net_device *net,
 {
 	struct lan78xx_net *dev = netdev_priv(net);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	strncpy(info->driver, DRIVER_NAME, sizeof(info->driver));
 	usb_make_path(dev->udev, info->bus_info, sizeof(info->bus_info));
 }
@@ -1600,6 +2021,7 @@ static void lan78xx_get_drvinfo(struct net_device *net,
 static u32 lan78xx_get_msglevel(struct net_device *net)
 {
 	struct lan78xx_net *dev = netdev_priv(net);
+	pr_debug(" SOFTING  %d %d", __LINE__,dev->msg_enable);
 
 	return dev->msg_enable;
 }
@@ -1607,6 +2029,7 @@ static u32 lan78xx_get_msglevel(struct net_device *net)
 static void lan78xx_set_msglevel(struct net_device *net, u32 level)
 {
 	struct lan78xx_net *dev = netdev_priv(net);
+	pr_debug(" SOFTING  %d ", __LINE__);
 
 	dev->msg_enable = level;
 }
@@ -1619,13 +2042,16 @@ static int lan78xx_get_link_ksettings(struct net_device *net,
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	phy_ethtool_ksettings_get(phydev, cmd);
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1638,13 +2064,17 @@ static int lan78xx_set_link_ksettings(struct net_device *net,
 	int temp;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* change speed & duplex */
 	ret = phy_ethtool_ksettings_set(phydev, cmd);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (!cmd->base.autoneg) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		/* force link down */
 		temp = phy_read(phydev, MII_BMCR);
 		phy_write(phydev, MII_BMCR, temp | BMCR_LOOPBACK);
@@ -1654,6 +2084,7 @@ static int lan78xx_set_link_ksettings(struct net_device *net,
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1673,6 +2104,7 @@ static void lan78xx_get_pause(struct net_device *net,
 
 	if (dev->fc_request_control & FLOW_CTRL_RX)
 		pause->rx_pause = 1;
+	pr_debug(" SOFTING  %d ", __LINE__);
 }
 
 static int lan78xx_set_pause(struct net_device *net,
@@ -1681,11 +2113,13 @@ static int lan78xx_set_pause(struct net_device *net,
 	struct lan78xx_net *dev = netdev_priv(net);
 	struct phy_device *phydev = net->phydev;
 	struct ethtool_link_ksettings ecmd;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	phy_ethtool_ksettings_get(phydev, &ecmd);
 
 	if (pause->autoneg && !ecmd.base.autoneg) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -1701,6 +2135,7 @@ static int lan78xx_set_pause(struct net_device *net,
 		__ETHTOOL_DECLARE_LINK_MODE_MASK(fc) = { 0, };
 		u32 mii_adv;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		linkmode_clear_bit(ETHTOOL_LINK_MODE_Pause_BIT,
 				   ecmd.link_modes.advertising);
 		linkmode_clear_bit(ETHTOOL_LINK_MODE_Asym_Pause_BIT,
@@ -1715,8 +2150,10 @@ static int lan78xx_set_pause(struct net_device *net,
 
 	dev->fc_autoneg = pause->autoneg;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = 0;
 exit:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1726,6 +2163,7 @@ static int lan78xx_get_regs_len(struct net_device *netdev)
 		return (sizeof(lan78xx_regs));
 	else
 		return (sizeof(lan78xx_regs) + PHY_REG_SIZE);
+	pr_debug(" SOFTING  %d ", __LINE__);
 }
 
 static void
@@ -1736,16 +2174,20 @@ lan78xx_get_regs(struct net_device *netdev, struct ethtool_regs *regs,
 	int i, j;
 	struct lan78xx_net *dev = netdev_priv(netdev);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* Read Device/MAC registers */
 	for (i = 0; i < ARRAY_SIZE(lan78xx_regs); i++)
 		lan78xx_read_reg(dev, lan78xx_regs[i], &data[i]);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (!netdev->phydev)
 		return;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* Read PHY registers */
 	for (j = 0; j < 32; i++, j++)
 		data[i] = phy_read(netdev->phydev, j);
+	pr_debug(" SOFTING  %d ", __LINE__);
 }
 
 static const struct ethtool_ops lan78xx_ethtool_ops = {
@@ -1788,8 +2230,11 @@ static void lan78xx_init_mac_address(struct lan78xx_net *dev)
 	addr[4] = addr_hi & 0xFF;
 	addr[5] = (addr_hi >> 8) & 0xFF;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (!is_valid_ether_addr(addr)) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		if (!eth_platform_get_mac_address(&dev->udev->dev, addr)) {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			/* valid address present in Device Tree */
 			netif_dbg(dev, ifup, dev->net,
 				  "MAC address read from Device Tree");
@@ -1798,16 +2243,19 @@ static void lan78xx_init_mac_address(struct lan78xx_net *dev)
 			    (lan78xx_read_otp(dev, EEPROM_MAC_OFFSET,
 					      ETH_ALEN, addr) == 0)) &&
 			   is_valid_ether_addr(addr)) {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			/* eeprom values are valid so use them */
 			netif_dbg(dev, ifup, dev->net,
 				  "MAC address read from EEPROM");
 		} else {
+			pr_debug(" SOFTING  %d ", __LINE__);
 			/* generate random MAC */
 			eth_random_addr(addr);
 			netif_dbg(dev, ifup, dev->net,
 				  "MAC address set to random addr");
 		}
 
+		pr_debug(" SOFTING  %d ", __LINE__);
 		addr_lo = addr[0] | (addr[1] << 8) |
 			  (addr[2] << 16) | (addr[3] << 24);
 		addr_hi = addr[4] | (addr[5] << 8);
@@ -1816,9 +2264,11 @@ static void lan78xx_init_mac_address(struct lan78xx_net *dev)
 		lan78xx_write_reg(dev, RX_ADDRH, addr_hi);
 	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_write_reg(dev, MAF_LO(0), addr_lo);
 	lan78xx_write_reg(dev, MAF_HI(0), addr_hi | MAF_HI_VALID_);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	ether_addr_copy(dev->net->dev_addr, addr);
 }
 
@@ -1827,35 +2277,50 @@ static int lan78xx_mdiobus_read(struct mii_bus *bus, int phy_id, int idx)
 {
 	struct lan78xx_net *dev = bus->priv;
 	u32 val, addr;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = usb_autopm_get_interface(dev->intf);
 	if (ret < 0)
 		return ret;
 
-	mutex_lock(&dev->phy_mutex);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_lock(&dev->mdiobus_mutex);
 
 	/* confirm MII not busy */
-	ret = lan78xx_phy_wait_not_busy(dev);
+	ret = lan78xx_mdiobus_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* set the address, index & direction (read from PHY) */
 	addr = mii_access(phy_id, idx, MII_READ);
 	ret = lan78xx_write_reg(dev, MII_ACC, addr);
-
-	ret = lan78xx_phy_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
+	ret = lan78xx_mdiobus_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (ret < 0)
+		goto done;
+
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, MII_DATA, &val);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (ret < 0)
+		goto done;
 
 	ret = (int)(val & 0xFFFF);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 done:
-	mutex_unlock(&dev->phy_mutex);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_unlock(&dev->mdiobus_mutex);
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -1867,40 +2332,50 @@ static int lan78xx_mdiobus_write(struct mii_bus *bus, int phy_id, int idx,
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
-	mutex_lock(&dev->phy_mutex);
+	mutex_lock(&dev->mdiobus_mutex);
 
 	/* confirm MII not busy */
-	ret = lan78xx_phy_wait_not_busy(dev);
+	ret = lan78xx_mdiobus_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 	val = (u32)regval;
 	ret = lan78xx_write_reg(dev, MII_DATA, val);
+	if (ret < 0)
+		goto done;
 
 	/* set the address, index & direction (write to PHY) */
 	addr = mii_access(phy_id, idx, MII_WRITE);
 	ret = lan78xx_write_reg(dev, MII_ACC, addr);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (ret < 0)
+		goto done;
 
-	ret = lan78xx_phy_wait_not_busy(dev);
+	ret = lan78xx_mdiobus_wait_not_busy(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 done:
-	mutex_unlock(&dev->phy_mutex);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_unlock(&dev->mdiobus_mutex);
 	usb_autopm_put_interface(dev->intf);
-	return 0;
+	return ret;
 }
 
 static int lan78xx_mdio_init(struct lan78xx_net *dev)
 {
 	struct device_node *node;
-	int ret;
+	int ret=0;
 
 	dev->mdiobus = mdiobus_alloc();
 	if (!dev->mdiobus) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_err(dev->net, "can't allocate MDIO bus\n");
 		return -ENOMEM;
 	}
@@ -1928,13 +2403,16 @@ static int lan78xx_mdio_init(struct lan78xx_net *dev)
 
 	node = of_get_child_by_name(dev->udev->dev.of_node, "mdio");
 	ret = of_mdiobus_register(dev->mdiobus, node);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	of_node_put(node);
 	if (ret) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_err(dev->net, "can't register MDIO bus\n");
 		goto exit1;
 	}
 
 	netdev_dbg(dev->net, "registered mdiobus bus %s\n", dev->mdiobus->id);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 exit1:
 	mdiobus_free(dev->mdiobus);
@@ -1943,22 +2421,38 @@ exit1:
 
 static void lan78xx_remove_mdio(struct lan78xx_net *dev)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	mdiobus_unregister(dev->mdiobus);
 	mdiobus_free(dev->mdiobus);
 }
 
 static void lan78xx_link_status_change(struct net_device *net)
 {
+	struct lan78xx_net *dev = netdev_priv(net);
 	struct phy_device *phydev = net->phydev;
+	struct ethtool_eee eee;
+	u32 data;
+	int ret;
+
+	ret = lan78xx_read_reg(dev, MAC_CR, &data);
+	if (ret < 0)
+		return;
+
+	/* Check EEE status using ethtool interface */
+	if (phy_ethtool_get_eee(phydev, &eee) == 0 && eee.tx_lpi_enabled)
+		data |=  MAC_CR_EEE_EN_;
+	else
+		data &= ~MAC_CR_EEE_EN_;
+	lan78xx_write_reg(dev, MAC_CR, data);
 
 	phy_print_status(phydev);
-
 }
 
 static int irq_map(struct irq_domain *d, unsigned int irq,
 		   irq_hw_number_t hwirq)
 {
 	struct irq_domain_data *data = d->host_data;
+	pr_debug(" SOFTING  %d ", __LINE__);
 
 	irq_set_chip_data(irq, data);
 	irq_set_chip_and_handler(irq, data->irqchip, data->irq_handler);
@@ -1969,6 +2463,7 @@ static int irq_map(struct irq_domain *d, unsigned int irq,
 
 static void irq_unmap(struct irq_domain *d, unsigned int irq)
 {
+	pr_debug(" SOFTING  %d ", __LINE__);
 	irq_set_chip_and_handler(irq, NULL, NULL);
 	irq_set_chip_data(irq, NULL);
 }
@@ -1981,6 +2476,7 @@ static const struct irq_domain_ops chip_domain_ops = {
 static void lan78xx_irq_mask(struct irq_data *irqd)
 {
 	struct irq_domain_data *data = irq_data_get_irq_chip_data(irqd);
+	pr_debug(" SOFTING  %d ", __LINE__);
 
 	data->irqenable &= ~BIT(irqd_to_hwirq(irqd));
 }
@@ -1988,6 +2484,7 @@ static void lan78xx_irq_mask(struct irq_data *irqd)
 static void lan78xx_irq_unmask(struct irq_data *irqd)
 {
 	struct irq_domain_data *data = irq_data_get_irq_chip_data(irqd);
+	pr_debug(" SOFTING  %d ", __LINE__);
 
 	data->irqenable |= BIT(irqd_to_hwirq(irqd));
 }
@@ -1995,6 +2492,7 @@ static void lan78xx_irq_unmask(struct irq_data *irqd)
 static void lan78xx_irq_bus_lock(struct irq_data *irqd)
 {
 	struct irq_domain_data *data = irq_data_get_irq_chip_data(irqd);
+	pr_debug(" SOFTING  %d ", __LINE__);
 
 	mutex_lock(&data->irq_lock);
 }
@@ -2006,6 +2504,7 @@ static void lan78xx_irq_bus_sync_unlock(struct irq_data *irqd)
 			container_of(data, struct lan78xx_net, domain_data);
 	u32 buf;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* call register access here because irq_bus_lock & irq_bus_sync_unlock
 	 * are only two callbacks executed in non-atomic contex.
 	 */
@@ -2013,6 +2512,7 @@ static void lan78xx_irq_bus_sync_unlock(struct irq_data *irqd)
 	if (buf != data->irqenable)
 		lan78xx_write_reg(dev, INT_EP_CTL, data->irqenable);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	mutex_unlock(&data->irq_lock);
 }
 
@@ -2032,6 +2532,7 @@ static int lan78xx_setup_irq_domain(struct lan78xx_net *dev)
 	u32 buf;
 	int ret = 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	of_node = dev->udev->dev.parent->of_node;
 
 	mutex_init(&dev->domain_data.irq_lock);
@@ -2044,28 +2545,34 @@ static int lan78xx_setup_irq_domain(struct lan78xx_net *dev)
 
 	irqdomain = irq_domain_add_simple(of_node, MAX_INT_EP, 0,
 					  &chip_domain_ops, &dev->domain_data);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (irqdomain) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		/* create mapping for PHY interrupt */
 		irqmap = irq_create_mapping(irqdomain, INT_EP_PHY);
 		if (!irqmap) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			irq_domain_remove(irqdomain);
 
 			irqdomain = NULL;
 			ret = -EINVAL;
 		}
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = -EINVAL;
 	}
 
 	dev->domain_data.irqdomain = irqdomain;
 	dev->domain_data.phyirq = irqmap;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
 static void lan78xx_remove_irq_domain(struct lan78xx_net *dev)
 {
 	if (dev->domain_data.phyirq > 0) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		irq_dispose_mapping(dev->domain_data.phyirq);
 
 		if (dev->domain_data.irqdomain)
@@ -2075,139 +2582,202 @@ static void lan78xx_remove_irq_domain(struct lan78xx_net *dev)
 	dev->domain_data.irqdomain = NULL;
 }
 
-static int lan8835_fixup(struct phy_device *phydev)
+
+/**
+ * lan78xx_register_fixed_phy() - Register a fallback fixed PHY
+ * @dev: LAN78xx device
+ *
+ * Registers a fixed PHY with 1 Gbps full duplex. This is used in special cases
+ * like EVB-KSZ9897-1, where LAN7801 acts as a USB-to-Ethernet interface to a
+ * switch without a visible PHY.
+ *
+ * Return: pointer to the registered fixed PHY, or ERR_PTR() on error.
+ */
+static struct phy_device *lan78xx_register_fixed_phy(struct lan78xx_net *dev)
 {
-	int buf;
-	struct lan78xx_net *dev = netdev_priv(phydev->attached_dev);
-
-	/* LED2/PME_N/IRQ_N/RGMII_ID pin to IRQ_N mode */
-	buf = phy_read_mmd(phydev, MDIO_MMD_PCS, 0x8010);
-	buf &= ~0x1800;
-	buf |= 0x0800;
-	phy_write_mmd(phydev, MDIO_MMD_PCS, 0x8010, buf);
-
-	/* RGMII MAC TXC Delay Enable */
-	lan78xx_write_reg(dev, MAC_RGMII_ID,
-			  MAC_RGMII_ID_TXC_DELAY_EN_);
-
-	/* RGMII TX DLL Tune Adjust */
-	lan78xx_write_reg(dev, RGMII_TX_BYP_DLL, 0x3D00);
-
-	dev->interface = PHY_INTERFACE_MODE_RGMII_TXID;
-
-	return 1;
-}
-
-static int ksz9031rnx_fixup(struct phy_device *phydev)
-{
-	struct lan78xx_net *dev = netdev_priv(phydev->attached_dev);
-
-	/* Micrel9301RNX PHY configuration */
-	/* RGMII Control Signal Pad Skew */
-	phy_write_mmd(phydev, MDIO_MMD_WIS, 4, 0x0077);
-	/* RGMII RX Data Pad Skew */
-	phy_write_mmd(phydev, MDIO_MMD_WIS, 5, 0x7777);
-	/* RGMII RX Clock Pad Skew */
-	phy_write_mmd(phydev, MDIO_MMD_WIS, 8, 0x1FF);
-
-	dev->interface = PHY_INTERFACE_MODE_RGMII_RXID;
-
-	return 1;
-}
-
-static struct phy_device *lan7801_phy_init(struct lan78xx_net *dev)
-{
-	u32 buf;
-	int ret;
 	struct fixed_phy_status fphy_status = {
 		.link = 1,
 		.speed = SPEED_1000,
 		.duplex = DUPLEX_FULL,
 	};
+
+	netdev_info(dev->net,
+		    "No PHY found on LAN7801 – registering fixed PHY (e.g. EVB-KSZ9897-1)\n");
+
+	return fixed_phy_register(PHY_POLL, &fphy_status, NULL);
+}
+
+/**
+ * lan78xx_get_phy() - Probe or register PHY device and set interface mode
+ * @dev: LAN78xx device structure
+ *
+ * This function attempts to find a PHY on the MDIO bus. If no PHY is found
+ * and the chip is LAN7801, it registers a fixed PHY as fallback. It also
+ * sets dev->interface based on chip ID and detected PHY type.
+ *
+ * Return: a valid PHY device pointer, or ERR_PTR() on failure.
+ */
+static struct phy_device *lan78xx_get_phy(struct lan78xx_net *dev)
+{
 	struct phy_device *phydev;
 
+	/* Attempt to locate a PHY on the MDIO bus */
 	phydev = phy_find_first(dev->mdiobus);
-	if (!phydev) {
-		netdev_dbg(dev->net, "PHY Not Found!! Registering Fixed PHY\n");
-		phydev = fixed_phy_register(PHY_POLL, &fphy_status, NULL);
-		if (IS_ERR(phydev)) {
-			netdev_err(dev->net, "No PHY/fixed_PHY found\n");
-			return NULL;
+
+	switch (dev->chipid) {
+	case ID_REV_CHIP_ID_7801_:
+		if (phydev) {
+			/* External RGMII PHY detected */
+			dev->interface = PHY_INTERFACE_MODE_RGMII_ID;
+			phydev->is_internal = false;
+
+			if (!phydev->drv)
+				netdev_warn(dev->net,
+					    "PHY driver not found – assuming RGMII delays are on PCB or strapped for the PHY\n");
+
+			return phydev;
 		}
-		netdev_dbg(dev->net, "Registered FIXED PHY\n");
+
 		dev->interface = PHY_INTERFACE_MODE_RGMII;
+		/* No PHY found – fallback to fixed PHY (e.g. KSZ switch board) */
+		return lan78xx_register_fixed_phy(dev);
+
+	case ID_REV_CHIP_ID_7800_:
+	case ID_REV_CHIP_ID_7850_:
+		if (!phydev)
+			return ERR_PTR(-ENODEV);
+
+		/* These use internal GMII-connected PHY */
+		dev->interface = PHY_INTERFACE_MODE_GMII;
+		phydev->is_internal = true;
+		return phydev;
+
+	default:
+		netdev_err(dev->net, "Unknown CHIP ID: 0x%08x\n", dev->chipid);
+		return ERR_PTR(-ENODEV);
+	}
+}
+
+/**
+ * lan78xx_mac_prepare_for_phy() - Preconfigure MAC-side interface settings
+ * @dev: LAN78xx device
+ *
+ * Configure MAC-side registers according to dev->interface, which should be
+ * set by lan78xx_get_phy().
+ *
+ * Return: 0 on success or a negative error code.
+ */
+static int lan78xx_mac_prepare_for_phy(struct lan78xx_net *dev)
+{
+	int ret;
+
+	switch (dev->interface) {
+	case PHY_INTERFACE_MODE_RGMII:
+		/* Enable MAC-side TX clock delay */
 		ret = lan78xx_write_reg(dev, MAC_RGMII_ID,
 					MAC_RGMII_ID_TXC_DELAY_EN_);
-		ret = lan78xx_write_reg(dev, RGMII_TX_BYP_DLL, 0x3D00);
-		ret = lan78xx_read_reg(dev, HW_CFG, &buf);
-		buf |= HW_CFG_CLK125_EN_;
-		buf |= HW_CFG_REFCLK25_EN_;
-		ret = lan78xx_write_reg(dev, HW_CFG, buf);
-	} else {
-		if (!phydev->drv) {
-			netdev_err(dev->net, "no PHY driver found\n");
-			return NULL;
-		}
-		dev->interface = PHY_INTERFACE_MODE_RGMII;
-		/* external PHY fixup for KSZ9031RNX */
-		ret = phy_register_fixup_for_uid(PHY_KSZ9031RNX, 0xfffffff0,
-						 ksz9031rnx_fixup);
-		if (ret < 0) {
-			netdev_err(dev->net, "Failed to register fixup for PHY_KSZ9031RNX\n");
-			return NULL;
-		}
-		/* external PHY fixup for LAN8835 */
-		ret = phy_register_fixup_for_uid(PHY_LAN8835, 0xfffffff0,
-						 lan8835_fixup);
-		if (ret < 0) {
-			netdev_err(dev->net, "Failed to register fixup for PHY_LAN8835\n");
-			return NULL;
-		}
-		/* add more external PHY fixup here if needed */
+		if (ret < 0)
+			return ret;
 
-		phydev->is_internal = false;
+		ret = lan78xx_write_reg(dev, RGMII_TX_BYP_DLL, 0x3D00);
+		if (ret < 0)
+			return ret;
+
+		ret = lan78xx_update_reg(dev, HW_CFG,
+					 HW_CFG_CLK125_EN_ | HW_CFG_REFCLK25_EN_,
+					 HW_CFG_CLK125_EN_ | HW_CFG_REFCLK25_EN_);
+		if (ret < 0)
+			return ret;
+
+		break;
+
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		/* Disable MAC-side TXC delay, PHY provides it */
+		ret = lan78xx_write_reg(dev, MAC_RGMII_ID, 0);
+		if (ret < 0)
+			return ret;
+
+		break;
+
+	case PHY_INTERFACE_MODE_GMII:
+		/* No MAC-specific configuration required */
+		break;
+
+	default:
+		netdev_warn(dev->net, "Unsupported interface mode: %d\n",
+			    dev->interface);
+		break;
 	}
-	return phydev;
+
+	return 0;
+}
+
+/**
+ * lan78xx_configure_leds_from_dt() - Configure LED enables based on DT
+ * @dev: LAN78xx device
+ * @phydev: PHY device (must be valid)
+ *
+ * Reads "microchip,led-modes" property from the PHY's DT node and enables
+ * the corresponding number of LEDs by writing to HW_CFG.
+ *
+ * This helper preserves the original logic, enabling up to 4 LEDs.
+ * If the property is not present, this function does nothing.
+ *
+ * Return: 0 on success or a negative error code.
+ */
+static int lan78xx_configure_leds_from_dt(struct lan78xx_net *dev,
+					  struct phy_device *phydev)
+{
+	struct device_node *np = phydev->mdio.dev.of_node;
+	u32 reg;
+	int len, ret;
+
+	if (!np)
+		return 0;
+
+	len = of_property_count_elems_of_size(np, "microchip,led-modes",
+					      sizeof(u32));
+	if (len < 0)
+		return 0;
+
+	ret = lan78xx_read_reg(dev, HW_CFG, &reg);
+	if (ret < 0)
+		return ret;
+
+	reg &= ~(HW_CFG_LED0_EN_ | HW_CFG_LED1_EN_ |
+		 HW_CFG_LED2_EN_ | HW_CFG_LED3_EN_);
+
+	reg |= (len > 0) * HW_CFG_LED0_EN_ |
+	       (len > 1) * HW_CFG_LED1_EN_ |
+	       (len > 2) * HW_CFG_LED2_EN_ |
+	       (len > 3) * HW_CFG_LED3_EN_;
+
+	return lan78xx_write_reg(dev, HW_CFG, reg);
 }
 
 static int lan78xx_phy_init(struct lan78xx_net *dev)
 {
 	__ETHTOOL_DECLARE_LINK_MODE_MASK(fc) = { 0, };
-	int ret;
+	int ret=0;
 	u32 mii_adv;
 	struct phy_device *phydev;
 
-	switch (dev->chipid) {
-	case ID_REV_CHIP_ID_7801_:
-		phydev = lan7801_phy_init(dev);
-		if (!phydev) {
-			netdev_err(dev->net, "lan7801: PHY Init Failed");
-			return -EIO;
-		}
-		break;
+	phydev = lan78xx_get_phy(dev);
+	if (IS_ERR(phydev))
+		return PTR_ERR(phydev);
 
-	case ID_REV_CHIP_ID_7800_:
-	case ID_REV_CHIP_ID_7850_:
-		phydev = phy_find_first(dev->mdiobus);
-		if (!phydev) {
-			netdev_err(dev->net, "no PHY found\n");
-			return -EIO;
-		}
-		phydev->is_internal = true;
-		dev->interface = PHY_INTERFACE_MODE_GMII;
-		break;
-
-	default:
-		netdev_err(dev->net, "Unknown CHIP ID found\n");
-		return -EIO;
-	}
+	ret = lan78xx_mac_prepare_for_phy(dev);
+	if (ret < 0)
+		goto free_phy;
 
 	/* if phyirq is not set, use polling mode in phylib */
-	if (dev->domain_data.phyirq > 0)
+	if (dev->domain_data.phyirq > 0) {
 		phydev->irq = dev->domain_data.phyirq;
-	else
+		netdev_dbg(dev->net, "Using PHY interrupt mode, irq = %d\n", phydev->irq);
+	} else {
 		phydev->irq = PHY_POLL;
-	netdev_dbg(dev->net, "phydev->irq = %d\n", phydev->irq);
+		netdev_dbg(dev->net, "Using PHY polling mode\n");
+	}
 	phydev->irq = PHY_POLL;
 
 	/* set to AUTOMDIX */
@@ -2216,13 +2786,18 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 	ret = phy_connect_direct(dev->net, phydev,
 				 lan78xx_link_status_change,
 				 dev->interface);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_err(dev->net, "can't attach PHY to %s\n",
 			   dev->mdiobus->id);
 		if (dev->chipid == ID_REV_CHIP_ID_7801_) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (phy_is_pseudo_fixed_link(phydev)) {
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				fixed_phy_unregister(phydev);
 			} else {
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				phy_unregister_fixup_for_uid(PHY_KSZ9031RNX,
 							     0xfffffff0);
 				phy_unregister_fixup_for_uid(PHY_LAN8835,
@@ -2235,6 +2810,7 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 	/* MAC doesn't support 1000T Half */
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Half_BIT);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* support both flow controls */
 	dev->fc_request_control = (FLOW_CTRL_RX | FLOW_CTRL_TX);
 	linkmode_clear_bit(ETHTOOL_LINK_MODE_Pause_BIT,
@@ -2245,33 +2821,23 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 	mii_adv_to_linkmode_adv_t(fc, mii_adv);
 	linkmode_or(phydev->advertising, fc, phydev->advertising);
 
-	if (phydev->mdio.dev.of_node) {
-		u32 reg;
-		int len;
-
-		len = of_property_count_elems_of_size(phydev->mdio.dev.of_node,
-						      "microchip,led-modes",
-						      sizeof(u32));
-		if (len >= 0) {
-			/* Ensure the appropriate LEDs are enabled */
-			lan78xx_read_reg(dev, HW_CFG, &reg);
-			reg &= ~(HW_CFG_LED0_EN_ |
-				 HW_CFG_LED1_EN_ |
-				 HW_CFG_LED2_EN_ |
-				 HW_CFG_LED3_EN_);
-			reg |= (len > 0) * HW_CFG_LED0_EN_ |
-				(len > 1) * HW_CFG_LED1_EN_ |
-				(len > 2) * HW_CFG_LED2_EN_ |
-				(len > 3) * HW_CFG_LED3_EN_;
-			lan78xx_write_reg(dev, HW_CFG, reg);
-		}
-	}
+	ret = lan78xx_configure_leds_from_dt(dev, phydev);
+	if (ret)
+		goto free_phy;
 
 	genphy_config_aneg(phydev);
 
 	dev->fc_autoneg = phydev->autoneg;
 
 	return 0;
+
+free_phy:
+	if (phy_is_pseudo_fixed_link(phydev)) {
+		fixed_phy_unregister(phydev);
+		phy_device_free(phydev);
+	}
+
+	return ret;
 }
 
 static int lan78xx_set_rx_max_frame_length(struct lan78xx_net *dev, int size)
@@ -2279,26 +2845,33 @@ static int lan78xx_set_rx_max_frame_length(struct lan78xx_net *dev, int size)
 	u32 buf;
 	bool rxenabled;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	lan78xx_read_reg(dev, MAC_RX, &buf);
 
 	rxenabled = ((buf & MAC_RX_RXEN_) != 0);
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (rxenabled) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		buf &= ~MAC_RX_RXEN_;
 		lan78xx_write_reg(dev, MAC_RX, buf);
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	/* add 4 to size for FCS */
 	buf &= ~MAC_RX_MAX_SIZE_MASK_;
 	buf |= (((size + 4) << MAC_RX_MAX_SIZE_SHIFT_) & MAC_RX_MAX_SIZE_MASK_);
 
 	lan78xx_write_reg(dev, MAC_RX, buf);
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (rxenabled) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		buf |= MAC_RX_RXEN_;
 		lan78xx_write_reg(dev, MAC_RX, buf);
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	return 0;
 }
 
@@ -2314,6 +2887,7 @@ static int unlink_urbs(struct lan78xx_net *dev, struct sk_buff_head *q)
 		struct urb *urb;
 		int ret;
 
+		pr_debug(" SOFTING  %d", __LINE__);
 		skb_queue_walk(q, skb) {
 			entry = (struct skb_data *)skb->cb;
 			if (entry->state != unlink_start)
@@ -2336,6 +2910,7 @@ found:
 		 * these (async) unlinks complete immediately
 		 */
 		ret = usb_unlink_urb(urb);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret != -EINPROGRESS && ret != 0)
 			netdev_dbg(dev->net, "unlink urb err, %d\n", ret);
 		else
@@ -2353,25 +2928,31 @@ static int lan78xx_change_mtu(struct net_device *netdev, int new_mtu)
 	int ll_mtu = new_mtu + netdev->hard_header_len;
 	int old_hard_mtu = dev->hard_mtu;
 	int old_rx_urb_size = dev->rx_urb_size;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* no second zero-length packet read wanted after mtu-sized packets */
 	if ((ll_mtu % dev->maxpacket) == 0)
 		return -EDOM;
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	lan78xx_set_rx_max_frame_length(dev, new_mtu + VLAN_ETH_HLEN);
 
 	netdev->mtu = new_mtu;
 
 	dev->hard_mtu = netdev->mtu + netdev->hard_header_len;
 	if (dev->rx_urb_size == old_hard_mtu) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		dev->rx_urb_size = dev->hard_mtu;
 		if (dev->rx_urb_size > old_rx_urb_size) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (netif_running(dev->net)) {
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				unlink_urbs(dev, &dev->rxq);
 				tasklet_schedule(&dev->bh);
 			}
@@ -2380,6 +2961,7 @@ static int lan78xx_change_mtu(struct net_device *netdev, int new_mtu)
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -2389,14 +2971,18 @@ static int lan78xx_set_mac_addr(struct net_device *netdev, void *p)
 	struct sockaddr *addr = p;
 	u32 addr_lo, addr_hi;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (netif_running(netdev))
 		return -EBUSY;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (!is_valid_ether_addr(addr->sa_data))
 		return -EADDRNOTAVAIL;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	ether_addr_copy(netdev->dev_addr, addr->sa_data);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	addr_lo = netdev->dev_addr[0] |
 		  netdev->dev_addr[1] << 8 |
 		  netdev->dev_addr[2] << 16 |
@@ -2407,10 +2993,12 @@ static int lan78xx_set_mac_addr(struct net_device *netdev, void *p)
 	lan78xx_write_reg(dev, RX_ADDRL, addr_lo);
 	lan78xx_write_reg(dev, RX_ADDRH, addr_hi);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* Added to support MAC address changes */
 	lan78xx_write_reg(dev, MAF_LO(0), addr_lo);
 	lan78xx_write_reg(dev, MAF_HI(0), addr_hi | MAF_HI_VALID_);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -2422,12 +3010,15 @@ static int lan78xx_set_features(struct net_device *netdev,
 	struct lan78xx_priv *pdata = (struct lan78xx_priv *)(dev->data[0]);
 	unsigned long flags;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	spin_lock_irqsave(&pdata->rfe_ctl_lock, flags);
 
 	if (features & NETIF_F_RXCSUM) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		pdata->rfe_ctl |= RFE_CTL_TCPUDP_COE_ | RFE_CTL_IP_COE_;
 		pdata->rfe_ctl |= RFE_CTL_ICMP_COE_ | RFE_CTL_IGMP_COE_;
 	} else {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		pdata->rfe_ctl &= ~(RFE_CTL_TCPUDP_COE_ | RFE_CTL_IP_COE_);
 		pdata->rfe_ctl &= ~(RFE_CTL_ICMP_COE_ | RFE_CTL_IGMP_COE_);
 	}
@@ -2437,15 +3028,18 @@ static int lan78xx_set_features(struct net_device *netdev,
 	else
 		pdata->rfe_ctl &= ~RFE_CTL_VLAN_STRIP_;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (features & NETIF_F_HW_VLAN_CTAG_FILTER)
 		pdata->rfe_ctl |= RFE_CTL_VLAN_FILTER_;
 	else
 		pdata->rfe_ctl &= ~RFE_CTL_VLAN_FILTER_;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	spin_unlock_irqrestore(&pdata->rfe_ctl_lock, flags);
 
 	lan78xx_write_reg(dev, RFE_CTL, pdata->rfe_ctl);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -2455,6 +3049,7 @@ static void lan78xx_deferred_vlan_write(struct work_struct *param)
 			container_of(param, struct lan78xx_priv, set_vlan);
 	struct lan78xx_net *dev = pdata->dev;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_dataport_write(dev, DP_SEL_RSEL_VLAN_DA_, 0,
 			       DP_SEL_VHF_VLAN_LEN, pdata->vlan_table);
 }
@@ -2467,6 +3062,7 @@ static int lan78xx_vlan_rx_add_vid(struct net_device *netdev,
 	u16 vid_bit_index;
 	u16 vid_dword_index;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	vid_dword_index = (vid >> 5) & 0x7F;
 	vid_bit_index = vid & 0x1F;
 
@@ -2475,6 +3071,7 @@ static int lan78xx_vlan_rx_add_vid(struct net_device *netdev,
 	/* defer register writes to a sleepable context */
 	schedule_work(&pdata->set_vlan);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -2494,6 +3091,7 @@ static int lan78xx_vlan_rx_kill_vid(struct net_device *netdev,
 	/* defer register writes to a sleepable context */
 	schedule_work(&pdata->set_vlan);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -2504,30 +3102,37 @@ static void lan78xx_init_ltm(struct lan78xx_net *dev)
 	u32 regs[6] = { 0 };
 
 	ret = lan78xx_read_reg(dev, USB_CFG1, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (buf & USB_CFG1_LTM_ENABLE_) {
 		u8 temp[2];
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		/* Get values from EEPROM first */
 		if (lan78xx_read_eeprom(dev, 0x3F, 2, temp) == 0) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (temp[0] == 24) {
 				ret = lan78xx_read_raw_eeprom(dev,
 							      temp[1] * 2,
 							      24,
 							      (u8 *)regs);
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				if (ret < 0)
 					return;
 			}
 		} else if (lan78xx_read_otp(dev, 0x3F, 2, temp) == 0) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (temp[0] == 24) {
 				ret = lan78xx_read_raw_otp(dev,
 							   temp[1] * 2,
 							   24,
 							   (u8 *)regs);
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				if (ret < 0)
 					return;
 			}
 		}
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	lan78xx_write_reg(dev, LTM_BELT_IDLE0, regs[0]);
 	lan78xx_write_reg(dev, LTM_BELT_IDLE1, regs[1]);
 	lan78xx_write_reg(dev, LTM_BELT_ACT0, regs[2]);
@@ -2552,9 +3157,11 @@ static int lan78xx_stop_hw(struct lan78xx_net *dev, u32 reg, u32 hw_enabled,
 	/* Stop the h/w block (if not already stopped) */
 
 	ret = lan78xx_read_reg(dev, reg, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (buf & hw_enabled) {
 		buf &= ~hw_enabled;
 
@@ -2566,9 +3173,11 @@ static int lan78xx_stop_hw(struct lan78xx_net *dev, u32 reg, u32 hw_enabled,
 		timeout = jiffies + HW_DISABLE_TIMEOUT;
 		do  {
 			ret = lan78xx_read_reg(dev, reg, &buf);
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (ret < 0)
 				return ret;
 
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (buf & hw_disabled)
 				stopped = true;
 			else
@@ -2576,8 +3185,9 @@ static int lan78xx_stop_hw(struct lan78xx_net *dev, u32 reg, u32 hw_enabled,
 		} while (!stopped && !time_after(jiffies, timeout));
 	}
 
-	ret = stopped ? 0 : -ETIME;
+	ret = stopped ? 0 : -ETIMEDOUT;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -2588,22 +3198,27 @@ static int lan78xx_flush_fifo(struct lan78xx_net *dev, u32 reg, u32 fifo_flush)
 
 static int lan78xx_start_tx_path(struct lan78xx_net *dev)
 {
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netif_dbg(dev, drv, dev->net, "start tx path");
 
 	/* Start the MAC transmitter */
 
 	ret = lan78xx_start_hw(dev, MAC_TX, MAC_TX_TXEN_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* Start the Tx FIFO */
 
 	ret = lan78xx_start_hw(dev, FCT_TX_CTL, FCT_TX_CTL_EN_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -2616,15 +3231,19 @@ static int lan78xx_stop_tx_path(struct lan78xx_net *dev)
 	/* Stop the Tx FIFO */
 
 	ret = lan78xx_stop_hw(dev, FCT_TX_CTL, FCT_TX_CTL_EN_, FCT_TX_CTL_DIS_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* Stop the MAC transmitter */
 
 	ret = lan78xx_stop_hw(dev, MAC_TX, MAC_TX_TXEN_, MAC_TX_TXD_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -2638,22 +3257,26 @@ static int lan78xx_flush_tx_fifo(struct lan78xx_net *dev)
 
 static int lan78xx_start_rx_path(struct lan78xx_net *dev)
 {
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netif_dbg(dev, drv, dev->net, "start rx path");
 
 	/* Start the Rx FIFO */
 
 	ret = lan78xx_start_hw(dev, FCT_RX_CTL, FCT_RX_CTL_EN_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* Start the MAC receiver*/
 
 	ret = lan78xx_start_hw(dev, MAC_RX, MAC_RX_RXEN_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return 0;
 }
 
@@ -2666,12 +3289,14 @@ static int lan78xx_stop_rx_path(struct lan78xx_net *dev)
 	/* Stop the MAC receiver */
 
 	ret = lan78xx_stop_hw(dev, MAC_RX, MAC_RX_RXEN_, MAC_RX_RXD_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* Stop the Rx FIFO */
 
 	ret = lan78xx_stop_hw(dev, FCT_RX_CTL, FCT_RX_CTL_EN_, FCT_RX_CTL_DIS_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2695,12 +3320,14 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	u8 sig;
 
 	ret = lan78xx_read_reg(dev, HW_CFG, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= HW_CFG_LRST_;
 
 	ret = lan78xx_write_reg(dev, HW_CFG, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2708,10 +3335,13 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	do {
 		mdelay(1);
 		ret = lan78xx_read_reg(dev, HW_CFG, &buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (time_after(jiffies, timeout)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			netdev_warn(dev->net,
 				    "timeout on completion of LiteReset");
 			ret = -ETIMEDOUT;
@@ -2719,10 +3349,12 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 		}
 	} while (buf & HW_CFG_LRST_);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	lan78xx_init_mac_address(dev);
 
 	/* save DEVID for later usage */
 	ret = lan78xx_read_reg(dev, ID_REV, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2731,29 +3363,35 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 
 	/* Respond to the IN token with a NAK */
 	ret = lan78xx_read_reg(dev, USB_CFG0, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= USB_CFG_BIR_;
 
 	ret = lan78xx_write_reg(dev, USB_CFG0, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* Init LTM */
 	lan78xx_init_ltm(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 	if (dev->udev->speed == USB_SPEED_SUPER) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		buf = DEFAULT_BURST_CAP_SIZE / SS_USB_PKT_SIZE;
 		dev->rx_urb_size = DEFAULT_BURST_CAP_SIZE;
 		dev->rx_qlen = 4;
 		dev->tx_qlen = 4;
 	} else if (dev->udev->speed == USB_SPEED_HIGH) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		buf = DEFAULT_BURST_CAP_SIZE / HS_USB_PKT_SIZE;
 		dev->rx_urb_size = DEFAULT_BURST_CAP_SIZE;
 		dev->rx_qlen = RX_MAX_QUEUE_MEMORY / dev->rx_urb_size;
 		dev->tx_qlen = RX_MAX_QUEUE_MEMORY / dev->hard_mtu;
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		buf = DEFAULT_BURST_CAP_SIZE / FS_USB_PKT_SIZE;
 		dev->rx_urb_size = DEFAULT_BURST_CAP_SIZE;
 		dev->rx_qlen = 4;
@@ -2761,30 +3399,36 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	}
 
 	ret = lan78xx_write_reg(dev, BURST_CAP, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_write_reg(dev, BULK_IN_DLY, DEFAULT_BULK_IN_DELAY);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_read_reg(dev, HW_CFG, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= HW_CFG_MEF_;
 
 	ret = lan78xx_write_reg(dev, HW_CFG, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_read_reg(dev, USB_CFG0, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= USB_CFG_BCE_;
 
 	ret = lan78xx_write_reg(dev, USB_CFG0, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2792,40 +3436,48 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	buf = (MAX_RX_FIFO_SIZE - 512) / 512;
 
 	ret = lan78xx_write_reg(dev, FCT_RX_FIFO_END, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf = (MAX_TX_FIFO_SIZE - 512) / 512;
 
 	ret = lan78xx_write_reg(dev, FCT_TX_FIFO_END, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_write_reg(dev, INT_STS, INT_STS_CLEAR_ALL_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_write_reg(dev, FLOW, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_write_reg(dev, FCT_FLOW, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* Don't need rfe_ctl_lock during initialisation */
 	ret = lan78xx_read_reg(dev, RFE_CTL, &pdata->rfe_ctl);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	pdata->rfe_ctl |= RFE_CTL_BCAST_EN_ | RFE_CTL_DA_PERFECT_;
 
 	ret = lan78xx_write_reg(dev, RFE_CTL, pdata->rfe_ctl);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* Enable or disable checksum offload engines */
 	ret = lan78xx_set_features(dev->net, dev->net->features);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2833,12 +3485,14 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 
 	/* reset PHY */
 	ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= PMT_CTL_PHY_RST_;
 
 	ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2846,10 +3500,12 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	do {
 		mdelay(1);
 		ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
 		if (time_after(jiffies, timeout)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			netdev_warn(dev->net, "timeout waiting for PHY Reset");
 			ret = -ETIMEDOUT;
 			return ret;
@@ -2857,6 +3513,7 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	} while ((buf & PMT_CTL_PHY_RST_) || !(buf & PMT_CTL_READY_));
 
 	ret = lan78xx_read_reg(dev, MAC_CR, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2864,8 +3521,10 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 	if (dev->chipid == ID_REV_CHIP_ID_7801_)
 		buf &= ~MAC_CR_GMII_EN_;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (dev->chipid == ID_REV_CHIP_ID_7800_) {
 		ret = lan78xx_read_raw_eeprom(dev, 0, 1, &sig);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!ret && sig != EEPROM_INDICATOR) {
 			/* Implies there is no external eeprom. Set mac speed */
 			netdev_info(dev->net, "No External EEPROM. Setting MAC Speed\n");
@@ -2873,12 +3532,14 @@ static int lan78xx_reset(struct lan78xx_net *dev)
 		}
 	}
 	ret = lan78xx_write_reg(dev, MAC_CR, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_set_rx_max_frame_length(dev,
 					      dev->net->mtu + VLAN_ETH_HLEN);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -2887,6 +3548,7 @@ static void lan78xx_init_stats(struct lan78xx_net *dev)
 	u32 *p;
 	int i;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* initialize for stats update
 	 * some counters are 20bits and some are 32bits
 	 */
@@ -2894,6 +3556,7 @@ static void lan78xx_init_stats(struct lan78xx_net *dev)
 	for (i = 0; i < (sizeof(dev->stats.rollover_max) / (sizeof(u32))); i++)
 		p[i] = 0xFFFFF;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	dev->stats.rollover_max.rx_unicast_byte_count = 0xFFFFFFFF;
 	dev->stats.rollover_max.rx_broadcast_byte_count = 0xFFFFFFFF;
 	dev->stats.rollover_max.rx_multicast_byte_count = 0xFFFFFFFF;
@@ -2906,29 +3569,38 @@ static void lan78xx_init_stats(struct lan78xx_net *dev)
 	dev->stats.rollover_max.eee_tx_lpi_time = 0xFFFFFFFF;
 
 	set_bit(EVENT_STAT_UPDATE, &dev->flags);
+	pr_debug(" SOFTING  %d ", __LINE__);
 }
 
 static int lan78xx_open(struct net_device *net)
 {
 	struct lan78xx_net *dev = netdev_priv(net);
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netif_dbg(dev, ifup, dev->net, "open device");
 
 	ret = usb_autopm_get_interface(dev->intf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&dev->dev_mutex);
 
 	phy_start(net->phydev);
+
+	/* Force initial link status check */
+	lan78xx_defer_kevent(dev, EVENT_LINK_RESET);
 
 	netif_dbg(dev, ifup, dev->net, "phy initialised successfully");
 
 	/* for Link Check */
 	if (dev->urb_intr) {
 		ret = usb_submit_urb(dev->urb_intr, GFP_KERNEL);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			netif_err(dev, ifup, dev->net,
 				  "intr submit %d\n", ret);
 			goto done;
@@ -2936,21 +3608,26 @@ static int lan78xx_open(struct net_device *net)
 	}
 
 	ret = lan78xx_flush_rx_fifo(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 	ret = lan78xx_flush_tx_fifo(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 	ret = lan78xx_start_tx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 	ret = lan78xx_start_rx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 	lan78xx_init_stats(dev);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	set_bit(EVENT_DEV_OPEN, &dev->flags);
 
 	netif_start_queue(net);
@@ -2958,11 +3635,13 @@ static int lan78xx_open(struct net_device *net)
 	dev->link_on = false;
 
 	lan78xx_defer_kevent(dev, EVENT_LINK_RESET);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 done:
 	mutex_unlock(&dev->dev_mutex);
 
 	usb_autopm_put_interface(dev->intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -2972,28 +3651,34 @@ static void lan78xx_terminate_urbs(struct lan78xx_net *dev)
 	DECLARE_WAITQUEUE(wait, current);
 	int temp;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* ensure there are no more active urbs */
 	add_wait_queue(&unlink_wakeup, &wait);
 	set_current_state(TASK_UNINTERRUPTIBLE);
 	dev->wait = &unlink_wakeup;
 	temp = unlink_urbs(dev, &dev->txq) + unlink_urbs(dev, &dev->rxq);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* maybe wait for deletions to finish. */
 	while (!skb_queue_empty(&dev->rxq) ||
 	       !skb_queue_empty(&dev->txq)) {
+		pr_debug(" SOFTING  %d ", __LINE__);
 		schedule_timeout(msecs_to_jiffies(UNLINK_TIMEOUT_MS));
 		set_current_state(TASK_UNINTERRUPTIBLE);
 		netif_dbg(dev, ifdown, dev->net,
 			  "waited for %d urb completions", temp);
 	}
+	pr_debug(" SOFTING  %d ", __LINE__);
 	set_current_state(TASK_RUNNING);
 	dev->wait = NULL;
 	remove_wait_queue(&unlink_wakeup, &wait);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	while (!skb_queue_empty(&dev->done)) {
 		struct skb_data *entry;
 		struct sk_buff *skb;
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 		skb = skb_dequeue(&dev->done);
 		entry = (struct skb_data *)(skb->cb);
 		usb_free_urb(entry->urb);
@@ -3005,10 +3690,12 @@ static int lan78xx_stop(struct net_device *net)
 {
 	struct lan78xx_net *dev = netdev_priv(net);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	netif_dbg(dev, ifup, dev->net, "stop device");
 
 	mutex_lock(&dev->dev_mutex);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	if (timer_pending(&dev->stat_monitor))
 		del_timer_sync(&dev->stat_monitor);
 
@@ -3016,20 +3703,27 @@ static int lan78xx_stop(struct net_device *net)
 	netif_stop_queue(net);
 	tasklet_kill(&dev->bh);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	lan78xx_terminate_urbs(dev);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	netif_info(dev, ifdown, dev->net,
 		   "stop stats: rx/tx %lu/%lu, errs %lu/%lu\n",
 		   net->stats.rx_packets, net->stats.tx_packets,
 		   net->stats.rx_errors, net->stats.tx_errors);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	/* ignore errors that occur stopping the Tx and Rx data paths */
 	lan78xx_stop_tx_path(dev);
 	lan78xx_stop_rx_path(dev);
 
-	if (net->phydev)
+	pr_debug(" SOFTING  %d ", __LINE__);
+	if (net->phydev) {
+	pr_debug(" SOFTING  %d ", __LINE__);
 		phy_stop(net->phydev);
+	}
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	usb_kill_urb(dev->urb_intr);
 
 	/* deferred work (task, timer, softirq) must also stop.
@@ -3047,6 +3741,7 @@ static int lan78xx_stop(struct net_device *net)
 
 	mutex_unlock(&dev->dev_mutex);
 
+	pr_debug(" SOFTING  %d ", __LINE__);
 	return 0;
 }
 
@@ -3206,13 +3901,16 @@ lan78xx_start_xmit(struct sk_buff *skb, struct net_device *net)
 static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 {
 	struct lan78xx_priv *pdata = NULL;
-	int ret;
+	int ret=0;
 	int i;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	dev->data[0] = (unsigned long)kzalloc(sizeof(*pdata), GFP_KERNEL);
 
 	pdata = (struct lan78xx_priv *)(dev->data[0]);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (!pdata) {
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_warn(dev->net, "Unable to allocate lan78xx_priv");
 		return -ENOMEM;
 	}
@@ -3222,8 +3920,10 @@ static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 	spin_lock_init(&pdata->rfe_ctl_lock);
 	mutex_init(&pdata->dataport_mutex);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	INIT_WORK(&pdata->set_multicast, lan78xx_deferred_multicast_write);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < DP_SEL_VHF_VLAN_LEN; i++)
 		pdata->vlan_table[i] = 0;
 
@@ -3231,15 +3931,19 @@ static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 
 	dev->net->features = 0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (DEFAULT_TX_CSUM_ENABLE)
 		dev->net->features |= NETIF_F_HW_CSUM;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (DEFAULT_RX_CSUM_ENABLE)
 		dev->net->features |= NETIF_F_RXCSUM;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (DEFAULT_TSO_CSUM_ENABLE)
 		dev->net->features |= NETIF_F_TSO | NETIF_F_TSO6 | NETIF_F_SG;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (DEFAULT_VLAN_RX_OFFLOAD)
 		dev->net->features |= NETIF_F_HW_VLAN_CTAG_RX;
 
@@ -3249,6 +3953,7 @@ static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 	dev->net->hw_features = dev->net->features;
 
 	ret = lan78xx_setup_irq_domain(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0) {
 		netdev_warn(dev->net,
 			    "lan78xx_setup_irq_domain() failed : %d", ret);
@@ -3260,12 +3965,14 @@ static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 
 	/* Init all registers */
 	ret = lan78xx_reset(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret) {
 		netdev_warn(dev->net, "Registers INIT FAILED....");
 		goto out2;
 	}
 
 	ret = lan78xx_mdio_init(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret) {
 		netdev_warn(dev->net, "MDIO INIT FAILED.....");
 		goto out2;
@@ -3275,12 +3982,15 @@ static int lan78xx_bind(struct lan78xx_net *dev, struct usb_interface *intf)
 
 	pdata->wol = WAKE_MAGIC;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 
 out2:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	lan78xx_remove_irq_domain(dev);
 
 out1:
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	netdev_warn(dev->net, "Bind routine FAILED");
 	cancel_work_sync(&pdata->set_multicast);
 	cancel_work_sync(&pdata->set_vlan);
@@ -3292,11 +4002,13 @@ static void lan78xx_unbind(struct lan78xx_net *dev, struct usb_interface *intf)
 {
 	struct lan78xx_priv *pdata = (struct lan78xx_priv *)(dev->data[0]);
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	lan78xx_remove_irq_domain(dev);
 
 	lan78xx_remove_mdio(dev);
 
 	if (pdata) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		cancel_work_sync(&pdata->set_multicast);
 		cancel_work_sync(&pdata->set_vlan);
 		netif_dbg(dev, ifdown, dev->net, "free pdata");
@@ -3382,12 +4094,26 @@ static int lan78xx_rx(struct lan78xx_net *dev, struct sk_buff *skb)
 		size = (rx_cmd_a & RX_CMD_A_LEN_MASK_);
 		align_count = (4 - ((size + RXW_PADDING) % 4)) % 4;
 
+		if (unlikely(size > skb->len)) {
+			netif_dbg(dev, rx_err, dev->net,
+				  "size err rx_cmd_a=0x%08x\n",
+				  rx_cmd_a);
+			return 0;
+		}
+
 		if (unlikely(rx_cmd_a & RX_CMD_A_RED_)) {
 			netif_dbg(dev, rx_err, dev->net,
 				  "Error rx_cmd_a=0x%08x", rx_cmd_a);
 		} else {
 			/* last frame in this batch */
 			if (skb->len == size) {
+				if (unlikely(size < ETH_FCS_LEN)) {
+					netif_dbg(dev, rx_err, dev->net,
+						  "size err rx_cmd_a=0x%08x\n",
+						  rx_cmd_a);
+					return 0;
+				}
+
 				lan78xx_rx_csum_offload(dev, skb,
 							rx_cmd_a, rx_cmd_b);
 				lan78xx_rx_vlan_offload(dev, skb,
@@ -3402,6 +4128,14 @@ static int lan78xx_rx(struct lan78xx_net *dev, struct sk_buff *skb)
 			skb2 = skb_clone(skb, GFP_ATOMIC);
 			if (unlikely(!skb2)) {
 				netdev_warn(dev->net, "Error allocating skb");
+				return 0;
+			}
+
+			if (unlikely(size < ETH_FCS_LEN)) {
+				netif_dbg(dev, rx_err, dev->net,
+					  "size err rx_cmd_a=0x%08x\n",
+					  rx_cmd_a);
+				dev_kfree_skb_any(skb2);
 				return 0;
 			}
 
@@ -3587,7 +4321,7 @@ static void lan78xx_tx_bh(struct lan78xx_net *dev)
 	unsigned long flags;
 	struct sk_buff_head *tqp = &dev->txq_pend;
 	struct sk_buff *skb, *skb2;
-	int ret;
+	int ret=0;
 	int count, pos;
 	int skb_totallen, pkt_cnt;
 
@@ -3783,14 +4517,37 @@ static void lan78xx_delayedwork(struct work_struct *work)
 {
 	int status;
 	struct lan78xx_net *dev;
+	int pm_ret;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	dev = container_of(work, struct lan78xx_net, wq.work);
 
 	if (test_bit(EVENT_DEV_DISCONNECT, &dev->flags))
 		return;
 
-	if (usb_autopm_get_interface(dev->intf) < 0)
+	pm_ret = usb_autopm_get_interface(dev->intf);
+	if (pm_ret < 0) {
+		/* USB interface is not ready (suspended/autosuspend).
+		 * For critical events like LINK_RESET, retry after a delay
+		 * instead of silently dropping the event.
+		 */
+		if (test_bit(EVENT_LINK_RESET, &dev->flags)) {
+			if (net_ratelimit()) {
+				netdev_warn(dev->net,
+					   "USB PM get failed (%d) for link check, retrying after 100ms\n",
+					   pm_ret);
+			}
+			/* Retry after 100ms to allow USB to wake up */
+			/* Ensure the flag stays set so we retry */
+			if (!schedule_delayed_work(&dev->wq, msecs_to_jiffies(100))) {
+				/* Work already queued, also ensure stat monitor will retry */
+				if (!timer_pending(&dev->stat_monitor)) {
+					mod_timer(&dev->stat_monitor, jiffies + msecs_to_jiffies(500));
+				}
+			}
+		}
 		return;
+	}
 
 	if (test_bit(EVENT_TX_HALT, &dev->flags)) {
 		unlink_urbs(dev, &dev->txq);
@@ -3799,44 +4556,58 @@ static void lan78xx_delayedwork(struct work_struct *work)
 		if (status < 0 &&
 		    status != -EPIPE &&
 		    status != -ESHUTDOWN) {
+			pr_debug(" SOFTING  %d", __LINE__);
 			if (netif_msg_tx_err(dev))
 				netdev_err(dev->net,
 					   "can't clear tx halt, status %d\n",
 					   status);
 		} else {
 			clear_bit(EVENT_TX_HALT, &dev->flags);
+			pr_debug(" SOFTING  %d", __LINE__);
 			if (status != -ESHUTDOWN)
 				netif_wake_queue(dev->net);
 		}
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (test_bit(EVENT_RX_HALT, &dev->flags)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		unlink_urbs(dev, &dev->rxq);
 		status = usb_clear_halt(dev->udev, dev->pipe_in);
 		if (status < 0 &&
 		    status != -EPIPE &&
 		    status != -ESHUTDOWN) {
+			pr_debug(" SOFTING  %d", __LINE__);
 			if (netif_msg_rx_err(dev))
 				netdev_err(dev->net,
 					   "can't clear rx halt, status %d\n",
 					   status);
+			pr_debug(" SOFTING  %d", __LINE__);
 		} else {
+			pr_debug(" SOFTING  %d", __LINE__);
 			clear_bit(EVENT_RX_HALT, &dev->flags);
-			tasklet_schedule(&dev->bh);
+			/* Restart RX processing after successful halt clear */
+			if (netif_device_present(dev->net) && netif_running(dev->net))
+				tasklet_schedule(&dev->bh);
 		}
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (test_bit(EVENT_LINK_RESET, &dev->flags)) {
 		int ret = 0;
 
 		clear_bit(EVENT_LINK_RESET, &dev->flags);
 		if (lan78xx_link_reset(dev) < 0) {
+			pr_debug(" SOFTING  %d", __LINE__);
 			netdev_info(dev->net, "link reset failed (%d)\n",
 				    ret);
 		}
+		/* Release the async PM reference we took in lan78xx_defer_kevent */
+		usb_autopm_put_interface_async(dev->intf);
 	}
 
 	if (test_bit(EVENT_STAT_UPDATE, &dev->flags)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		lan78xx_update_stats(dev);
 
 		clear_bit(EVENT_STAT_UPDATE, &dev->flags);
@@ -3847,6 +4618,7 @@ static void lan78xx_delayedwork(struct work_struct *work)
 		dev->delta = min((dev->delta * 2), 50);
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	usb_autopm_put_interface(dev->intf);
 }
 
@@ -3855,9 +4627,11 @@ static void intr_complete(struct urb *urb)
 	struct lan78xx_net *dev = urb->context;
 	int status = urb->status;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	switch (status) {
 	/* success */
 	case 0:
+		pr_debug(" SOFTING  %d", __LINE__);
 		lan78xx_status(dev, urb);
 		break;
 
@@ -3865,6 +4639,7 @@ static void intr_complete(struct urb *urb)
 	case -ENOENT:			/* urb killed */
 	case -ENODEV:			/* hardware gone */
 	case -ESHUTDOWN:		/* hardware gone */
+		pr_debug(" SOFTING  %d", __LINE__);
 		netif_dbg(dev, ifdown, dev->net,
 			  "intr shutdown, code %d\n", status);
 		return;
@@ -3873,12 +4648,14 @@ static void intr_complete(struct urb *urb)
 	 * already polls infrequently
 	 */
 	default:
+		pr_debug(" SOFTING  %d", __LINE__);
 		netdev_dbg(dev->net, "intr status %d\n", status);
 		break;
 	}
 
 	if (!netif_device_present(dev->net) ||
 	    !netif_running(dev->net)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		netdev_warn(dev->net, "not submitting new status URB");
 		return;
 	}
@@ -3888,14 +4665,17 @@ static void intr_complete(struct urb *urb)
 
 	switch (status) {
 	case  0:
+		pr_debug(" SOFTING  %d", __LINE__);
 		break;
 	case -ENODEV:
 	case -ENOENT:
+		pr_debug(" SOFTING  %d", __LINE__);
 		netif_dbg(dev, timer, dev->net,
 			  "intr resubmit %d (disconnect?)", status);
 		netif_device_detach(dev->net);
 		break;
 	default:
+		pr_debug(" SOFTING  %d", __LINE__);
 		netif_err(dev, timer, dev->net,
 			  "intr resubmit --> %d\n", status);
 		break;
@@ -3909,11 +4689,13 @@ static void lan78xx_disconnect(struct usb_interface *intf)
 	struct net_device *net;
 	struct phy_device *phydev;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	dev = usb_get_intfdata(intf);
 	usb_set_intfdata(intf, NULL);
 	if (!dev)
 		return;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	set_bit(EVENT_DEV_DISCONNECT, &dev->flags);
 
 	udev = interface_to_usbdev(intf);
@@ -3921,7 +4703,15 @@ static void lan78xx_disconnect(struct usb_interface *intf)
 
 	unregister_netdev(net);
 
+	/* Ensure proper cleanup order */
+	if (timer_pending(&dev->stat_monitor))
+		del_timer_sync(&dev->stat_monitor);
+	set_bit(EVENT_DEV_DISCONNECT, &dev->flags);
 	cancel_delayed_work_sync(&dev->wq);
+	
+	/* Stop PHY to prevent further link events */
+	if (net->phydev)
+		phy_stop(net->phydev);
 
 	phydev = net->phydev;
 
@@ -3930,8 +4720,10 @@ static void lan78xx_disconnect(struct usb_interface *intf)
 
 	phy_disconnect(net->phydev);
 
-	if (phy_is_pseudo_fixed_link(phydev))
+	if (phy_is_pseudo_fixed_link(phydev)) {
 		fixed_phy_unregister(phydev);
+		phy_device_free(phydev);
+	}
 
 	usb_scuttle_anchored_urbs(&dev->deferred);
 
@@ -3940,11 +4732,13 @@ static void lan78xx_disconnect(struct usb_interface *intf)
 
 	lan78xx_unbind(dev, intf);
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	usb_kill_urb(dev->urb_intr);
 	usb_free_urb(dev->urb_intr);
 
 	free_netdev(net);
 	usb_put_dev(udev);
+	pr_debug(" SOFTING  %d", __LINE__);
 }
 
 static void lan78xx_tx_timeout(struct net_device *net, unsigned int txqueue)
@@ -3959,6 +4753,7 @@ static netdev_features_t lan78xx_features_check(struct sk_buff *skb,
 						struct net_device *netdev,
 						netdev_features_t features)
 {
+	pr_debug(" SOFTING  %d", __LINE__);
 	if (skb->len + TX_OVERHEAD > MAX_SINGLE_PACKET_SIZE)
 		features &= ~NETIF_F_GSO_MASK;
 
@@ -3987,8 +4782,23 @@ static const struct net_device_ops lan78xx_netdev_ops = {
 static void lan78xx_stat_monitor(struct timer_list *t)
 {
 	struct lan78xx_net *dev = from_timer(dev, t, stat_monitor);
+	
+	pr_debug(" SOFTING  %d", __LINE__);
 
 	lan78xx_defer_kevent(dev, EVENT_STAT_UPDATE);
+	
+	/* Also trigger link check to recover from NO-CARRIER state */
+	if (!dev->link_on) {
+		if (net_ratelimit()) {
+			netdev_dbg(dev->net, "Stat monitor: link down, triggering link check\n");
+		}
+		lan78xx_defer_kevent(dev, EVENT_LINK_RESET);
+		/* Ensure stat monitor will fire again if link doesn't come up */
+		if (!timer_pending(&dev->stat_monitor)) {
+			dev->delta = 1;
+			mod_timer(&dev->stat_monitor, jiffies + STAT_UPDATE_TIMER);
+		}
+	}
 }
 
 static int lan78xx_probe(struct usb_interface *intf,
@@ -4003,11 +4813,13 @@ static int lan78xx_probe(struct usb_interface *intf,
 	unsigned int period;
 	u8 *buf = NULL;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	udev = interface_to_usbdev(intf);
 	udev = usb_get_dev(udev);
 
 	netdev = alloc_etherdev(sizeof(struct lan78xx_net));
 	if (!netdev) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		dev_err(&intf->dev, "Error: OOM\n");
 		ret = -ENOMEM;
 		goto out1;
@@ -4027,7 +4839,7 @@ static int lan78xx_probe(struct usb_interface *intf,
 	skb_queue_head_init(&dev->txq);
 	skb_queue_head_init(&dev->done);
 	skb_queue_head_init(&dev->txq_pend);
-	mutex_init(&dev->phy_mutex);
+	mutex_init(&dev->mdiobus_mutex);
 	mutex_init(&dev->dev_mutex);
 
 	tasklet_setup(&dev->bh, lan78xx_bh);
@@ -4044,6 +4856,7 @@ static int lan78xx_probe(struct usb_interface *intf,
 	mutex_init(&dev->stats.access_lock);
 
 	if (intf->cur_altsetting->desc.bNumEndpoints < 3) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		ret = -ENODEV;
 		goto out2;
 	}
@@ -4051,6 +4864,7 @@ static int lan78xx_probe(struct usb_interface *intf,
 	dev->pipe_in = usb_rcvbulkpipe(udev, BULK_IN_PIPE);
 	ep_blkin = usb_pipe_endpoint(udev, dev->pipe_in);
 	if (!ep_blkin || !usb_endpoint_is_bulk_in(&ep_blkin->desc)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		ret = -ENODEV;
 		goto out2;
 	}
@@ -4058,12 +4872,14 @@ static int lan78xx_probe(struct usb_interface *intf,
 	dev->pipe_out = usb_sndbulkpipe(udev, BULK_OUT_PIPE);
 	ep_blkout = usb_pipe_endpoint(udev, dev->pipe_out);
 	if (!ep_blkout || !usb_endpoint_is_bulk_out(&ep_blkout->desc)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		ret = -ENODEV;
 		goto out2;
 	}
 
 	ep_intr = &intf->cur_altsetting->endpoint[2];
 	if (!usb_endpoint_is_int_in(&ep_intr->desc)) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		ret = -ENODEV;
 		goto out2;
 	}
@@ -4072,8 +4888,10 @@ static int lan78xx_probe(struct usb_interface *intf,
 					usb_endpoint_num(&ep_intr->desc));
 
 	ret = lan78xx_bind(dev, intf);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		goto out2;
+	}
 
 	if (netdev->mtu > (dev->hard_mtu - netdev->hard_header_len))
 		netdev->mtu = dev->hard_mtu - netdev->hard_header_len;
@@ -4086,12 +4904,15 @@ static int lan78xx_probe(struct usb_interface *intf,
 	maxp = usb_maxpacket(dev->udev, dev->pipe_intr, 0);
 	buf = kmalloc(maxp, GFP_KERNEL);
 	if (buf) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		dev->urb_intr = usb_alloc_urb(0, GFP_KERNEL);
 		if (!dev->urb_intr) {
+			pr_debug(" SOFTING  %d", __LINE__);
 			ret = -ENOMEM;
 			kfree(buf);
 			goto out3;
 		} else {
+			pr_debug(" SOFTING  %d", __LINE__);
 			usb_fill_int_urb(dev->urb_intr, dev->udev,
 					 dev->pipe_intr, buf, maxp,
 					 intr_complete, dev, period);
@@ -4103,24 +4924,81 @@ static int lan78xx_probe(struct usb_interface *intf,
 
 	/* Reject broken descriptors. */
 	if (dev->maxpacket == 0) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		ret = -ENODEV;
 		goto out4;
 	}
 
 	/* driver requires remote-wakeup capability during autosuspend. */
 	intf->needs_remote_wakeup = 1;
+	
+	/* Enable autosuspend for better power management */
+	usb_enable_autosuspend(udev);
 
 	ret = lan78xx_phy_init(dev);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		goto out4;
+	}
+
+	/* Initialize carrier state - start with carrier off until link is detected */
+	netif_carrier_off(netdev);
+
+	/* Set interface name based on USB port number for Android/LXC container usage */
+	/* Port 5 (2-1.5) -> eth_obd, Port 4 (2-1.4) -> eth_lan, Port 3 (2-1.3) -> eth_brr */
+	if (udev->portnum == 5) {
+		strscpy(netdev->name, "eth_obd", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_obd (USB port %u)\n",
+			   udev->portnum);
+	} else if (udev->portnum == 4) {
+		strscpy(netdev->name, "eth_lan", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_lan (USB port %u)\n",
+			   udev->portnum);
+	} else if (udev->portnum == 3) {
+		strscpy(netdev->name, "eth_brr", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_brr (USB port %u)\n",
+			   udev->portnum);
+	} else {
+		netif_info(dev, probe, netdev, "Using default interface name (USB port %u)\n",
+			   udev->portnum);
+	}
 
 	ret = register_netdev(netdev);
 	if (ret != 0) {
+		pr_debug(" SOFTING  %d", __LINE__);
 		netif_err(dev, probe, netdev, "couldn't register the device\n");
 		goto out5;
 	}
 
 	usb_set_intfdata(intf, dev);
+
+	/* Configure eth_obd (port 5) to 100Mbps, full duplex, autoneg on */
+	if (udev->portnum == 5 && netdev->phydev) {
+		struct ethtool_link_ksettings ecmd;
+		int link_ret;
+
+		/* Get current settings */
+		phy_ethtool_ksettings_get(netdev->phydev, &ecmd);
+		/* Set to 100Mbps, full duplex, autoneg on */
+		ecmd.base.speed = SPEED_100;
+		ecmd.base.duplex = DUPLEX_FULL;
+		ecmd.base.autoneg = AUTONEG_ENABLE;
+		/* Clear all advertising bits, then set only 100Mbps full duplex */
+		linkmode_zero(ecmd.link_modes.advertising);
+		linkmode_set_bit(ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+				 ecmd.link_modes.advertising);
+		linkmode_set_bit(ETHTOOL_LINK_MODE_Autoneg_BIT,
+				 ecmd.link_modes.advertising);
+
+		link_ret = phy_ethtool_ksettings_set(netdev->phydev, &ecmd);
+		if (link_ret == 0) {
+			netif_info(dev, probe, netdev,
+				   "Configured eth_obd: 100Mbps, full duplex, autoneg on\n");
+		} else {
+			netif_warn(dev, probe, netdev,
+				   "Failed to configure link settings: %d\n", link_ret);
+		}
+	}
 
 	ret = device_set_wakeup_enable(&udev->dev, true);
 
@@ -4130,19 +5008,41 @@ static int lan78xx_probe(struct usb_interface *intf,
 	pm_runtime_set_autosuspend_delay(&udev->dev,
 					 DEFAULT_AUTOSUSPEND_DELAY);
 
+	/* During boot, the interface might not be opened immediately.
+	 * Start stat monitor timer to ensure link checks happen even if
+	 * interface isn't opened yet. This helps recover from boot-time
+	 * initialization race conditions where interface stays DOWN.
+	 */
+	if (!timer_pending(&dev->stat_monitor)) {
+		dev->delta = 1;
+		/* Start first check after 2 seconds to allow USB/PHY to stabilize */
+		mod_timer(&dev->stat_monitor, jiffies + msecs_to_jiffies(2000));
+		if (net_ratelimit()) {
+			netdev_info(netdev,
+				    "Device registered, starting initial link check in 2s\n");
+		}
+	}
+
+	pr_debug(" SOFTING  %d", __LINE__);
 	return 0;
 
 out5:
+	pr_debug(" SOFTING  %d", __LINE__);
 	phy_disconnect(netdev->phydev);
 out4:
+	pr_debug(" SOFTING  %d", __LINE__);
 	usb_free_urb(dev->urb_intr);
 out3:
+	pr_debug(" SOFTING  %d", __LINE__);
 	lan78xx_unbind(dev, intf);
 out2:
+	pr_debug(" SOFTING  %d", __LINE__);
 	free_netdev(netdev);
 out1:
+	pr_debug(" SOFTING  %d", __LINE__);
 	usb_put_dev(udev);
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	return ret;
 }
 
@@ -4177,28 +5077,34 @@ static int lan78xx_set_auto_suspend(struct lan78xx_net *dev)
 	int ret;
 
 	ret = lan78xx_stop_tx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_stop_rx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* auto suspend (selective suspend) */
 
 	ret = lan78xx_write_reg(dev, WUCSR, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 	ret = lan78xx_write_reg(dev, WUCSR2, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 	ret = lan78xx_write_reg(dev, WK_SRC, 0xFFF1FF1FUL);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* set goodframe wakeup */
 
 	ret = lan78xx_read_reg(dev, WUCSR, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -4206,10 +5112,12 @@ static int lan78xx_set_auto_suspend(struct lan78xx_net *dev)
 	buf |= WUCSR_STORE_WAKE_;
 
 	ret = lan78xx_write_reg(dev, WUCSR, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -4221,20 +5129,24 @@ static int lan78xx_set_auto_suspend(struct lan78xx_net *dev)
 	buf |= PMT_CTL_SUS_MODE_3_;
 
 	ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= PMT_CTL_WUPS_MASK_;
 
 	ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_start_rx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 	return ret;
 }
@@ -4252,19 +5164,24 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 	int ret;
 
 	ret = lan78xx_stop_tx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 	ret = lan78xx_stop_rx_path(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_write_reg(dev, WUCSR, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 	ret = lan78xx_write_reg(dev, WUCSR2, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 	ret = lan78xx_write_reg(dev, WK_SRC, 0xFFF1FF1FUL);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -4273,6 +5190,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 	temp_pmt_ctl = 0;
 
 	ret = lan78xx_read_reg(dev, PMT_CTL, &temp_pmt_ctl);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -4281,12 +5199,14 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 
 	for (mask_index = 0; mask_index < NUM_OF_WUF_CFG; mask_index++) {
 		ret = lan78xx_write_reg(dev, WUF_CFG(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 	}
 
 	mask_index = 0;
 	if (wol & WAKE_PHY) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_pmt_ctl |= PMT_CTL_PHY_WAKE_EN_;
 
 		temp_pmt_ctl |= PMT_CTL_WOL_EN_;
@@ -4294,6 +5214,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_0_;
 	}
 	if (wol & WAKE_MAGIC) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_wucsr |= WUCSR_MPEN_;
 
 		temp_pmt_ctl |= PMT_CTL_WOL_EN_;
@@ -4301,6 +5222,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_3_;
 	}
 	if (wol & WAKE_BCAST) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_wucsr |= WUCSR_BCST_EN_;
 
 		temp_pmt_ctl |= PMT_CTL_WOL_EN_;
@@ -4308,6 +5230,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_0_;
 	}
 	if (wol & WAKE_MCAST) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_wucsr |= WUCSR_WAKE_EN_;
 
 		/* set WUF_CFG & WUF_MASK for IPv4 Multicast */
@@ -4321,15 +5244,19 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 			return ret;
 
 		ret = lan78xx_write_reg(dev, WUF_MASK0(mask_index), 7);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK1(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK2(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK3(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
@@ -4342,19 +5269,24 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 					WUF_CFGX_TYPE_MCAST_ |
 					(0 << WUF_CFGX_OFFSET_SHIFT_) |
 					(crc & WUF_CFGX_CRC16_MASK_));
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
 		ret = lan78xx_write_reg(dev, WUF_MASK0(mask_index), 3);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK1(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK2(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK3(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
@@ -4365,6 +5297,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_0_;
 	}
 	if (wol & WAKE_UCAST) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_wucsr |= WUCSR_PFDA_EN_;
 
 		temp_pmt_ctl |= PMT_CTL_WOL_EN_;
@@ -4372,6 +5305,7 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_0_;
 	}
 	if (wol & WAKE_ARP) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_wucsr |= WUCSR_WAKE_EN_;
 
 		/* set WUF_CFG & WUF_MASK
@@ -4387,15 +5321,19 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 			return ret;
 
 		ret = lan78xx_write_reg(dev, WUF_MASK0(mask_index), 0x3000);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK1(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK2(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 		ret = lan78xx_write_reg(dev, WUF_MASK3(mask_index), 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			return ret;
 
@@ -4407,32 +5345,38 @@ static int lan78xx_set_suspend(struct lan78xx_net *dev, u32 wol)
 	}
 
 	ret = lan78xx_write_reg(dev, WUCSR, temp_wucsr);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* when multiple WOL bits are set */
 	if (hweight_long((unsigned long)wol) > 1) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		temp_pmt_ctl |= PMT_CTL_WOL_EN_;
 		temp_pmt_ctl &= ~PMT_CTL_SUS_MODE_MASK_;
 		temp_pmt_ctl |= PMT_CTL_SUS_MODE_0_;
 	}
 	ret = lan78xx_write_reg(dev, PMT_CTL, temp_pmt_ctl);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	/* clear WUPS */
 	ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	buf |= PMT_CTL_WUPS_MASK_;
 
 	ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	ret = lan78xx_start_rx_path(dev);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -4440,8 +5384,9 @@ static int lan78xx_suspend(struct usb_interface *intf, pm_message_t message)
 {
 	struct lan78xx_net *dev = usb_get_intfdata(intf);
 	bool dev_open;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&dev->dev_mutex);
 
 	netif_dbg(dev, ifdown, dev->net,
@@ -4449,31 +5394,38 @@ static int lan78xx_suspend(struct usb_interface *intf, pm_message_t message)
 
 	dev_open = test_bit(EVENT_DEV_OPEN, &dev->flags);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (dev_open) {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		spin_lock_irq(&dev->txq.lock);
 		/* don't autosuspend while transmitting */
 		if ((skb_queue_len(&dev->txq) ||
 		     skb_queue_len(&dev->txq_pend)) &&
 		    PMSG_IS_AUTO(message)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			spin_unlock_irq(&dev->txq.lock);
 			ret = -EBUSY;
 			goto out;
 		} else {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			set_bit(EVENT_DEV_ASLEEP, &dev->flags);
 			spin_unlock_irq(&dev->txq.lock);
 		}
 
 		/* stop RX */
 		ret = lan78xx_stop_rx_path(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		ret = lan78xx_flush_rx_fifo(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		/* stop Tx */
 		ret = lan78xx_stop_tx_path(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
@@ -4489,14 +5441,17 @@ static int lan78xx_suspend(struct usb_interface *intf, pm_message_t message)
 
 		if (PMSG_IS_AUTO(message)) {
 			ret = lan78xx_set_auto_suspend(dev);
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (ret < 0)
 				goto out;
 		} else {
 			struct lan78xx_priv *pdata;
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 			pdata = (struct lan78xx_priv *)(dev->data[0]);
 			netif_carrier_off(dev->net);
 			ret = lan78xx_set_suspend(dev, pdata->wol);
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			if (ret < 0)
 				goto out;
 		}
@@ -4505,17 +5460,21 @@ static int lan78xx_suspend(struct usb_interface *intf, pm_message_t message)
 		 * events to wake up the host
 		 */
 		u32 buf;
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 		set_bit(EVENT_DEV_ASLEEP, &dev->flags);
 
 		ret = lan78xx_write_reg(dev, WUCSR, 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 		ret = lan78xx_write_reg(dev, WUCSR2, 0);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
@@ -4525,24 +5484,29 @@ static int lan78xx_suspend(struct usb_interface *intf, pm_message_t message)
 		buf |= PMT_CTL_SUS_MODE_3_;
 
 		ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		ret = lan78xx_read_reg(dev, PMT_CTL, &buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		buf |= PMT_CTL_WUPS_MASK_;
 
 		ret = lan78xx_write_reg(dev, PMT_CTL, buf);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 	}
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = 0;
 out:
 	mutex_unlock(&dev->dev_mutex);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -4551,13 +5515,15 @@ static bool lan78xx_submit_deferred_urbs(struct lan78xx_net *dev)
 	bool pipe_halted = false;
 	struct urb *urb;
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	while ((urb = usb_get_from_anchor(&dev->deferred))) {
 		struct sk_buff *skb = urb->context;
-		int ret;
+		int ret=0;
 
 		if (!netif_device_present(dev->net) ||
 		    !netif_carrier_ok(dev->net) ||
 		    pipe_halted) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			usb_free_urb(urb);
 			dev_kfree_skb(skb);
 			continue;
@@ -4565,6 +5531,7 @@ static bool lan78xx_submit_deferred_urbs(struct lan78xx_net *dev)
 
 		ret = usb_submit_urb(urb, GFP_ATOMIC);
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret == 0) {
 			netif_trans_update(dev->net);
 			lan78xx_queue_skb(&dev->txq, skb, tx_start);
@@ -4573,14 +5540,17 @@ static bool lan78xx_submit_deferred_urbs(struct lan78xx_net *dev)
 			dev_kfree_skb(skb);
 
 			if (ret == -EPIPE) {
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				netif_stop_queue(dev->net);
 				pipe_halted = true;
 			} else if (ret == -ENODEV) {
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 				netif_device_detach(dev->net);
 			}
 		}
 	}
 
+	pr_debug(" SOFTING  %d", __LINE__);
 	return pipe_halted;
 }
 
@@ -4588,35 +5558,45 @@ static int lan78xx_resume(struct usb_interface *intf)
 {
 	struct lan78xx_net *dev = usb_get_intfdata(intf);
 	bool dev_open;
-	int ret;
+	int ret=0;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&dev->dev_mutex);
 
 	netif_dbg(dev, ifup, dev->net, "resuming device");
 
 	dev_open = test_bit(EVENT_DEV_OPEN, &dev->flags);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (dev_open) {
 		bool pipe_halted = false;
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 		ret = lan78xx_flush_tx_fifo(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		if (dev->urb_intr) {
 			int ret = usb_submit_urb(dev->urb_intr, GFP_KERNEL);
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 			if (ret < 0) {
-				if (ret == -ENODEV)
+				if (ret == -ENODEV) {
 					netif_device_detach(dev->net);
+					pr_debug(" SOFTING  %d %d", __LINE__, ret);
+				}
+				pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
-			netdev_warn(dev->net, "Failed to submit intr URB");
+				netdev_warn(dev->net, "Failed to submit intr URB");
 			}
 		}
 
 		spin_lock_irq(&dev->txq.lock);
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (netif_device_present(dev->net)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			pipe_halted = lan78xx_submit_deferred_urbs(dev);
 
 			if (pipe_halted)
@@ -4627,34 +5607,41 @@ static int lan78xx_resume(struct usb_interface *intf)
 
 		spin_unlock_irq(&dev->txq.lock);
 
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (!pipe_halted &&
 		    netif_device_present(dev->net) &&
 		    (skb_queue_len(&dev->txq) < dev->tx_qlen))
 			netif_start_queue(dev->net);
 
 		ret = lan78xx_start_tx_path(dev);
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto out;
 
 		tasklet_schedule(&dev->bh);
 
 		if (!timer_pending(&dev->stat_monitor)) {
+			pr_debug(" SOFTING  %d %d", __LINE__, ret);
 			dev->delta = 1;
 			mod_timer(&dev->stat_monitor,
 				  jiffies + STAT_UPDATE_TIMER);
 		}
 
 	} else {
+		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		clear_bit(EVENT_DEV_ASLEEP, &dev->flags);
 	}
 
 	ret = lan78xx_write_reg(dev, WUCSR2, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto out;
 	ret = lan78xx_write_reg(dev, WUCSR, 0);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto out;
 	ret = lan78xx_write_reg(dev, WK_SRC, 0xFFF1FF1FUL);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto out;
 
@@ -4662,6 +5649,7 @@ static int lan78xx_resume(struct usb_interface *intf)
 					     WUCSR2_ARP_RCD_ |
 					     WUCSR2_IPV6_TCPSYN_RCD_ |
 					     WUCSR2_IPV4_TCPSYN_RCD_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto out;
 
@@ -4672,13 +5660,16 @@ static int lan78xx_resume(struct usb_interface *intf)
 					    WUCSR_WUFR_ |
 					    WUCSR_MPR_ |
 					    WUCSR_BCST_FR_);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto out;
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = 0;
 out:
 	mutex_unlock(&dev->dev_mutex);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -4690,13 +5681,18 @@ static int lan78xx_reset_resume(struct usb_interface *intf)
 	netif_dbg(dev, ifup, dev->net, "(reset) resuming device");
 
 	ret = lan78xx_reset(dev);
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
 	phy_start(dev->net->phydev);
 
+	/* Force link status check after reset resume */
+	lan78xx_defer_kevent(dev, EVENT_LINK_RESET);
+
 	ret = lan78xx_resume(intf);
 
+	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
