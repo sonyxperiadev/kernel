@@ -2778,6 +2778,7 @@ static int lan78xx_phy_init(struct lan78xx_net *dev)
 		phydev->irq = PHY_POLL;
 		netdev_dbg(dev->net, "Using PHY polling mode\n");
 	}
+	phydev->irq = PHY_POLL;
 
 	/* set to AUTOMDIX */
 	phydev->mdix = ETH_TP_MDI_AUTO;
@@ -4943,6 +4944,25 @@ static int lan78xx_probe(struct usb_interface *intf,
 	/* Initialize carrier state - start with carrier off until link is detected */
 	netif_carrier_off(netdev);
 
+	/* Set interface name based on USB port number for Android/LXC container usage */
+	/* Port 5 (2-1.5) -> eth_obd, Port 4 (2-1.4) -> eth_lan, Port 3 (2-1.3) -> eth_brr */
+	if (udev->portnum == 5) {
+		strscpy(netdev->name, "eth_obd", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_obd (USB port %u)\n",
+			   udev->portnum);
+	} else if (udev->portnum == 4) {
+		strscpy(netdev->name, "eth_lan", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_lan (USB port %u)\n",
+			   udev->portnum);
+	} else if (udev->portnum == 3) {
+		strscpy(netdev->name, "eth_brr", IFNAMSIZ);
+		netif_info(dev, probe, netdev, "Setting interface name to eth_brr (USB port %u)\n",
+			   udev->portnum);
+	} else {
+		netif_info(dev, probe, netdev, "Using default interface name (USB port %u)\n",
+			   udev->portnum);
+	}
+
 	ret = register_netdev(netdev);
 	if (ret != 0) {
 		pr_debug(" SOFTING  %d", __LINE__);
@@ -4951,6 +4971,34 @@ static int lan78xx_probe(struct usb_interface *intf,
 	}
 
 	usb_set_intfdata(intf, dev);
+
+	/* Configure eth_obd (port 5) to 100Mbps, full duplex, autoneg on */
+	if (udev->portnum == 5 && netdev->phydev) {
+		struct ethtool_link_ksettings ecmd;
+		int link_ret;
+
+		/* Get current settings */
+		phy_ethtool_ksettings_get(netdev->phydev, &ecmd);
+		/* Set to 100Mbps, full duplex, autoneg on */
+		ecmd.base.speed = SPEED_100;
+		ecmd.base.duplex = DUPLEX_FULL;
+		ecmd.base.autoneg = AUTONEG_ENABLE;
+		/* Clear all advertising bits, then set only 100Mbps full duplex */
+		linkmode_zero(ecmd.link_modes.advertising);
+		linkmode_set_bit(ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+				 ecmd.link_modes.advertising);
+		linkmode_set_bit(ETHTOOL_LINK_MODE_Autoneg_BIT,
+				 ecmd.link_modes.advertising);
+
+		link_ret = phy_ethtool_ksettings_set(netdev->phydev, &ecmd);
+		if (link_ret == 0) {
+			netif_info(dev, probe, netdev,
+				   "Configured eth_obd: 100Mbps, full duplex, autoneg on\n");
+		} else {
+			netif_warn(dev, probe, netdev,
+				   "Failed to configure link settings: %d\n", link_ret);
+		}
+	}
 
 	ret = device_set_wakeup_enable(&udev->dev, true);
 
