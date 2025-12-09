@@ -482,8 +482,8 @@ static int lan78xx_read_reg(struct lan78xx_net *dev, u32 index, u32 *data)
 			le32_to_cpus(buf);
 			*data = *buf;
 			break;
-		} else if (ret != -ETIMEDOUT) {
-			/* Don't retry non-timeout errors */
+		} else if (ret == -ENODEV) {
+			pr_debug(" Breaking loop because of -ENODEV");
 			break;
 		}
 		/* Brief delay before retry (exponential backoff) */
@@ -534,8 +534,7 @@ static int lan78xx_write_reg(struct lan78xx_net *dev, u32 index, u32 data)
 
 		if (likely(ret >= 0)) {
 			break;
-		} else if (ret != -ETIMEDOUT) {
-			/* Don't retry non-timeout errors */
+		} else if (ret == -ENODEV) {
 			break;
 		}
 		/* Brief delay before retry (exponential backoff) */
