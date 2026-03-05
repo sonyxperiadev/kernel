@@ -13,7 +13,7 @@ add-overlays = $(foreach o,$1,$(foreach b,$2,$(eval $(basename $b)-$(basename $o
 # see DTB_TYPES from scripts/Makefile.dtbinst and install_dtbs from build.config.msm.common
 #
 
-PARROT_BASE_DTB += parrot.dtb
+PARROT_BASE_DTB += parrot.dtb parrot-gen1.dtb
 
 PARROT_BOARDS += \
 	parrot-qrd-overlay.dtbo \
