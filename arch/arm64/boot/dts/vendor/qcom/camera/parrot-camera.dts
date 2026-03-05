@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-parrot.h>
+#include <dt-bindings/clock/qcom,camcc-parrot.h>
+#include <dt-bindings/interconnect/qcom,parrot.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "parrot-camera.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot v1 SoC";
+	compatible = "qcom,parrot";
+	qcom,msm-id = <537 0x10000>;
+	qcom,board-id = <0 0>;
+};

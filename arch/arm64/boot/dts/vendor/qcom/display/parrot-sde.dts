@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "parrot-sde.dtsi"
+
+/ {
+	qcom,msm-id = <537 0x10000>, <583 0x10000>, <613 0x10000>, <631 0x10000>, <633 0x10000>, <634 0x10000>, <638 0x10000>, <663 0x10000>;
+	qcom,board-id = <0 0>, <0 0x600>;
+};
