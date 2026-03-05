@@ -7,7 +7,7 @@
 /dts-v1/;
 /plugin/;
 
-#include "parrot-wcn6750.dtsi"
+#include "wlan/parrot-wcn6750.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Parrot QRD";

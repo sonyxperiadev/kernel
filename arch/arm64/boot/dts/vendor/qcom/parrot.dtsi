@@ -2790,6 +2790,15 @@
 #include "parrot-dma-heaps.dtsi"
 #include "msm-arm-smmu-parrot.dtsi"
 #include "parrot-walt.dtsi"
+#include "audio/waipio-audio.dtsi"
+#include "bt/parrot-wcn3990-bt.dtsi"
+#include "camera/parrot-camera.dtsi"
+#include "data/parrot-ipa.dtsi"
+#include "display/parrot-sde.dtsi"
+#include "dsp/parrot-dsp.dtsi"
+#include "graphics/parrot-gpu.dtsi"
+#include "graphics/parrot-gpu-pwrlevels.dtsi"
+#include "video/parrot-vidc.dtsi"
 
 &qupv3_se3_2uart {
 	status = "ok";

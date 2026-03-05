@@ -8,6 +8,7 @@
 #include "parrot.dtsi"
 #include "parrot-qrd.dtsi"
 #include "parrot-qrd-pm7250b.dtsi"
+#include "wlan/parrot-wcn3990.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Parrot QRD";
