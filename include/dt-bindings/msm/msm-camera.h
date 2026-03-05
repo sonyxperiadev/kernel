@@ -1,0 +1,1 @@
+../../../techpack/camera/dt-bindings/msm-camera.h
