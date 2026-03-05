@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,aop-qmp.h>
+#include <dt-bindings/clock/qcom,gcc-parrot.h>
+#include <dt-bindings/clock/qcom,gpucc-parrot.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interconnect/qcom,parrot.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "parrot-gpu.dtsi"
+#include "parrot-gpu-pwrlevels.dtsi"
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot";
+	compatible = "qcom,parrot", "qcom,parrot-atp",
+			"qcom,parrot-idp", "qcom,parrot-qrd",
+			"qcom,parrot-rumi", "qcom,parrotp",
+			"qcom,parrotp-atp", "qcom,parrotp-idp",
+			"qcom,parrotp-qrd";
+	qcom,msm-id = <537 0x10000>, <583 0x10000>,
+			<613 0x10000>, <631 0x10000>,
+			<638 0x10000>, <663 0x10000>,
+			<713 0x10000>, <714 0x10000>,
+			<715 0x10000>;
+	qcom,board-id = <0 0>;
+};

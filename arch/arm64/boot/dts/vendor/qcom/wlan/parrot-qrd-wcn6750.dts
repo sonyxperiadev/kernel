@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "parrot-wcn6750.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Parrot QRD";
+	compatible = "qcom,parrot", "qcom,parrot-qrd", "qcom,qrd";
+	qcom,msm-id = <537 0x10000>, <583 0x10000>, <613 0x10000>, <631 0x10000>,
+			<633 0x10000>, <634 0x10000>, <638 0x10000>, <663 0x10000>,
+			<713 0x10000>, <714 0x10000>, <715 0x10000>;
+	qcom,board-id = <0x1000B 1>, <0x1000B 0x601>;
+};
