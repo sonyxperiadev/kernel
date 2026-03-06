@@ -9,7 +9,7 @@
 #include "parrot-pmic-overlay.dtsi"
 #include "parrot-thermal-overlay.dtsi"
 #include "audio/parrot-audio-qrd.dtsi"
-#include "camera/parrot-camera-sensor-qrd.dtsi"
+//#include "camera/parrot-camera-sensor-qrd.dtsi"
 #include "display/parrot-sde-display-qrd.dtsi"
 
 &soc {
