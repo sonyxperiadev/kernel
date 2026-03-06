@@ -1,0 +1,111 @@
+&pm6450_gpios {
+	wl2868c_pins_default: wl2868c_pins_default {
+		pins = "gpio3";
+		function = "normal";
+		output-high;
+		bias-disable;
+		power-source = <0>;
+	};
+};
+
+&qupv3_se2_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pm8010i@8 {
+		status = "disabled";
+	};
+
+	pm8010i@9 {
+		status = "disabled";
+	};
+
+	pm8010j@c {
+		status = "disabled";
+	};
+
+	pm8010j@d {
+		status = "disabled";
+	};
+
+	wl2868c@2f {
+		compatible = "willsemi,wl2868c";
+		reg = <0x2f>;
+
+		rstn-gpio = <&pm6450_gpios 3 0>;
+
+		regulators {
+			wl2868c_l1: ldo1 {
+				regulator-name = "ldo1";
+				regulator-min-microvolt  = <496000>;
+				regulator-max-microvolt  = <1512000>;
+			};
+
+			wl2868c_l2: ldo2 {
+				regulator-name = "ldo2";
+				regulator-min-microvolt = <496000>;
+				regulator-max-microvolt = <1512000>;
+			};
+
+			wl2868c_l3: ldo3 {
+				regulator-name = "ldo3";
+				regulator-min-microvolt = <1504000>;
+				regulator-max-microvolt = <3544000>;
+			};
+
+			wl2868c_l4: ldo4 {
+				regulator-name = "ldo4";
+				regulator-min-microvolt = <1504000>;
+				regulator-max-microvolt = <3544000>;
+			};
+
+			wl2868c_l5: ldo5 {
+				regulator-name = "ldo5";
+				regulator-min-microvolt = <1504000>;
+				regulator-max-microvolt = <3544000>;
+			};
+
+			wl2868c_l6: ldo6 {
+				regulator-name = "ldo6";
+				regulator-min-microvolt = <1504000>;
+				regulator-max-microvolt = <3544000>;
+			};
+
+			wl2868c_l7: ldo7 {
+				regulator-name = "ldo7";
+				regulator-min-microvolt = <1504000>;
+				regulator-max-microvolt = <3544000>;
+			};
+		};
+	};
+};
+
+&tlmm {
+	cam_ois_vdd_active: cam_ois_vdd_active {
+		/* OIS VDD */
+		mux {
+			pins = "gpio43";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio43";
+			bias-disable; /* No PULL */
+			drive-strength = <6>; /* 6 MA */
+		};
+	};
+
+	cam_ois_vdd_suspend: cam_ois_vdd_suspend {
+		/* OIS VDD */
+		mux {
+			pins = "gpio43";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio43";
+			bias-pull-down; /* PULL DOWN */
+			drive-strength = <6>; /* 6 MA */
+		};
+	};
+};

@@ -1,0 +1,4 @@
+#include "parrot-columbia-pdx246_common.dtsi"
+
+&soc {
+};
