@@ -1,0 +1,13 @@
+#include "parrot-elbe-common.dtsi"
+
+&soc {
+};
+
+#include "somc-elbe-audio-common.dtsi"
+#include "somc-elbe-audio-pdx257.dtsi"
+#include "somc-elbe-camera-common.dtsi"
+#include "somc-elbe-camera-pdx257.dtsi"
+#include "somc-elbe-charger-common.dtsi"
+#include "somc-elbe-charger-pdx257.dtsi"
+#include "somc-elbe-display-common.dtsi"
+#include "somc-elbe-display-pdx257.dtsi"
