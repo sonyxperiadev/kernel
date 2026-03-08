@@ -1,0 +1,14 @@
+/dts-v1/;
+
+#include "../qcom/parrot.dtsi"
+#include "../qcom/parrot-qrd-wcn6750.dtsi"
+#include "../qcom/parrot-qrd-pm7250b.dtsi"
+#include "../qcom/wlan/parrot-wcn6750.dtsi"
+#include "parrot-elbe-pdx257_generic.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-257(Parrot QRD)";
+	compatible = "somc,pdx257-generic", "qcom,parrot-qrd",
+			"qcom,parrot", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+};

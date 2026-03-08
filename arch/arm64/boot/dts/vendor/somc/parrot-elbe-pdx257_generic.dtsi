@@ -1,0 +1,4 @@
+#include "parrot-elbe-pdx257_common.dtsi"
+
+&soc {
+};

@@ -481,4 +481,13 @@ config ARCH_SONY_COLUMBIA
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_SONY_ELBE
+	bool "Sony Mobile Elbe platform"
+	depends on ARCH_PARROT
+	help
+	  Support for the SONY Mobile Elbe platform
+	  which is based on QCOM Parrot chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 endmenu # "Platform selection"
