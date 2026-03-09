@@ -7,6 +7,9 @@
 #include "parrot-sde-display-common.dtsi"
 
 &soc {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	sde_wb: qcom,wb-display@0 {
 		compatible = "qcom,wb-display";
 		cell-index = <0>;
