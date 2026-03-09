@@ -149,7 +149,6 @@
 
 	sde_rscc: qcom,sde_rscc@af20000 {
 		cell-index = <0>;
-		status = "disabled";
 		compatible = "qcom,sde-rsc";
 		reg = <0xaf20000 0x4d68>,
 			<0xaf30000 0x3fd4>;
@@ -166,9 +165,8 @@
 
 		qcom,msm-bus,active-only;
 		interconnects =
-			<&mmss_noc MASTER_MDP_DISP &mc_virt SLAVE_EBI1_DISP>,
 			<&mmss_noc MASTER_MDP_DISP &mc_virt SLAVE_EBI1_DISP>;
-		interconnect-names = "qcom,sde-data-bus0", "qcom,sde-data-bus1";
+		interconnect-names = "qcom,sde-data-bus0";
 	};
 
 	smmu_sde_iommu_region_partition: smmu_sde_iommu_region_partition {
@@ -216,8 +214,6 @@
 	clock-rate = <0 0 506000000 506000000 19200000 506000000>;
 	clock-max-rate = <0 0 608000000 608000000 19200000 608000000>;
 
-	vdd-supply = <&disp_cc_mdss_core_gdsc>;
-
 	/* data and reg bus scale settings */
 	interconnects = <&mmss_noc MASTER_MDP &gem_noc SLAVE_LLCC>,
 			<&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
@@ -228,22 +224,14 @@
 
 	qcom,sde-ib-bw-vote = <2500000 0 1600000>;
 	qcom,sde-has-idle-pc;
-
-	qcom,platform-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		qcom,platform-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vdd";
-			qcom,supply-min-voltage = <0>;
-			qcom,supply-max-voltage = <0>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
 };
 
-
+&disp_rsc_drv0 {
+	sde_rsc_rpmh {
+		compatible = "qcom,sde-rsc-rpmh";
+		cell-index = <0>;
+	};
+};
 
 &mdss_dsi0 {
 	vdda-1p2-supply = <&L16B>;
