@@ -2595,11 +2595,11 @@
 			bits = <2 6>;
 		};
 
-		feat_conf12: feat_conf12@0130 {
+		feat_conf12: feat_conf12@130 {
 			reg = <0x0130 0x4>;
 		};
 
-		feat_conf13: feat_conf13@0134 {
+		feat_conf13: feat_conf13@134 {
 			reg = <0x0134 0x4>;
 		};
 

@@ -12,6 +12,9 @@
 		memory-region = <&adsp_mem_heap>;
 		qcom,vmids = <22 37>;
 
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		compute-cb@1 {
 			compatible = "qcom,fastrpc-compute-cb";
 			reg = <3>;
@@ -33,6 +36,7 @@
 			dma-coherent;
 			pd-type = <2>;
 		};
+
 		compute-cb@3 {
 			compatible = "qcom,fastrpc-compute-cb";
 			reg = <5>;
@@ -57,6 +61,9 @@
 		qcom,rpc-latency-us = <235>;
 
 		qcom,qos-cores = <0 1 2 3>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
 
 		compute-cb@1 {
 			compatible = "qcom,fastrpc-compute-cb";
