@@ -6,6 +6,16 @@
 #include <dt-bindings/clock/qcom,dispcc-parrot.h>
 #include "parrot-sde-display-common.dtsi"
 
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	splash_memory: splash_region {
+		reg = <0x0 0xb8000000 0x0 0x02b00000>;
+		label = "cont_splash_region";
+	};
+};
+
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
