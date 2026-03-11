@@ -37,7 +37,7 @@
 
 	chosen: chosen {
 		stdout-path = "serial0:115200n8";
-		bootargs = "loglevel=6 log_buf_len=256K kernel.panic_on_rcu_stall=1 loop.max_part=7 pcie_ports=compat allow_mismatched_32bit_el0 kasan=off rcupdate.rcu_expedited=1 rcu_nocbs=0-7 ftrace_dump_on_oops pstore.compress=none kpti=0 swiotlb=noforce cgroup.memory=nokmem,nosocket kswapd_per_node=2 slub_debug=- allow_file_spec_access cpufreq.default_governor=performance transparent_hugepage=never page_poison=on can.stats_timer=0 disable_dma32=on android12_only.will_be_removed_soon.memblock_nomap_remove=on cgroup_disable=pressure fw_devlink.strict=1 restrict_cma_redirect=false";
+		bootargs = "log_buf_len=256K kernel.panic_on_rcu_stall=1 loop.max_part=7 pcie_ports=compat allow_mismatched_32bit_el0 kasan=off rcupdate.rcu_expedited=1 rcu_nocbs=0-7 ftrace_dump_on_oops pstore.compress=none kpti=0 swiotlb=noforce cgroup.memory=nokmem,nosocket kswapd_per_node=2 slub_debug=- allow_file_spec_access cpufreq.default_governor=performance transparent_hugepage=never page_poison=on can.stats_timer=0 disable_dma32=on android12_only.will_be_removed_soon.memblock_nomap_remove=on cgroup_disable=pressure fw_devlink.strict=1 restrict_cma_redirect=false";
 	};
 
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
