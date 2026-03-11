@@ -177,6 +177,7 @@
 				cdc-vdd-1p8-supply = <&L21B>;
 				qcom,cdc-vdd-1p8-voltage = <1800000 1800000>;
 				qcom,cdc-vdd-1p8-current = <20000>;
+				qcom,cdc-vdd-1p8-lpm-supported = <1>;
 				qcom,cdc-static-supplies = "cdc-vdd-1p8";
 				sound-name-prefix = "SpkrLeft";
 			};
@@ -190,6 +191,7 @@
 				cdc-vdd-1p8-supply = <&L21B>;
 				qcom,cdc-vdd-1p8-voltage = <1800000 1800000>;
 				qcom,cdc-vdd-1p8-current = <20000>;
+				qcom,cdc-vdd-1p8-lpm-supported = <1>;
 				qcom,cdc-static-supplies = "cdc-vdd-1p8";
 				sound-name-prefix = "SpkrRight";
 			};
@@ -238,6 +240,7 @@
 				cdc-vdd-1p8-supply = <&L21B>;
 				qcom,cdc-vdd-1p8-voltage = <1800000 1800000>;
 				qcom,cdc-vdd-1p8-current = <20000>;
+				qcom,cdc-vdd-1p8-lpm-supported = <1>;
 				qcom,cdc-static-supplies = "cdc-vdd-1p8";
 				sound-name-prefix = "Spkr2Left";
 			};
@@ -251,6 +254,7 @@
 				cdc-vdd-1p8-supply = <&L21B>;
 				qcom,cdc-vdd-1p8-voltage = <1800000 1800000>;
 				qcom,cdc-vdd-1p8-current = <20000>;
+				qcom,cdc-vdd-1p8-lpm-supported = <1>;
 				qcom,cdc-static-supplies = "cdc-vdd-1p8";
 				sound-name-prefix = "Spkr2Right";
 			};
@@ -349,14 +353,17 @@
 		cdc-vdd-rxtx-supply = <&L21B>;
 		qcom,cdc-vdd-rxtx-voltage = <1800000 1800000>;
 		qcom,cdc-vdd-rxtx-current = <30000>;
+		qcom,cdc-vdd-rxtx-lpm-supported = <1>;
 
 		cdc-vddio-supply = <&L21B>;
 		qcom,cdc-vddio-voltage = <1800000 1800000>;
 		qcom,cdc-vddio-current = <30000>;
+		qcom,cdc-vddio-lpm-supported = <1>;
 
 		cdc-vdd-buck-supply = <&L20B>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
 		qcom,cdc-vdd-buck-current = <650000>;
+		qcom,cdc-vdd-buck-lpm-supported = <1>;
 
 		cdc-vdd-mic-bias-supply = <&BOB>;
 		qcom,cdc-vdd-mic-bias-voltage = <3296000 3296000>;
@@ -369,8 +376,8 @@
 
 		qcom,cdc-static-supplies = "cdc-vdd-rxtx",
 					   "cdc-vddio",
-					   "cdc-vdd-buck",
 					   "cdc-vdd-mic-bias";
+		qcom,cdc-on-demand-supplies = "cdc-vdd-buck";
 	};
 
 };
