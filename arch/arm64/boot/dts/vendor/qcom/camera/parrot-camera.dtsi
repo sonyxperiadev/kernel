@@ -5,6 +5,11 @@
 
 #include <dt-bindings/msm/msm-camera.h>
 
+/* Feature support bit positions in feature fuse register */
+#define CAM_CPAS_SHDR_MFHDR_ENABLE	23
+/* Group name for common clock source */
+#define CAM_COMMON_TFE_SRC_CLK		1
+
 &tlmm {
 	cci_sda0_active: cci_sda0_active {
 		mux {
