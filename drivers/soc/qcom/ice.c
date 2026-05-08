@@ -371,13 +371,14 @@ static int qcom_ice_program_wrapped_key(struct qcom_ice *ice,
 	if (err) {
 		pr_err("%s:SCM call Error: 0x%x slot %d\n", __func__, err,
 		       slot);
-		return err;
+		goto free_shm;
 	}
 
 	/* Enable CFGE after programming key */
 	qcom_ice_writel(ice, cfg.regval, QCOM_ICE_LUT_KEYS_CRYPTOCFG_R16 +
 					 QCOM_ICE_LUT_KEYS_CRYPTOCFG_OFFSET * slot);
 
+free_shm:
 	qtee_shmbridge_inv_shm_buf(&shm);
 	qtee_shmbridge_free_shm(&shm);
 	return err;
@@ -504,16 +505,15 @@ int qcom_ice_derive_sw_secret(struct qcom_ice *ice, const u8 wkey[],
 
 	err = qcom_scm_derive_sw_secret(shm_key.paddr, wkey_size,
 					shm_secret.paddr, BLK_CRYPTO_SW_SECRET_SIZE);
-	if (err) {
-		pr_err("%s:SCM call error for raw secret: 0x%x\n", __func__, err);
-		goto free_secret;
-	}
 
 	qtee_shmbridge_inv_shm_buf(&shm_secret);
-	memcpy(sw_secret, shm_secret.vaddr, BLK_CRYPTO_SW_SECRET_SIZE);
 	qtee_shmbridge_inv_shm_buf(&shm_key);
 
-free_secret:
+	if (err)
+		pr_err("%s:SCM call error for raw secret: 0x%x\n", __func__, err);
+	else
+		memcpy(sw_secret, shm_secret.vaddr, BLK_CRYPTO_SW_SECRET_SIZE);
+
 	qtee_shmbridge_free_shm(&shm_secret);
 free_key:
 	qtee_shmbridge_free_shm(&shm_key);
