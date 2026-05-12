@@ -2492,6 +2492,60 @@ static const struct adsp_data kera_wpss_resource = {
 	.ssctl_id = 0x19,
 };
 
+static const struct adsp_data waipio_adsp_resource = {
+	.crash_reason_smem = 423,
+	.firmware_name = "adsp.mdt",
+	.pas_id = 1,
+	.minidump_id = 5,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.load_state = "adsp",
+	.ssr_name = "lpass",
+	.sysmon_name = "adsp",
+	.ssctl_id = 0x14,
+};
+
+static const struct adsp_data waipio_cdsp_resource = {
+	.crash_reason_smem = 601,
+	.firmware_name = "cdsp.mdt",
+	.pas_id = 18,
+	.minidump_id = 7,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.load_state = "cdsp",
+	.ssr_name = "cdsp",
+	.sysmon_name = "cdsp",
+	.ssctl_id = 0x17,
+};
+
+static const struct adsp_data waipio_mpss_resource = {
+	.crash_reason_smem = 421,
+	.firmware_name = "modem.mdt",
+	.pas_id = 4,
+	.minidump_id = 3,
+	.both_dumps = true,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.decrypt_shutdown = true,
+	.load_state = "modem",
+	.ssr_name = "mpss",
+	.sysmon_name = "modem",
+	.ssctl_id = 0x12,
+	.dma_phys_below_32b = true,
+};
+
+static const struct adsp_data waipio_slpi_resource = {
+	.crash_reason_smem = 424,
+	.firmware_name = "slpi.mdt",
+	.pas_id = 12,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.load_state = "slpi",
+	.ssr_name = "dsps",
+	.sysmon_name = "slpi",
+	.ssctl_id = 0x16,
+};
+
 static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,msm8226-adsp-pil", .data = &msm8996_adsp_resource},
 	{ .compatible = "qcom,msm8953-adsp-pil", .data = &msm8996_adsp_resource},
@@ -2575,6 +2629,10 @@ static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,monaco-modem-pas", .data = &monaco_modem_resource},
 	{ .compatible = "qcom,tuna-wpss-pas", .data = &tuna_wpss_resource},
 	{ .compatible = "qcom,kera-wpss-pas", .data = &kera_wpss_resource},
+	{ .compatible = "qcom,waipio-adsp-pas", .data = &waipio_adsp_resource},
+	{ .compatible = "qcom,waipio-cdsp-pas", .data = &waipio_cdsp_resource},
+	{ .compatible = "qcom,waipio-slpi-pas", .data = &waipio_slpi_resource},
+	{ .compatible = "qcom,waipio-modem-pas", .data = &waipio_mpss_resource},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, adsp_of_match);
