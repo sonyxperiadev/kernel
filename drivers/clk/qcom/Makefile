@@ -198,6 +198,7 @@ obj-$(CONFIG_SM_VIDEOCC_8550) += videocc-sm8550.o
 obj-$(CONFIG_SM_VIDEOCC_PARROT) += videocc-parrot.o
 obj-$(CONFIG_SM_VIDEOCC_SUN) += videocc-sun.o
 obj-$(CONFIG_SM_VIDEOCC_TUNA) += videocc-tuna.o
+obj-$(CONFIG_SM_VIDEOCC_WAIPIO) += videocc-waipio.o
 obj-$(CONFIG_SPMI_PMIC_CLKDIV) += clk-spmi-pmic-div.o
 obj-$(CONFIG_KPSS_XCC) += kpss-xcc.o
 obj-$(CONFIG_QCOM_HFPLL) += hfpll.o
