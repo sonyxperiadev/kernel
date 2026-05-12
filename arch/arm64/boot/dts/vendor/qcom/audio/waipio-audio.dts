@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,gcc-waipio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interconnect/qcom,waipio.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "waipio-audio.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Waipio v1 SoC";
+	compatible = "qcom,waipio";
+	qcom,msm-id = <457 0x10000>, <482 0x10000>, <457 0x20000>, <482 0x20000>;
+	qcom,board-id = <0 0>;
+};

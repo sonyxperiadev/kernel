@@ -3,6 +3,9 @@
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-vidc.dtbo
 
+dtbo-$(CONFIG_ARCH_WAIPIO) += \
+	waipio-vidc.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo
