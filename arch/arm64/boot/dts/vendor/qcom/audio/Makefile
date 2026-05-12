@@ -4,6 +4,10 @@ dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-audio.dtbo \
 	parrot-audio-qrd.dtbo
 
+dtbo-$(CONFIG_ARCH_WAIPIO) += \
+	waipio-audio.dtbo \
+	waipio-audio-qrd.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

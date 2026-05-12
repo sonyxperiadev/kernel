@@ -3,6 +3,10 @@
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-gpu.dtbo
 
+dtbo-$(CONFIG_ARCH_WAIPIO) += \
+	waipio-gpu.dtbo \
+	waipio-v2-gpu.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

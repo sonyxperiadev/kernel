@@ -13,6 +13,7 @@ add-overlays = $(foreach o,$1,$(foreach b,$2,$(eval $(basename $b)-$(basename $o
 # see DTB_TYPES from scripts/Makefile.dtbinst and install_dtbs from build.config.msm.common
 #
 
+# SoC Parrot
 PARROT_BASE_DTB += parrot.dtb parrot-gen1.dtb
 
 PARROT_BOARDS += \
@@ -23,6 +24,17 @@ parrot-dtb-$(CONFIG_ARCH_PARROT) += \
 	$(call add-overlays, $(PARROT_BOARDS),$(PARROT_BASE_DTB))
 parrot-overlays-dtb-$(CONFIG_ARCH_PARROT) += $(PARROT_BOARDS) $(PARROT_BASE_DTB)
 dtb-y += $(parrot-dtb-y)
+
+# SoC Waipio
+WAIPIO_BASE_DTB += waipio.dtb waipio-v2.dtb
+
+WAIPIO_BOARDS += \
+	waipio-v2-qrd-pm8010.dtbo
+
+waipio-dtb-$(CONFIG_ARCH_WAIPIO) += \
+	$(call add-overlays, $(WAIPIO_BOARDS),$(WAIPIO_BASE_DTB))
+waipio-overlays-dtb-$(CONFIG_ARCH_WAIPIO) += $(WAIPIO_BOARDS) $(WAIPIO_BASE_DTB)
+dtb-y += $(waipio-dtb-y)
 
 always-y    := $(dtb-y)
 subdir-y    := $(dts-dirs)

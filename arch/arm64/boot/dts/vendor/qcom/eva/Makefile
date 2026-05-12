@@ -1,12 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 
-dtbo-$(CONFIG_ARCH_PARROT) += \
-	parrot-camera.dtbo \
-	parrot-camera-sensor-qrd.dtbo
-
 dtbo-$(CONFIG_ARCH_WAIPIO) += \
-	waipio-camera.dtbo \
-	waipio-camera-sensor-qrd.dtbo
+	waipio-eva.dtbo
 
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
