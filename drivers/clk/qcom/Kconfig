@@ -1606,4 +1606,13 @@ config SM_CAMCC_WAIPIO
 	  Say Y if you want to support camera devices and functionality such as
 	  capturing pictures.
 
+config SM_DISPCC_WAIPIO
+	tristate "WAIPIO Display Clock Controller"
+	depends on SM_GCC_WAIPIO
+	help
+	  Support for the display clock controller on Qualcomm Technologies, Inc
+	  WAIPIO devices.
+	  Say Y if you want to support display devices and functionality such as
+	  splash screen.
+
 endif
