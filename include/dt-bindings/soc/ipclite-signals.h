@@ -1,0 +1,1 @@
+../../../techpack/synx/dt-bindings/ipclite-signals.h
