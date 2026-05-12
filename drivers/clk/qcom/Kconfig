@@ -1624,7 +1624,6 @@ config SM_GPUCC_WAIPIO
 	  Say Y if you want to support graphics controller devices and
 	  functionality such as 3D graphics.
 
-
 config SM_VIDEOCC_WAIPIO
 	tristate "WAIPIO Video Clock Controller"
 	depends on SM_GCC_WAIPIO
@@ -1633,5 +1632,14 @@ config SM_VIDEOCC_WAIPIO
 	  WAIPIO devices.
 	  Say Y if you want to support video devices and functionality such as
 	  video encode/decode.
+
+config SM_DEBUGCC_WAIPIO
+	tristate "WAIPIO Debug Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  WAIPIO devices.
+	  Say Y if you want to support the debug clocks such as clock
+	  measurement functionality.
 
 endif
