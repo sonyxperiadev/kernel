@@ -3152,6 +3152,7 @@
 #include "display/waipio-sde.dtsi"
 #include "eva/waipio-eva.dtsi"
 #include "graphics/waipio-gpu.dtsi"
+#include "graphics/waipio-gpu-pwrlevels.dtsi"
 #include "data/waipio-ipa.dtsi"
 #include "mmrm/waipio-mmrm.dtsi"
 #include "mmrm/waipio-mmrm-test.dtsi"
