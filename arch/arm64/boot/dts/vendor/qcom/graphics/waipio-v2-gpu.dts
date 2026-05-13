@@ -12,6 +12,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 #include "waipio-v2-gpu.dtsi"
+#include "waipio-v2-gpu-pwrlevels.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Waipio v2 SoC";
