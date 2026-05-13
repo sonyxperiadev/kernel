@@ -200,35 +200,34 @@
 		qcom,sde-vbif-memtype-0 = <3 3 3 3 3 3 3 3>;
 		qcom,sde-vbif-memtype-1 = <3 3 3 3 3 3>;
 
+		qcom,sde-vbif-default-ot-rd-limit = <40>;
 		qcom,sde-vbif-default-ot-wr-limit = <32>;
 		qcom,sde-vbif-dynamic-ot-wr-limit = <62208000 2 124416000 6 497664000 16>;
 
-		qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
-		qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;
-		qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 6>;
-		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 6>;
+		qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6 3 3 4 4 5 5 6 6>;
+		qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3>;
+		qcom,sde-vbif-qos-cwb-remap = <3 3 4 4 5 5 6 6 3 3 4 4 5 5 6 6>;
+		qcom,sde-vbif-qos-lutdma-remap = <3 3 3 3 4 4 4 6 3 3 3 3 4 4 4 6>;
+		qcom,sde-vbif-qos-offline-wb-remap = <3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3>;
+		qcom,sde-vbif-qos-cnoc-remap = <3 3 4 4 5 5 5 5 3 3 3 3 3 3 3 3>;
 
-		qcom,sde-qos-refresh-rates = <120 240>;
-		qcom,sde-danger-lut = <0x3ffff 0x3ffff 0x0 0x0 0x0 0x3fffff 0x3fffff>,
-                <0x3ffffff 0x3ffffff 0x0 0x0 0x0 0x3ffffff 0x3fffff>;
+		qcom,sde-danger-lut = <0x3ffff 0x3ffff 0x3ffff 0x3ffff 0x0 0x0
+					0x0        0x0        0x0        0x0        0x3fffff   0x3fffff
+					0x3fffff   0x3fffff   0x0        0x0        0x0        0x0>;
 
-		qcom,sde-safe-lut = <0xFE00 0xFE00 0xFFFF 0x01 0x03FF 0xF800 0xF800>,
-                <0xE000 0xE000 0xFFFF 0x01 0x03FF 0xE000 0xF800>;
+		qcom,sde-safe-lut = <0xFE00 0xFE00 0xFE00 0xFE00 0xFFFF 0xFFFF
+					0x1        0x1        0x3FF      0x3FF      0xF800     0xF800
+					0xF800     0xF800     0x0        0x0        0x0        0x0>;
 
 		qcom,sde-creq-lut = <0x00112234 0x45566777 0x00112236 0x67777777
-                                0x00112234 0x45566777 0x00112236 0x67777777
-                                0x0        0x0         0x0        0x0
-                                0x77776666 0x66666540 0x77776666 0x66666540
-                                0x77776541 0x00000000 0x77776541 0x00000000
-                                0x00123445 0x56677777 0x00123667 0x77777777
-                                0x00123445 0x56677777 0x00123667 0x77777777>,
-                            <0x02344455 0x56667777 0x02366677 0x77777777
-                                0x02344455 0x56667777 0x02366677 0x77777777
-                                0x0        0x0        0x0        0x0
-                                0x77776666 0x66666540 0x77776666 0x66666540
-                                0x77776541 0x00000000 0x77776541 0x00000000
-                                0x02344455 0x56667777 0x02366677 0x77777777
-                                0x00123445 0x56677777 0x00123667 0x77777777>;
+					0x00112234 0x45566777 0x00112236 0x67777777
+					0x0        0x0        0x0       0x0
+					0x77776666 0x66666540 0x77776666 0x66666540
+					0x77776541 0x0        0x77776541 0x0
+					0x00123445 0x56677777 0x00123667 0x77777777
+					0x00123445 0x56677777 0x00123667 0x77777777
+					0x0        0x0        0x0        0x0
+					0x0        0x0        0x0        0x0>;
 
 		qcom,sde-cdp-setting = <1 1>, <1 0>;
 
