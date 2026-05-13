@@ -1501,11 +1501,13 @@
 	};
 
 	cache-controller@19200000 {
-		compatible = "qcom,waipio-llcc", "qcom,llcc-v21";
-		reg = <0x19200000 0x580000> , <0x19A00000 0x80000>;
-		reg-names = "llcc_base", "llcc_broadcast_base";
+		compatible = "qcom,sm8450-llcc";
+		reg = <0x19200000 0x80000>, <0x19600000 0x80000>,
+			      <0x19300000 0x80000>, <0x19700000 0x80000>,
+			      <0x19a00000 0x80000>;
+			reg-names = "llcc0_base", "llcc1_base", "llcc2_base",
+				    "llcc3_base", "llcc_broadcast_base";
 		interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
-		cap-based-alloc-and-pwr-collapse;
 
 		llcc-perfmon {
 			compatible = "qcom,llcc-perfmon";
