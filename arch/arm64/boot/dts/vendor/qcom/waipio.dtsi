@@ -756,17 +756,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "ok";
-		ngd@1 {
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			/* slimbus child nodes */
-			slimbus: btfmslim-driver {
-				compatible = "slim217,221";
-				reg = <1 0>;
-			};
-		};
 	};
 
 	intc: interrupt-controller@17100000 {
@@ -2657,30 +2646,6 @@
 		qcom,rproc-handle = <&adsp_pas>;
 	};
 
-	bluetooth: bt_qca6490 {
-		compatible = "qcom,qca6490";
-		pinctrl-names = "default";
-		pinctrl-0 = <&bt_en_sleep>;
-		qcom,bt-reset-gpio = <&tlmm 81 0>; /* BT_EN */
-		qcom,wl-reset-gpio = <&tlmm 80 0>; /* WL_EN */
-		qcom,bt-sw-ctrl-gpio = <&tlmm 82 0>; /* SW_CTRL */
-		qcom,xo-clk-gpio = <&tlmm 204 0>; /* XO */
-		mboxes = <&qmp_aop 0>;
-		qcom,vreg_ipa="s3e";
-
-		qcom,bt-vdd-aon-supply = <&S11B>;
-		qcom,bt-vdd-dig-supply = <&S11B>;
-		qcom,bt-vdd-rfa1-supply = <&S1C>;
-		qcom,bt-vdd-rfa2-supply = <&S12B>;
-		qcom,bt-vdd-asd-supply = <&L7E>;
-
-		qcom,bt-vdd-aon-config = <966000 966000 0 1>;
-		qcom,bt-vdd-dig-config = <966000 966000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1900000 2100000 0 1>;
-		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
-		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
-	};
-
 	llcc_pmu: llcc-pmu@19095000 {
 		compatible = "qcom,llcc-pmu-ver2";
 		reg = <0x19095000 0x300>;
@@ -3148,6 +3113,7 @@
 #include "msm-rdbg.dtsi"
 #include "waipio-thermal.dtsi"
 #include "audio/waipio-audio.dtsi"
+#include "bt/waipio-qca6490-bt.dtsi"
 #include "camera/waipio-camera.dtsi"
 #include "display/waipio-sde.dtsi"
 #include "eva/waipio-eva.dtsi"
@@ -3179,10 +3145,6 @@
 					    "non-fatal";
 		};
 	};
-};
-
-&qupv3_se7_2uart {
-	status = "ok";
 };
 
 &qupv3_se20_4uart {
