@@ -4,6 +4,9 @@ dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-qrd-wcn3990.dtbo \
 	parrot-qrd-wcn6750.dtbo
 
+dtbo-$(CONFIG_ARCH_WAIPIO) += \
+	waipio-qca6490.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo
