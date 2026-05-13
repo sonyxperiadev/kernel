@@ -21,6 +21,11 @@
 		compatible = "qcom,msm-hdcp";
 	};
 
+	sde_dp_pll: qcom,dp_pll@88eb000 {
+		compatible = "qcom,dp-pll-5nm-v1";
+		#clock-cells = <1>;
+	};
+
 	sde_dp: qcom,dp_display@ae90000 {
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
@@ -59,10 +64,10 @@
 			<&clock_gcc GCC_USB3_PRIM_PHY_PIPE_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_CLK_SRC>,
-			<&sde_dp 0>,
+			<&sde_dp_pll 0>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_LINK_INTF_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK_SRC>,
-			<&sde_dp 1>,
+			<&sde_dp_pll 1>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL1_CLK_SRC>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL0_CLK>,
 			<&clock_dispcc DISP_CC_MDSS_DPTX0_PIXEL1_CLK>;
@@ -72,7 +77,7 @@
 			"pixel1_clk_rcg", "strm0_pixel_clk", "strm1_pixel_clk";
 		clock-mmrm = <0 0 0 0 0 DISP_CC_MDSS_DPTX0_LINK_CLK_SRC 0 0 0 0 0 0 0>;
 
-		qcom,pll-revision = "5nm-v1";
+		qcom,dp-pll = <&sde_dp_pll>;
 		qcom,phy-version = <0x420>;
 		qcom,aux-cfg0-settings = [20 00];
 		qcom,aux-cfg1-settings = [24 13];
