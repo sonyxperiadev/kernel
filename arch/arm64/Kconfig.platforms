@@ -498,4 +498,13 @@ config ARCH_SONY_ELBE
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_SONY_NAGARA
+	bool "Sony Mobile Nagara platform"
+	depends on ARCH_WAIPIO
+	help
+	  Support for the SONY Mobile Nagara platform
+	  which is based on QCOM Waipio chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 endmenu # "Platform selection"
