@@ -61,56 +61,66 @@
 					1000 15000000>;
 
 		/* MMUs */
-		non_secure_cb {
+		iommu_region_partition: iommu_region_partition {
+			/* These IOVA regions are unique per context bank */
+			iommu-addresses =
+				<&non_secure_cb 0x0 0x25800000>,
+					<&non_secure_cb 0xe0000000 0x20000000>,
+				<&non_secure_pixel_cb 0x0 0x00100000>,
+					<&non_secure_pixel_cb 0xe000000 0x20000000>,
+				<&secure_non_pixel_cb 0x0 0x01000000>,
+					<&secure_non_pixel_cb 0x25800000 0xda800000>,
+				<&secure_bitstream_cb 0x0 0x00500000>,
+					<&secure_bitstream_cb 0xe0000000 0x20000000>,
+				<&secure_pixel_cb 0x0 0x00500000>,
+					<&secure_pixel_cb 0xe0000000 0x20000000>;
+		};
+
+		non_secure_cb: non_secure_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_ns";
 			iommus = <&apps_smmu 0x2180 0x0400>;
-			qcom,iommu-dma-addr-pool = <0x25800000 0xba800000>;
+			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
-			virtual-addr-pool = <0x25800000 0xba800000>;
 			dma-coherent;
 		};
 
-		non_secure_pixel_cb {
+		non_secure_pixel_cb: non_secure_pixel_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_ns_pixel";
 			iommus = <&apps_smmu 0x2187 0x0400>;
-			qcom,iommu-dma-addr-pool = <0x00100000 0xdff00000>;
+			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
-			virtual-addr-pool = <0x00100000 0xdff00000>;
 			dma-coherent;
 		};
 
-		secure_non_pixel_cb {
+		secure_non_pixel_cb: secure_non_pixel_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_non_pixel";
 			iommus = <&apps_smmu 0x2184 0x0400>;
-			qcom,iommu-dma-addr-pool = <0x01000000 0x24800000>;
+			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0xB>; /* VMID_CP_NON_PIXEL */
-			virtual-addr-pool = <0x01000000 0x24800000>;
 			qcom,secure-context-bank;
 		};
 
-		secure_bitstream_cb {
+		secure_bitstream_cb: secure_bitstream_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_bitstream";
 			iommus = <&apps_smmu 0x2181 0x0404>;
-			qcom,iommu-dma-addr-pool = <0x00500000 0xdfb00000>;
+			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0x9>; /* VMID_CP_BITSTREAM */
-			virtual-addr-pool = <0x00500000 0xdfb00000>;
 			qcom,secure-context-bank;
 		};
 
-		secure_pixel_cb {
+		secure_pixel_cb: secure_pixel_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_pixel";
 			iommus = <&apps_smmu 0x2183 0x0400>;
-			qcom,iommu-dma-addr-pool = <0x00500000 0xdfb00000>;
+			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0xA>; /* VMID_CP_PIXEL */
-			virtual-addr-pool = <0x00500000 0xdfb00000>;
 			qcom,secure-context-bank;
 		};
 	};

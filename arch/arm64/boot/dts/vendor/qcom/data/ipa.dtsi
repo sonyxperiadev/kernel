@@ -46,7 +46,6 @@
 		qcom,ipa-wdi3-over-gsi;
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
-		qcom,use-64-bit-dma-mask;
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,lan-rx-napi;
 		qcom,tx-napi;
@@ -88,10 +87,21 @@
 			interrupt-names = "ipa-smp2p-in";
 		};
 
+		ipa_smmu_ap_partition: ipa_smmu_ap_partition {
+			iommu-addresses = <&ipa_smmu_ap 0x0 0x20000000>,
+				<&ipa_smmu_ap 0x40000000 0xc0000000>;
+		};
+
+		ipa_smmu_uc_partition: ipa_smmu_uc_partition {
+			iommu-addresses = <&ipa_smmu_uc 0x0 0x20000000>,
+				<&ipa_smmu_uc 0x40000000 0xc0000000>;
+		};
+
 		ipa_smmu_ap: ipa_smmu_ap {
 			compatible = "qcom,ipa-smmu-ap-cb";
 			iommus = <&apps_smmu 0x4A0 0x0>;
-			qcom,iommu-dma-addr-pool = <0x20000000 0x20000000>;
+			qcom,ipa-dma-addr-pool = <0x20000000 0x20000000>;
+			memory-region = <&ipa_smmu_ap_partition>;
 			qcom,additional-mapping =
 				/* modem tables in IMEM */
 				<0x146A8000 0x146A8000 0x2000>;
@@ -110,7 +120,8 @@
 		ipa_smmu_uc: ipa_smmu_uc {
 			compatible = "qcom,ipa-smmu-uc-cb";
 			iommus = <&apps_smmu 0x4A2 0x0>;
-			qcom,iommu-dma-addr-pool = <0x20000000 0x20000000>;
+			qcom,ipa-dma-addr-pool = <0x20000000 0x20000000>;
+			memory-region = <&ipa_smmu_uc_partition>;
 			qcom,iommu-dma = "atomic";
 			dma-coherent;
 		};
