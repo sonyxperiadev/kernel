@@ -26,6 +26,11 @@
 	 * Qup2 6: SE 21
 	 */
 
+	qup_iommu_region0: qup_iommu_region {
+		iommu-addresses = <&gpi_dma0 0x0 0x100000>, <&gpi_dma0 0x200000 0xffe00000>,
+			<&qupv3_0 0x0 0x40000000>, <&qupv3_0 0x50000000 0xb0000000>;
+	};
+
 	/* GPI Instance */
 	gpi_dma0: qcom,gpi-dma@900000 {
 		compatible = "qcom,gpi-dma";
@@ -49,7 +54,7 @@
 		qcom,static-gpii-mask = <0x1>;
 		qcom,gpii-mask = <0x7e>;
 		qcom,ev-factor = <2>;
-		qcom,iommu-dma-addr-pool = <0x100000 0x100000>;
+		memory-region = <&qup_iommu_region0>;
 		dma-coherent;
 		qcom,gpi-ee-offset = <0x10000>;
 		status = "ok";
@@ -65,8 +70,7 @@
 		clocks = <&clock_gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
 			<&clock_gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
 		iommus = <&apps_smmu 0x5a3 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
-		qcom,iommu-geometry = <0x40000000 0x10000000>;
+		memory-region = <&qup_iommu_region0>;
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 		ranges;
@@ -416,6 +420,11 @@
 		};
 	};
 
+	qup_iommu_region1: qup_iommu_region {
+		iommu-addresses = <&gpi_dma1 0x0 0x100000>, <&gpi_dma1 0x200000 0xffe00000>,
+			<&qupv3_1 0x0 0x40000000>, <&qupv3_1 0x50000000 0xb0000000>;
+	};
+
 	/* GPI Instance */
 	gpi_dma1: qcom,gpi-dma@a00000 {
 		compatible = "qcom,gpi-dma";
@@ -438,7 +447,7 @@
 			<GIC_SPI 298 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,gpii-mask = <0x3f>;
 		qcom,ev-factor = <2>;
-		qcom,iommu-dma-addr-pool = <0x100000 0x100000>;
+		memory-region = <&qup_iommu_region1>;
 		dma-coherent;
 		qcom,gpi-ee-offset = <0x10000>;
 		status = "ok";
@@ -454,8 +463,7 @@
 		clocks = <&clock_gcc GCC_QUPV3_WRAP_1_M_AHB_CLK>,
 			<&clock_gcc GCC_QUPV3_WRAP_1_S_AHB_CLK>;
 		iommus = <&apps_smmu 0x43 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
-		qcom,iommu-geometry = <0x40000000 0x10000000>;
+		memory-region = <&qup_iommu_region1>;
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 		ranges;
@@ -784,6 +792,11 @@
 		};
 	};
 
+	qup_iommu_region2: qup_iommu_region {
+		iommu-addresses = <&gpi_dma2 0x0 0x100000>, <&gpi_dma2 0x200000 0xffe00000>,
+			<&qupv3_2 0x0 0x40000000>, <&qupv3_2 0x50000000 0xb0000000>;
+	};
+
 	/* GPI Instance */
 	gpi_dma2: qcom,gpi-dma@800000 {
 		compatible = "qcom,gpi-dma";
@@ -806,7 +819,7 @@
 			<GIC_SPI 599 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,gpii-mask = <0x3f>;
 		qcom,ev-factor = <2>;
-		qcom,iommu-dma-addr-pool = <0x100000 0x100000>;
+		memory-region = <&qup_iommu_region2>;
 		dma-coherent;
 		qcom,gpi-ee-offset = <0x10000>;
 		status = "ok";
@@ -822,8 +835,7 @@
 		clocks = <&clock_gcc GCC_QUPV3_WRAP_2_M_AHB_CLK>,
 			<&clock_gcc GCC_QUPV3_WRAP_2_S_AHB_CLK>;
 		iommus = <&apps_smmu 0x483 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
-		qcom,iommu-geometry = <0x40000000 0x10000000>;
+		memory-region = <&qup_iommu_region2>;
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 		ranges;

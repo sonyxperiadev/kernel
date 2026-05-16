@@ -919,7 +919,7 @@
 		force_cache_allocs;
 		need_shared_buffer_padding;
 
-		msm_cam_smmu_ife {
+		msm_cam_smmu_ife: msm_cam_smmu_ife {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x460>,
 				<&apps_smmu 0x820 0x460>,
@@ -929,10 +929,14 @@
 				<&apps_smmu 0x860 0x460>,
 				<&apps_smmu 0xC40 0x460>,
 				<&apps_smmu 0xC60 0x460>;
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent;
 			cam-smmu-label = "ife", "sfe";
 			multiple-client-devices;
+			memory-region = <&cam_smmu_ife_resv_region>;
+			cam_smmu_ife_resv_region: cam_smmu_ife_resv_region {
+				iommu-addresses = <&msm_cam_smmu_ife 0x0 0x100000>,
+					<&msm_cam_smmu_ife 0xfff00000 0x100000>;
+			};
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
 				iova-mem-region-io {
@@ -947,13 +951,17 @@
 			};
 		};
 
-		msm_cam_smmu_jpeg {
+		msm_cam_smmu_jpeg: msm_cam_smmu_jpeg {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x20E0 0x400>,
 				<&apps_smmu 0x24E0 0x400>;
 			cam-smmu-label = "jpeg";
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent;
+			memory-region = <&cam_smmu_jpeg_resv_region>;
+			cam_smmu_jpeg_resv_region: cam_smmu_jpeg_resv_region {
+				iommu-addresses = <&msm_cam_smmu_jpeg 0x0 0x100000>,
+					<&msm_cam_smmu_jpeg 0xfff00000 0x00100000>;
+			};
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
 				iova-mem-region-io {
@@ -968,7 +976,7 @@
 			};
 		};
 
-		msm_cam_smmu_icp {
+		msm_cam_smmu_icp: msm_cam_smmu_icp {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x2020 0x420>,
 				<&apps_smmu 0x2000 0x420>,
@@ -985,9 +993,11 @@
 				<&apps_smmu 0x2120 0x420>,
 				<&apps_smmu 0x2520 0x420>;
 			cam-smmu-label = "icp";
-			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
-			iova-region-discard = <0xe0000000 0x800000>;
 			dma-coherent;
+			memory-region = <&cam_smmu_icp_resv_region>;
+			cam_smmu_icp_resv_region: cam_smmu_icp_resv_region {
+				iommu-addresses = <&msm_cam_smmu_icp 0x0 0x10c00000>;
+			};
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
 					/* Shared region is ~250MB long */
@@ -1029,16 +1039,20 @@
 			};
 		};
 
-		msm_cam_smmu_cpas_cdm {
+		msm_cam_smmu_cpas_cdm: msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x20C0 0x0400>,
 				<&apps_smmu 0x24C0 0x0400>,
 				<&apps_smmu 0x20A0 0x0400>,
 				<&apps_smmu 0x24A0 0x0400>;
 			cam-smmu-label = "cpas-cdm", "rt-cdm";
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent;
 			multiple-client-devices;
+			memory-region = <&cam_smmu_cpas_cdm_resv_region>;
+			cam_smmu_cpas_cdm_resv_region: cam_smmu_cpas_cdm_resv_region {
+				iommu-addresses = <&msm_cam_smmu_cpas_cdm 0x0 0x100000>,
+					<&msm_cam_smmu_cpas_cdm 0xfff00000 0x00100000>;
+			};
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 4.0 GB */

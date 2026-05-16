@@ -3296,8 +3296,6 @@
 		iommus = <&apps_smmu 0x0600 0>,
 			<&apps_smmu 0x0520 0>;
 
-		qcom,iommu-dma-addr-pool = <0x0 0xffc00000>;
-
 		qcom,sw-usb;
 		dma-coherent;
 		coresight-name = "coresight-tmc-etr";
@@ -3335,7 +3333,6 @@
 		coresight-name = "coresight-tmc-etr1";
 
 		iommus = <&apps_smmu 0x0620 0>;
-		qcom,iommu-dma-addr-pool = <0x0 0xffc00000>;
 		dma-coherent;
 
 		coresight-csr = <&csr>;
