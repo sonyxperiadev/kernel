@@ -1,8 +1,9 @@
 #include <dt-bindings/clock/qcom,gcc-waipio.h>
 
 &soc {
-	pcie0: qcom,pcie@1c00000 {
+	pcie0: pcie@1c00000 {
 		compatible = "qcom,pci-msm";
+		device_type = "pci";
 
 		reg = <0x01c00000 0x3000>,
 			<0x01c06000 0x2000>,
@@ -221,7 +222,7 @@
 					0x022C 0x0230 0x0234 0x0238 0x023C
 					0x0600 0x0604 0x1204 0x1210>;
 
-		pcie0_rp: pcie0_rp {
+		pcie0_rp: pcie0_rp@0,0 {
 			reg = <0 0 0 0 0>;
 		};
 	};
@@ -266,8 +267,9 @@
 		status = "disabled";
 	};
 
-	pcie1: qcom,pcie@1c08000 {
+	pcie1: pcie@1c08000 {
 		compatible = "qcom,pci-msm";
+		device_type = "pci";
 
 		reg = <0x01c08000 0x3000>,
 			<0x01c0e000 0x2000>,
@@ -560,7 +562,7 @@
 					0x1214 0x1218 0x121C 0x1220 0x1224
 					0x1228 0x122C 0x1230 0x1234 0x1238
 					0x123C 0x1400 0x1404>;
-		pcie1_rp: pcie1_rp {
+		pcie1_rp: pcie1_rp@0,0 {
 			reg = <0 0 0 0 0>;
 		};
 	};
