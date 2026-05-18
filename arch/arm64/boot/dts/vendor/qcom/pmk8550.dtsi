@@ -1,0 +1,241 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen4-pmih010x.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pmk8550.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pm8550.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pm8550b.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pm8550vx.h>
+
+&spmi_bus {
+	#address-cells = <2>;
+	#size-cells = <0>;
+	interrupt-controller;
+	#interrupt-cells = <4>;
+
+	qcom,pmk8550@0 {
+		compatible = "qcom,spmi-pmic";
+		reg = <0x0 SPMI_USID>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pmk8550_sdam_1: sdam@7000 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			sm1510_present: sm1510_present@5d {
+				reg = <0x5d 0x1>;
+				bits = <5 5>;
+			};
+
+			ocp_log: ocp-log@76 {
+				reg = <0x76 0x6>;
+			};
+		};
+
+		pmk8550_sdam_2: sdam@7100 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7100>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			restart_reason: restart@48 {
+				reg = <0x48 0x1>;
+				bits = <1 7>;
+			};
+
+			wr_thermal_flag: wr_thermal-flag@58 {
+				reg = <0x58 0x1>;
+			};
+
+			alarm_log: alarm-log@76 {
+				reg = <0x76 0x6>;
+			};
+
+			fmd_set: fmd-set@9a {
+				reg = <0x9a 0x1>;
+			};
+
+			fmd_cont_after_pon: fmd-cont-after-pon@9c {
+				reg = <0x9c 0x1>;
+			};
+
+			fmd_chg_pon: fmd-chg-pon@9f {
+				reg = <0x9f 0x1>;
+			};
+
+			fmd_cnt2_stop: fmd-cnt2-stop@a2 {
+				reg = <0xa2 0x1>;
+			};
+		};
+
+		pmk8550_sdam_5: sdam@7400 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7400>;
+		};
+
+		pmk8550_sdam_6: sdam@7500 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7500>;
+		};
+
+		pmk8550_sdam_13: sdam@7c00 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7c00>;
+		};
+
+		pmk8550_sdam_14: sdam@7d00 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x7d00>;
+		};
+
+		pmk8550_sdam_21: sdam@8400 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x8400>;
+		};
+
+		pmk8550_sdam_22: sdam@8500 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x8500>;
+		};
+
+		pmk8550_sdam_41: sdam@9800 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x9800>;
+		};
+
+		pmk8550_sdam_43: sdam@9a00 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x9a00>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			ibb_spur_sqm_timer: sqm-timer@b8 {
+				reg = <0xb8 0x2>;
+			};
+		};
+
+		pmk8550_sdam_46: sdam@9d00 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0x9d00>;
+		};
+
+		pmk8550_sdam_71: sdam@b600 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0xb600>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			usb_mode: usb-mode@50 {
+				reg = <0x50 0x1>;
+			};
+		};
+
+		pon_hlos@1300 {
+			compatible = "qcom,pm8998-pon";
+			reg = <0x1300>, <0x800>;
+			reg-names = "pon_hlos", "pon_pbs";
+
+			pwrkey {
+				compatible = "qcom,pmk8350-pwrkey";
+				interrupts = <0x0 0x13 0x7 IRQ_TYPE_EDGE_BOTH>;
+				linux,code = <KEY_POWER>;
+			};
+
+			resin {
+				compatible = "qcom,pmk8350-resin";
+				interrupts = <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>;
+				linux,code = <KEY_VOLUMEUP>;
+			};
+		};
+
+		pmk8550_gpios: pinctrl@b800 {
+			compatible = "qcom,pmk8550-gpio";
+			reg = <0xb800>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		pmk8550_rtc: rtc@6100 {
+			compatible = "qcom,pmk8350-rtc";
+			reg = <0x6100>, <0x6200>;
+			reg-names = "rtc", "alarm";
+			interrupts = <0x0 0x62 0x1 IRQ_TYPE_EDGE_RISING>;
+		};
+
+		pmk8550-pwm {
+			compatible = "qcom,pmk8550-pwm";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#pwm-cells = <2>;
+		};
+
+		pmk8550_vadc: vadc@9000 {
+			compatible = "qcom,spmi-adc5-gen3";
+			reg = <0x9000>, <0x9100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-names = "adc-sdam0", "adc-sdam1";
+			interrupts = <0x0 0x90 0x1 IRQ_TYPE_EDGE_RISING>,
+				     <0x0 0x91 0x1 IRQ_TYPE_EDGE_RISING>;
+			#thermal-sensor-cells = <1>;
+			#io-channel-cells = <1>;
+			io-channel-ranges;
+
+			/* PMK8550 Channel nodes */
+			pmk8550_offset_ref {
+				reg = <PMK8550_ADC5_GEN3_OFFSET_REF>;
+				label = "pmk8550_offset_ref";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pmk8550_vref_1p25 {
+				reg = <PMK8550_ADC5_GEN3_1P25VREF>;
+				label = "pmk8550_vref_1p25";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pmk8550_die_temp {
+				reg = <PMK8550_ADC5_GEN3_DIE_TEMP>;
+				label = "pmk8550_die_temp";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			/* PM8550 Channel nodes */
+			pm8550_offset_ref {
+				reg = <PM8550_ADC5_GEN3_OFFSET_REF>;
+				label = "pm8550_offset_ref";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm8550_vref_1p25 {
+				reg = <PM8550_ADC5_GEN3_1P25VREF>;
+				label = "pm8550_vref_1p25";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm8550_die_temp {
+				reg = <PM8550_ADC5_GEN3_DIE_TEMP>;
+				label = "pm8550_die_temp";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm8550_vph_pwr {
+				reg = <PM8550_ADC5_GEN3_VPH_PWR>;
+				label = "pm8550_vph_pwr";
+				qcom,pre-scaling = <1 3>;
+			};
+
+		};
+	};
+};

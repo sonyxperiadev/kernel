@@ -1,0 +1,5 @@
+#include "kalama-gpu.dtsi"
+
+&msm_gpu {
+	compatible = "qcom,adreno-gpu-gen7-2-1", "qcom,kgsl-3d0";
+};

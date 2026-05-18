@@ -4,6 +4,10 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-gpu.dtbo \
 	waipio-v2-gpu.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-gpu.dtbo \
+	kalama-v2-gpu.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-gpu.dtbo
 

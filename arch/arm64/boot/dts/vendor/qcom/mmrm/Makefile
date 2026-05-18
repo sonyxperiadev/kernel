@@ -6,6 +6,12 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-v2-mmrm.dtbo \
 	waipio-v2-mmrm-test.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-mmrm.dtbo \
+	kalama-mmrm-test.dtbo \
+	kalama-v2-mmrm.dtbo \
+	kalama-v2-mmrm-test.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

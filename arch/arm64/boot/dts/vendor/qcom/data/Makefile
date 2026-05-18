@@ -3,6 +3,9 @@
 dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-ipa.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-ipa.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-ipa.dtbo
 

@@ -4,6 +4,10 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-audio.dtbo \
 	waipio-audio-qrd.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-audio.dtbo \
+	kalama-audio-qrd.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-audio.dtbo \
 	parrot-audio-qrd.dtbo

@@ -4,6 +4,10 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-sde.dtbo \
 	waipio-sde-display-qrd-overlay.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-sde.dtbo \
+	kalama-sde-display-qrd-overlay.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-sde.dtbo \
 	parrot-sde-display-qrd-overlay.dtbo

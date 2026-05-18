@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "kalama-qrd.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kalama QRD";
+	compatible = "qcom,kalama-qrd", "qcom,kalama", "qcom,qrd";
+	qcom,msm-id = <519 0x10000>, <536 0x10000>, <519 0x20000>, <536 0x20000>, <600 0x20000>, <601 0x20000>;
+	qcom,board-id = <0x1000B 0>;
+};
