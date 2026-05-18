@@ -156,6 +156,7 @@ obj-$(CONFIG_SM_GCC_WAIPIO) += gcc-waipio.o
 obj-$(CONFIG_SM_GCC_KALAMA) += gcc-kalama.o
 obj-$(CONFIG_SM_GPUCC_TUNA) += gpucc-tuna.o
 obj-$(CONFIG_SM_GPUCC_WAIPIO) += gpucc-waipio.o
+obj-$(CONFIG_SM_GPUCC_KALAMA) += gpucc-kalama.o
 obj-$(CONFIG_SM_GPUCC_KERA) += gpucc-kera.o
 obj-$(CONFIG_SM_VIDEOCC_PINEAPPLE) += videocc-pineapple.o
 obj-$(CONFIG_SM_CAMBISTMCLKCC_TUNA) += cambistmclkcc-tuna.o
