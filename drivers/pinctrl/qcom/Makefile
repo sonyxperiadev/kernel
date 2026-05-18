@@ -8,6 +8,7 @@ obj-$(CONFIG_PINCTRL_RAVELIN) += pinctrl-ravelin.o
 obj-$(CONFIG_PINCTRL_PINEAPPLE) += pinctrl-pineapple.o
 obj-$(CONFIG_PINCTRL_PARROT) += pinctrl-parrot.o
 obj-$(CONFIG_PINCTRL_WAIPIO) += pinctrl-waipio.o
+obj-$(CONFIG_PINCTRL_KALAMA) += pinctrl-kalama.o
 obj-$(CONFIG_PINCTRL_APQ8064)	+= pinctrl-apq8064.o
 obj-$(CONFIG_PINCTRL_APQ8084)	+= pinctrl-apq8084.o
 obj-$(CONFIG_PINCTRL_IPQ4019)	+= pinctrl-ipq4019.o
