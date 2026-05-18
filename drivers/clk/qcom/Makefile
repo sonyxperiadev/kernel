@@ -168,6 +168,7 @@ obj-$(CONFIG_SM_CAMCC_KALAMA) += camcc-kalama.o
 obj-$(CONFIG_SM_DISPCC_PINEAPPLE) += dispcc-pineapple.o
 obj-$(CONFIG_SM_DEBUGCC_PINEAPPLE) += debugcc-pineapple.o
 obj-$(CONFIG_SM_GPUCC_PINEAPPLE) += gpucc-pineapple.o
+obj-$(CONFIG_SM_TCSRCC_KALAMA) += tcsrcc-kalama.o
 obj-$(CONFIG_SM_TCSRCC_PINEAPPLE) += tcsrcc-pineapple.o
 obj-$(CONFIG_SM_TCSRCC_TUNA) += tcsrcc-tuna.o
 obj-$(CONFIG_SM_CAMCC_KERA) += camcc-kera.o
