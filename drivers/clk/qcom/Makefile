@@ -182,6 +182,7 @@ obj-$(CONFIG_SM_DEBUGCC_KERA) += debugcc-kera.o
 obj-$(CONFIG_SM_DEBUGCC_SUN) += debugcc-sun.o
 obj-$(CONFIG_SM_DEBUGCC_TUNA) += debugcc-tuna.o
 obj-$(CONFIG_SM_DEBUGCC_WAIPIO) += debugcc-waipio.o
+obj-$(CONFIG_SM_DEBUGCC_KALAMA) += debugcc-kalama.o
 obj-$(CONFIG_SM_GPUCC_4450) += gpucc-sm4450.o
 obj-$(CONFIG_SM_GPUCC_6150) += gpucc-sm6150.o
 obj-$(CONFIG_SM_GPUCC_6115) += gpucc-sm6115.o
