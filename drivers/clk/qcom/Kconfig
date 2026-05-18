@@ -1696,4 +1696,13 @@ config SM_VIDEOCC_KALAMA
 	  Say Y if you want to support video devices and functionality such as
 	  video encode/decode.
 
+config SM_DEBUGCC_KALAMA
+	tristate "KALAMA Debug Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  KALAMA devices.
+	  Say Y if you want to support the debug clocks such as clock
+	  measurement functionality.
+
 endif
