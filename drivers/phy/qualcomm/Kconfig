@@ -189,6 +189,17 @@ config PHY_QCOM_UFS_V4_WAIPIO
 	  By incorporating support for UFS phy on Waipio chipsets, users
 	  can take advantage of the benefits offered by WAIPIO UFS PHY.
 
+config PHY_QCOM_UFS_V4_KALAMA
+	tristate "Qualcomm Technologies, Inc. UFS V4 KALAMA"
+	depends on PHY_QCOM_UFS
+	help
+	  Support for UFS phy present on QCOM Kalama chipsets is essential
+	  for enabling UFS on Kalama chipsets.
+	  To compile this driver as a module, users can choose "M" to have
+	  the flexibility of loading and unloading the driver as needed.
+	  By incorporating support for UFS phy on Kalama chipsets, users
+	  can take advantage of the benefits offered by KALAMA UFS PHY.
+
 endif
 
 config PHY_QCOM_QUSB2
