@@ -1651,4 +1651,13 @@ config SM_GCC_KALAMA
 	  Say Y if you want to use peripheral devices such as UART, SPI, I2C,
 	  USB, SD/UFS, PCIe etc.
 
+config SM_CAMCC_KALAMA
+	tristate "KALAMA Camera Clock Controller"
+	depends on SM_GCC_KALAMA
+	help
+	  Support for the camera clock controller on Qualcomm Technologies, Inc
+	  KALAMA devices.
+	  Say Y if you want to support camera devices and functionality such as
+	  capturing pictures.
+
 endif
