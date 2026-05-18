@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
 
+dtbo-$(CONFIG_ARCH_WAIPIO) += \
+	waipio-ipa.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-ipa.dtbo
 
