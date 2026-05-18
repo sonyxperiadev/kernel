@@ -2546,6 +2546,52 @@ static const struct adsp_data waipio_slpi_resource = {
 	.ssctl_id = 0x16,
 };
 
+static const struct adsp_data kalama_adsp_resource = {
+	.crash_reason_smem = 423,
+	.firmware_name = "adsp.mdt",
+	.dtb_firmware_name = "adsp_dtb.mdt",
+	.pas_id = 1,
+	.dtb_pas_id = 0x24,
+	.minidump_id = 5,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.load_state = "adsp",
+	.ssr_name = "lpass",
+	.sysmon_name = "adsp",
+	.ssctl_id = 0x14,
+};
+
+static const struct adsp_data kalama_cdsp_resource = {
+	.crash_reason_smem = 601,
+	.firmware_name = "cdsp.mdt",
+	.dtb_firmware_name = "cdsp_dtb.mdt",
+	.pas_id = 18,
+	.dtb_pas_id = 0x25,
+	.minidump_id = 7,
+	.uses_elf64 = true,
+	.auto_boot = false,
+	.load_state = "cdsp",
+	.ssr_name = "cdsp",
+	.sysmon_name = "cdsp",
+	.ssctl_id = 0x17,
+};
+
+static const struct adsp_data kalama_mpss_resource = {
+	.crash_reason_smem = 421,
+	.firmware_name = "modem.mdt",
+	.dtb_firmware_name = "modem_dtb.mdt",
+	.pas_id = 4,
+	.dtb_pas_id = 0x26,
+	.minidump_id = 3,
+	.auto_boot = false,
+	.decrypt_shutdown = true,
+	.load_state = "modem",
+	.ssr_name = "mpss",
+	.sysmon_name = "modem",
+	.ssctl_id = 0x12,
+	.dma_phys_below_32b = true,
+};
+
 static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,msm8226-adsp-pil", .data = &msm8996_adsp_resource},
 	{ .compatible = "qcom,msm8953-adsp-pil", .data = &msm8996_adsp_resource},
@@ -2633,6 +2679,9 @@ static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,waipio-cdsp-pas", .data = &waipio_cdsp_resource},
 	{ .compatible = "qcom,waipio-slpi-pas", .data = &waipio_slpi_resource},
 	{ .compatible = "qcom,waipio-modem-pas", .data = &waipio_mpss_resource},
+	{ .compatible = "qcom,kalama-adsp-pas", .data = &kalama_adsp_resource},
+	{ .compatible = "qcom,kalama-cdsp-pas", .data = &kalama_cdsp_resource},
+	{ .compatible = "qcom,kalama-modem-pas", .data = &kalama_mpss_resource},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, adsp_of_match);
