@@ -2375,7 +2375,7 @@
 	};
 
 	aoss_qmp: power-controller@c300000 {
-		compatible = "qcom,kalama-aoss-qmp";
+		compatible = "qcom,aoss-qmp";
 		reg = <0xc300000 0x400>;
 		interrupt-parent = <&ipcc_mproc>;
 		interrupts = <IPCC_CLIENT_AOP
