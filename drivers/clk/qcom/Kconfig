@@ -1687,4 +1687,13 @@ config SM_TCSRCC_KALAMA
 	  Say Y if you want to support miscellaneous top-level clocks
 	  such as for the PHY references.
 
+config SM_VIDEOCC_KALAMA
+	tristate "KALAMA Video Clock Controller"
+	depends on SM_GCC_KALAMA
+	help
+	  Support for the video clock controller on Qualcomm Technologies, Inc.
+	  KALAMA devices.
+	  Say Y if you want to support video devices and functionality such as
+	  video encode/decode.
+
 endif
