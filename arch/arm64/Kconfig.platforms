@@ -515,4 +515,13 @@ config ARCH_SONY_NAGARA
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_SONY_YODO
+	bool "Sony Mobile Yodo platform"
+	depends on ARCH_KALAMA
+	help
+	  Support for the SONY Mobile Yodo platform
+	  which is based on QCOM Kalama chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 endmenu # "Platform selection"
