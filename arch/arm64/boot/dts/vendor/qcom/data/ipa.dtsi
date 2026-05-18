@@ -4,6 +4,10 @@
  */
 
 &soc {
+	interrupt-parent = <&intc>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	qcom,msm_gsi {
 		compatible = "qcom,msm_gsi";
 	};

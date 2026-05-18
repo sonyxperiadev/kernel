@@ -4,6 +4,10 @@ dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-camera.dtbo \
 	waipio-camera-sensor-qrd.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-camera.dtbo \
+	kalama-camera-sensor-qrd.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-camera.dtbo \
 	parrot-camera-sensor-qrd.dtbo

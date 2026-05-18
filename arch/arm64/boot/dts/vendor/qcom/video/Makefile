@@ -3,6 +3,9 @@
 dtbo-$(CONFIG_ARCH_WAIPIO) += \
 	waipio-vidc.dtbo
 
+dtbo-$(CONFIG_ARCH_KALAMA) += \
+	kalama-vidc.dtbo
+
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-vidc.dtbo
 

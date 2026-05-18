@@ -24,6 +24,17 @@ waipio-dtb-$(CONFIG_ARCH_WAIPIO) += \
 waipio-overlays-dtb-$(CONFIG_ARCH_WAIPIO) += $(WAIPIO_BOARDS) $(WAIPIO_BASE_DTB)
 dtb-y += $(waipio-dtb-y)
 
+# SoC Kalama
+KALAMA_BASE_DTB += kalama.dtb kalama-v2.dtb
+
+KALAMA_BOARDS += \
+	kalama-qrd-overlay.dtbo
+
+kalama-dtb-$(CONFIG_ARCH_KALAMA) += \
+	$(call add-overlays, $(KALAMA_BOARDS),$(KALAMA_BASE_DTB))
+kalama-overlays-dtb-$(CONFIG_ARCH_KALAMA) += $(KALAMA_BOARDS) $(KALAMA_BASE_DTB)
+dtb-y += $(kalama-dtb-y)
+
 # SoC Parrot
 PARROT_BASE_DTB += parrot.dtb parrot-gen1.dtb
 

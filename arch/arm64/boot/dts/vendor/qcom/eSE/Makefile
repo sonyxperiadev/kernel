@@ -1,13 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
 
-dtbo-$(CONFIG_ARCH_WAIPIO) += \
-	waipio-qca6490-bt.dtbo
-
 dtbo-$(CONFIG_ARCH_KALAMA) += \
-	kalama-bt.dtbo
-
-dtbo-$(CONFIG_ARCH_PARROT) += \
-	parrot-wcn3990-bt.dtbo
+	kalama-ese-qrd.dtbo \
+	kalama-v2-ese-qrd.dtbo
 
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
