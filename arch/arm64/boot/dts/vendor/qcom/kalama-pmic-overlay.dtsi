@@ -137,27 +137,27 @@
 };
 
 &pm8550vs_c_tz {
-	io-channels = <&pmk8550_vadc PM8550VS_C_ADC5_GEN3_DIE_TEMP>;
+	io-channels = <&pmk8550_vadc PM8550VX_ADC5_GEN3_DIE_TEMP(2)>;
 	io-channel-names = "thermal";
 };
 
 &pm8550vs_d_tz {
-	io-channels = <&pmk8550_vadc PM8550VS_D_ADC5_GEN3_DIE_TEMP>;
+	io-channels = <&pmk8550_vadc PM8550VX_ADC5_GEN3_DIE_TEMP(3)>;
 	io-channel-names = "thermal";
 };
 
 &pm8550vs_e_tz {
-	io-channels = <&pmk8550_vadc PM8550VS_E_ADC5_GEN3_DIE_TEMP>;
+	io-channels = <&pmk8550_vadc PM8550VX_ADC5_GEN3_DIE_TEMP(4)>;
 	io-channel-names = "thermal";
 };
 
 &pm8550vs_g_tz {
-	io-channels = <&pmk8550_vadc PM8550VS_G_ADC5_GEN3_DIE_TEMP>;
+	io-channels = <&pmk8550_vadc PM8550VX_ADC5_GEN3_DIE_TEMP(6)>;
 	io-channel-names = "thermal";
 };
 
 &pm8550ve_f_tz {
-	io-channels = <&pmk8550_vadc PM8550VE_ADC5_GEN3_DIE_TEMP>;
+	io-channels = <&pmk8550_vadc PM8550VX_ADC5_GEN3_DIE_TEMP(5)>;
 	io-channel-names = "thermal";
 };
 
