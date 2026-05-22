@@ -2183,7 +2183,7 @@
 			};
 
 			clock_rpmh: qcom,rpmhclk {
-				compatible = "qcom,sm8450-rpmh-clk";
+				compatible = "qcom,waipio-rpmh-clk";
 				#clock-cells = <1>;
 			};
 
