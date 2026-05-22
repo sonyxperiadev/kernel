@@ -3509,8 +3509,6 @@
 		qcom,iommu-dma = "bypass";
 		iommus = <&apps_smmu 0x04c0 0x0020>;
 
-		qcom,iommu-dma-addr-pool = <0x0 0xffc00000>;
-
 		qcom,mem_support;
 		qcom,sw-usb;
 		dma-coherent;
@@ -3548,7 +3546,6 @@
 		coresight-name = "coresight-tmc-etr1";
 
 		iommus = <&apps_smmu 0x0500 0>;
-		qcom,iommu-dma-addr-pool = <0x0 0xffc00000>;
 		dma-coherent;
 
 		qcom,mem_support;

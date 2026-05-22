@@ -60,9 +60,14 @@
 		qcom,smmu-version = <2>;
 		qcom,smmu-enabled;
 		iommus = <&apps_smmu 0x1001 0x0080>, <&apps_smmu 0x1061 0x0>;
-		qcom,iommu-dma-addr-pool = <0x10000000 0x10000000>;
+		memory-region = <&audio_resv_region>;
 		qcom,smmu-sid-mask = /bits/ 64 <0xf>;
 		dma-coherent;
+
+		audio_resv_region: audio_resv_region {
+			iommu-addresses = <&msm_audio_ion 0x0 0x10000000>,
+				<&msm_audio_ion 0x20000000 0xe0000000>;
+		};
 	};
 
 	msm_audio_ion_cma: qcom,msm-audio-ion-cma {
