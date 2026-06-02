@@ -3432,6 +3432,21 @@
 #include "msm-rdbg.dtsi"
 #include "pineapple-thermal.dtsi"
 #include "pineapple-walt.dtsi"
+#include "audio/pineapple-audio.dtsi"
+#include "bt/pineapple-kiwi-bt.dtsi"
+#include "camera/pineapple-camera.dtsi"
+#include "data/pineapple-ipa.dtsi"
+#include "display/pineapple-sde.dtsi"
+#include "dsp/pineapple-dsp.dtsi"
+#include "eva/pineapple-eva.dtsi"
+#include "graphics/pineapple-gpu.dtsi"
+#include "graphics/pineapple-gpu-pwrlevels.dtsi"
+#include "mm/hw_fence/pineapple-hw-fence.dtsi"
+#include "mmrm/pineapple-mmrm.dtsi"
+#include "mmrm/pineapple-mmrm-test.dtsi"
+#include "synx/pineapple-synx.dtsi"
+#include "video/pineapple-vidc.dtsi"
+#include "wlan/pineapple-kiwi-cnss.dtsi"
 
 &qupv3_se15_2uart {
 	status = "ok";
