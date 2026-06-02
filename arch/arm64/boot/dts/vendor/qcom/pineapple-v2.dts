@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "pineapple-v2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Pineapple v2 SoC";
+	compatible = "qcom,pineapple";
+	qcom,board-id = <0 0>;
+};

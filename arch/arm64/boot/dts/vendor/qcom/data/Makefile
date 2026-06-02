@@ -9,6 +9,9 @@ dtbo-$(CONFIG_ARCH_KALAMA) += \
 dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-ipa.dtbo
 
+dtbo-$(CONFIG_ARCH_PINEAPPLE) += \
+	pineapple-ipa.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

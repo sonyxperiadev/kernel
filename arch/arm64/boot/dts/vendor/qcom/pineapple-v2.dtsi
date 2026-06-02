@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include "pineapple.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Pineapple v2 SoC";
+	compatible = "qcom,pineapple";
+	qcom,msm-id = <557 0x20000>;
+};
+
+&camcc {
+	compatible = "qcom,pineapple-camcc-v2", "syscon";
+};
+
+&videocc {
+	compatible = "qcom,pineapple-videocc-v2", "syscon";
+};
+
+&qcom_memlat {
+	ddr {
+		silver {
+			qcom,cpufreq-memfreq-tbl =
+				< 1132800  547000 >,
+				< 1574400  768000 >,
+				< 2265600 1555000 >;
+		};
+
+		gold {
+			qcom,cpufreq-memfreq-tbl =
+				<  614400  547000 >,
+				<  960000  768000 >,
+				< 1190400 1555000 >,
+				< 1401600 2092000 >,
+				< 1920000 2736000 >,
+				< 2764800 3686000 >,
+				< 3187200 4224000 >;
+		};
+
+		prime {
+			qcom,cpufreq-memfreq-tbl =
+				<  614400  547000 >,
+				<  960000  768000 >,
+				< 1190400 1555000 >,
+				< 1401600 2092000 >,
+				< 1920000 2736000 >,
+				< 2764800 3686000 >,
+				< 3187200 4224000 >;
+		};
+
+		gold-compute {
+			qcom,cpufreq-memfreq-tbl =
+				< 2131200  547000 >,
+				< 3187200 2092000 >;
+		};
+
+		prime-latfloor {
+			qcom,cpufreq-memfreq-tbl =
+				< 2764800  547000 >,
+				< 3187200 4224000 >;
+		};
+	};
+
+	llcc {
+		silver {
+			qcom,cpufreq-memfreq-tbl =
+				<  902400  300000 >,
+				< 1574400  466000 >,
+				< 2265600  600000 >;
+		};
+
+		gold {
+			qcom,cpufreq-memfreq-tbl =
+				<  614400  300000 >,
+				< 1190400  466000 >,
+				< 1401600  600000 >,
+				< 1920000  806000 >,
+				< 2764800  933000 >,
+				< 3187200 1066000 >;
+		};
+
+		gold-compute {
+			qcom,cpufreq-memfreq-tbl =
+				< 2131200  300000 >,
+				< 3187200  600000 >;
+		};
+
+	};
+
+	l3 {
+		silver {
+			qcom,cpufreq-memfreq-tbl =
+				<  307200  307200 >,
+				<  460800  384000 >,
+				<  556800  499200 >,
+				<  787200  729600 >,
+				<  902400  844800 >,
+				< 1017600  940800 >,
+				< 1132800 1036800 >,
+				< 1248000 1132800 >,
+				< 1344000 1248000 >,
+				< 1574400 1440000 >,
+				< 1804800 1555200 >,
+				< 1920000 1651200 >,
+				< 2035200 1843200 >,
+				< 2265600 2035200 >;
+		};
+
+		gold {
+			qcom,cpufreq-memfreq-tbl =
+				<  499200  307200 >,
+				<  614400  499200 >,
+				<  960000  844800 >,
+				< 1190400 1036800 >,
+				< 1401600 1248000 >,
+				< 1920000 1440000 >,
+				< 2572800 1651200 >,
+				< 2764800 1843200 >,
+				< 3187200 2035200 >;
+		};
+
+		prime {
+			qcom,cpufreq-memfreq-tbl =
+				<  499200  307200 >,
+				<  614400  499200 >,
+				<  960000  844800 >,
+				< 1190400 1036800 >,
+				< 1401600 1248000 >,
+				< 1920000 1440000 >,
+				< 2572800 1651200 >,
+				< 2764800 1843200 >,
+				< 3187200 2035200 >;
+		};
+
+		prime-compute {
+			qcom,cpufreq-memfreq-tbl =
+				< 2131200  307200 >,
+				< 3187200 2035200 >;
+		};
+	};
+
+	ddrqos {
+		gold {
+			qcom,cpufreq-memfreq-tbl =
+				< 1920000 0 >,
+				< 3187200 1 >;
+		};
+
+		prime {
+			qcom,cpufreq-memfreq-tbl =
+				< 1401600 0 >,
+				< 3187200 1 >;
+		};
+
+		prime-latfloor {
+			qcom,cpufreq-memfreq-tbl =
+				< 2131200 0 >,
+				< 3187200 1 >;
+		};
+	};
+};

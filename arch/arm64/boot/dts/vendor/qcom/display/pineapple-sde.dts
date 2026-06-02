@@ -1,0 +1,9 @@
+/dts-v1/;
+/plugin/;
+
+#include "pineapple-sde.dtsi"
+
+/ {
+	qcom,msm-id = <557 0x10000>, <557 0x20000>, <577 0x10000>, <577 0x20000>;
+	qcom,board-id = <0 0>;
+};

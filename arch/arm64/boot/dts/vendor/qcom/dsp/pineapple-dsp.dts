@@ -1,0 +1,10 @@
+/dts-v1/;
+/plugin/;
+
+#include "pineapple-dsp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. pineapple v1 SoC";
+	compatible = "qcom,pineapple";
+	qcom,board-id = <0 0>;
+};

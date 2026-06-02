@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+&soc {
+	walt {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		qcom,cycle-cntr {
+			compatible = "qcom,epss";
+			reg = <0x17D91000 0x1000>,
+				<0x17D92000 0x1000>,
+				<0x17D93000 0x1000>,
+				<0x17D94000 0x1000>;
+			reg-names = "freq-domain0",
+				"freq-domain1",
+				"freq-domain2",
+				"freq-domain3";
+		};
+	};
+};

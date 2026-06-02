@@ -1,0 +1,11 @@
+/dts-v1/;
+/plugin/;
+
+#include "hw_fence/pineapple-hw-fence.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Pineapple QRD";
+	compatible = "qcom,pineapple-qrd", "qcom,pineapple", "qcom,pineapplep-qrd", "qcom,pineapplep", "qcom,qrd";
+	qcom,msm-id = <557 0x10000>, <557 0x20000>, <577 0x10000>, <577 0x20000>;
+	qcom,board-id = <0x1000B 0>, <0xB 0>;
+};

@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include "pineapple-gpu.dtsi"
+
+&msm_gpu {
+	compatible = "qcom,adreno-gpu-gen7-9-1", "qcom,kgsl-3d0";
+
+	qcom,gpu-model = "Adreno750v2";
+
+	qcom,chipid = <0x43051401>;
+};

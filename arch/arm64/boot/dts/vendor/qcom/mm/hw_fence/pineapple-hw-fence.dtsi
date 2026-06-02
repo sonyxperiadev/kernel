@@ -1,0 +1,42 @@
+&soc {
+	msm_hw_fence: qcom,hw-fence {
+		compatible = "qcom,msm-hw-fence";
+		status = "ok";
+
+		qcom,hw-fence-table-entries = <8192>;
+		qcom,hw-fence-queue-entries = <800>;
+		qcom,ipcc-reg = <0x400000 0x200000>;
+
+		/* time register */
+		qcom,qtime-reg = <0xC221000 0x1000>;
+
+		/* ipc version */
+		qcom,hw-fence-ipc-ver = <0x20003>;
+
+		/* client queues: clients_num, queues_num, queue_entries, skip_txq_wr_idx */
+		qcom,hw-fence-client-type-dpu = <6 2 128 1>;
+		qcom,hw-fence-client-type-ipe = <1 2 800 0>;
+		qcom,hw-fence-client-type-vpu = <1 2 800 0>;
+		qcom,hw-fence-client-type-ife0 = <1 1 128 1>;
+
+		/* extra client queue properties */
+		qcom,hw-fence-client-type-ife0-extra = <20 28 1 1>;
+
+		/* haven doorbell specific */
+		hw_fence@0 {
+			compatible = "qcom,msm-hw-fence-db";
+			qcom,master;
+			gunyah-label = <6>;
+			peer-name = <3>;
+		};
+
+		/* haven io-mem specific */
+		hw_fence@1 {
+			compatible = "qcom,msm-hw-fence-mem";
+			qcom,master;
+			gunyah-label = <5>;
+			peer-name = <3>;
+			shared-buffer = <&hwfence_shbuf>;
+		};
+	};
+};
