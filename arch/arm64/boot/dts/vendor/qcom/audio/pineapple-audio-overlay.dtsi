@@ -3,9 +3,9 @@
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
-#include <bindings/qcom,audio-ext-clk.h>
-#include <bindings/qcom,lpass-cdc-clk-rsc.h>
-#include <bindings/audio-codec-port-types.h>
+#include <dt-bindings/clock/qcom,audio-ext-clk.h>
+#include <dt-bindings/sound/qcom,lpass-cdc-clk-rsc.h>
+#include <dt-bindings/sound/audio-codec-port-types.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include "pineapple-lpi.dtsi"
 
