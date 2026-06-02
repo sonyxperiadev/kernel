@@ -198,10 +198,16 @@
 		interconnect-names = "qcom,sde-data-bus0";
 	};
 
+	smmu_sde_iommu_region_partition: smmu_sde_iommu_region_partition {
+		iommu-addresses = <&smmu_sde_unsec 0x0 0x00060000>,
+			<&smmu_sde_unsec 0xd5100000 0x02b00000>,
+			<&smmu_sde_sec 0x0 0x00020000>;
+	};
+
 	smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
 		compatible = "qcom,smmu_sde_unsec";
 		iommus = <&apps_smmu 0x1c00 0x2>;
-		qcom,iommu-dma-addr-pool = <0x00060000 0xd50a0000 0xd7c00000 0x283f0000>;
+		memory-region = <&smmu_sde_iommu_region_partition>;
 		qcom,iommu-faults = "non-fatal";
 		qcom,iommu-earlymap; /* for cont-splash */
 		dma-coherent;
@@ -212,7 +218,7 @@
 	smmu_sde_sec: qcom,smmu_sde_sec_cb {
 		compatible = "qcom,smmu_sde_sec";
 		iommus = <&apps_smmu 0x1c01 0x0>;
-		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+		memory-region = <&smmu_sde_iommu_region_partition>;
 		qcom,iommu-faults = "non-fatal";
 		qcom,iommu-vmid = <0xa>;
 	};

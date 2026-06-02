@@ -77,6 +77,17 @@
 
 		/* MMUs */
 		/* Camera cb is used to get secure camera buffer IPA */
+		cvp_iommu_region_partition: cvp_iommu_region_partition {
+			/* These IOVA regions are unique per context bank */
+			iommu-addresses =
+				<&cvp_non_secure_cb 0x0 0x4b000000>,
+					<&cvp_non_secure_cb 0xdb000000 0x25000000>,
+				<&cvp_secure_nonpixel_cb 0x0 0x01000000>,
+					<&cvp_secure_nonpixel_cb 0x26800000 0xd9800000>,
+				<&cvp_secure_pixel_cb 0x0 0x26800000>,
+					<&cvp_secure_pixel_cb 0x4b000000 0xb5000000>;
+		};
+
 		cvp_camera_cb {
 			compatible = "qcom,msm-cvp,context-bank";
 			label = "cvp_camera";
@@ -85,11 +96,10 @@
 		};
 
 		non_secure_cb_group: cvp_non_secure_cb_group {
-			qcom,iommu-dma-addr-pool = <0x4b000000 0x90000000>;
 			qcom,iommu-faults = "non-fatal";
 		};
 
-		cvp_non_secure_cb {
+		cvp_non_secure_cb: cvp_non_secure_cb {
 			compatible = "qcom,msm-cvp,context-bank";
 			label = "cvp_hlos";
 			iommus =
@@ -97,28 +107,29 @@
 			buffer-types = <0xfff>;
 			dma-coherent;
 			qcom,iommu-group = <&non_secure_cb_group>;
+			memory-region = <&cvp_iommu_region_partition>;
 		};
 
 
-		cvp_secure_nonpixel_cb {
+		cvp_secure_nonpixel_cb: cvp_secure_nonpixel_cb {
 			compatible = "qcom,msm-cvp,context-bank";
 			label = "cvp_sec_nonpixel";
 			iommus =
 				<&apps_smmu 0x1924 0x0000>;
 			buffer-types = <0x741>;
 			qcom,iommu-faults = "non-fatal";
-			qcom,iommu-dma-addr-pool = <0x01000000 0x25800000>;
+			memory-region = <&cvp_iommu_region_partition>;
 			qcom,iommu-vmid = <0xB>;
 		};
 
-		cvp_secure_pixel_cb {
+		cvp_secure_pixel_cb: cvp_secure_pixel_cb {
 			compatible = "qcom,msm-cvp,context-bank";
 			label = "cvp_sec_pixel";
 			iommus =
 				<&apps_smmu 0x1923 0x0000>;
 			buffer-types = <0x106>;
 			qcom,iommu-faults = "non-fatal";
-			qcom,iommu-dma-addr-pool = <0x26800000 0x24800000>;
+			memory-region = <&cvp_iommu_region_partition>;
 			qcom,iommu-vmid = <0xA>;
 		};
 
@@ -129,6 +140,7 @@
 				<&apps_smmu 0x1920 0x0000>;
 			buffer-types = <0xfff>;
 			qcom,iommu-group = <&non_secure_cb_group>;
+			memory-region = <&cvp_iommu_region_partition>;
 		};
 
 		/* Memory Heaps */

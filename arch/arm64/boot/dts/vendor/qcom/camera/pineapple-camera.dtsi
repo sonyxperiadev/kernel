@@ -1378,14 +1378,18 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 
-		msm_cam_smmu_ife {
+		msm_cam_smmu_ife: msm_cam_smmu_ife {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x20>;
-			qcom,iommu-dma-addr-pool = <0x0 0x100000 0xf 0xffe00000>;
 			qcom,iommu-faults = "stall-disable", "non-fatal";
 			dma-coherent;
 			cam-smmu-label = "ife", "sfe";
 			multiple-client-devices;
+			memory-region = <&cam_smmu_ife_resv_region>;
+			cam_smmu_ife_resv_region: cam_smmu_ife_resv_region {
+				iommu-addresses = <&msm_cam_smmu_ife 0x0 0x0 0x0 0x100000>,
+					<&msm_cam_smmu_ife 0xf 0xfff00000 0x0 0x100000>;
+			};
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 64 GB */
 				iova-mem-region-io {
@@ -1402,13 +1406,17 @@
 			};
 		};
 
-		msm_cam_smmu_jpeg {
+		msm_cam_smmu_jpeg: msm_cam_smmu_jpeg {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x18A0 0x0040>;
 			cam-smmu-label = "jpeg";
 			qcom,iommu-faults = "stall-disable", "non-fatal";
-			qcom,iommu-dma-addr-pool = <0x0 0x100000 0x0 0xffe00000>;
 			dma-coherent;
+			memory-region = <&cam_smmu_jpeg_resv_region>;
+			cam_smmu_jpeg_resv_region: cam_smmu_jpeg_resv_region {
+				iommu-addresses = <&msm_cam_smmu_jpeg 0x0 0x0 0x0 0x100000>,
+					<&msm_cam_smmu_jpeg 0x0 0xfff00000 0xf 0x00100000>;
+			};
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
 				iova-mem-region-io {
@@ -1425,7 +1433,7 @@
 			};
 		};
 
-		msm_cam_smmu_icp {
+		msm_cam_smmu_icp: msm_cam_smmu_icp {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x1820 0x00>,
 				<&apps_smmu 0x18C0 0x00>,
@@ -1434,8 +1442,11 @@
 				<&apps_smmu 0x1880 0x00>;
 			cam-smmu-label = "icp";
 			qcom,iommu-faults = "stall-disable", "non-fatal";
-			qcom,iommu-dma-addr-pool = <0x0 0xf9500000 0xf 0x06a00000>;
 			dma-coherent;
+			memory-region = <&cam_smmu_icp_resv_region>;
+			cam_smmu_icp_resv_region: cam_smmu_icp_resv_region {
+				iommu-addresses = <&msm_cam_smmu_icp 0x0 0x0 0x0 0xf9500000>;
+			};
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
 					/* Shared region is ~900MB long */
@@ -1538,14 +1549,18 @@
 			};
 		};
 
-		msm_cam_smmu_cdm {
+		msm_cam_smmu_cdm: msm_cam_smmu_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x1860 0x00>;
 			cam-smmu-label = "rt-cdm";
 			qcom,iommu-faults = "stall-disable", "non-fatal";
-			qcom,iommu-dma-addr-pool = <0x0 0x100000 0x0 0xffe00000>;
 			dma-coherent;
 			multiple-client-devices;
+			memory-region = <&cam_smmu_cdm_resv_region>;
+			cam_smmu_cdm_resv_region: cam_smmu_cdm_resv_region {
+				iommu-addresses = <&msm_cam_smmu_cdm 0x0 0x0 0x0 0x100000>,
+					<&msm_cam_smmu_cdm 0x0 0xfff00000 0xf 0x00100000>;
+			};
 			rt_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					iova-region-name = "io";
