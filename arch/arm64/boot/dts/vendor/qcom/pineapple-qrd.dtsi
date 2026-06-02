@@ -8,6 +8,9 @@
 #include <dt-bindings/clock/qcom,gcc-pineapple.h>
 #include "pineapple-pmic-overlay.dtsi"
 #include "pineapple-thermal-overlay.dtsi"
+#include "audio/pineapple-audio-qrd.dtsi"
+//#include "pineapple-camera-sensor-qrd.dtsi"
+#include "display/pineapple-sde-display-qrd.dtsi"
 
 &sdhc_2 {
 	status = "ok";
