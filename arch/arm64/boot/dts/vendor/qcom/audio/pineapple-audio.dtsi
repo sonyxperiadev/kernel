@@ -3,8 +3,8 @@
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
-#include <bindings/qcom,audio-ext-clk.h>
-#include <bindings/qcom,gpr.h>
+#include <dt-bindings/clock/qcom,audio-ext-clk.h>
+#include <dt-bindings/sound/qcom,gpr.h>
 #include "msm-audio-lpass.dtsi"
 
 &soc {

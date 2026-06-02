@@ -3,7 +3,7 @@
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
-#include <dt-bindings/msm-camera.h>
+#include <dt-bindings/msm/msm-camera.h>
 &soc {
 	led_flash_triple_rear_wide: qcom,camera-flash1 {
 		cell-index = <1>;
