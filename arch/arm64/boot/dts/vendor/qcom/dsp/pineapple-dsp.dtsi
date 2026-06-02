@@ -1,0 +1,225 @@
+&glink_edge {
+	qcom,fastrpc {
+		compatible = "qcom,fastrpc";
+		qcom,glink-channels = "fastrpcglink-apps-dsp";
+		qcom,intents = <0x64 64>;
+		label = "adsp";
+		memory-region = <&adsp_mem_heap>;
+		qcom,vmids = <22 37>;
+
+		compute-cb@1 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <3>;
+			iommus = <&apps_smmu 0x1003 0x0080>,
+				 <&apps_smmu 0x1043 0x0020>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <1>;	/* ROOT_PD */
+		};
+
+		compute-cb@2 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <4>;
+			iommus = <&apps_smmu 0x1004 0x0080>,
+				 <&apps_smmu 0x1044 0x0020>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			qcom,nsessions = <8>;
+			dma-coherent;
+			pd-type = <3>;	/* SENSORS_STATICPD */
+		};
+
+		compute-cb@3 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <5>;
+			iommus = <&apps_smmu 0x1005 0x0080>,
+				 <&apps_smmu 0x1045 0x0020>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <2>;	/* AUDIO_STATICPD */
+		};
+
+		compute-cb@4 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <6>;
+			iommus = <&apps_smmu 0x1006 0x0080>,
+				 <&apps_smmu 0x1046 0x0020>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@5 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <7>;
+			iommus = <&apps_smmu 0x1007 0x0040>,
+				 <&apps_smmu 0x1067 0x0000>,
+				 <&apps_smmu 0x1087 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+	};
+};
+
+&remoteproc_cdsp_glink {
+	qcom,fastrpc {
+		compatible = "qcom,fastrpc";
+		qcom,glink-channels = "fastrpcglink-apps-dsp";
+		qcom,intents = <0x64 64>;
+		label = "cdsp";
+		qcom,fastrpc-gids = <2908>;
+		qcom,rpc-latency-us = <235>;
+
+		compute-cb@1 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <1>;
+			iommus = <&apps_smmu 0x1961 0x0000>,
+				 <&apps_smmu 0x0C01 0x0020>,
+				 <&apps_smmu 0x19C1 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <1>;	/* ROOT_PD */
+		};
+
+		compute-cb@2 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <2>;
+			iommus = <&apps_smmu 0x1962 0x0000>,
+				 <&apps_smmu 0x0C02 0x0020>,
+				 <&apps_smmu 0x19C2 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@3 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <3>;
+			iommus = <&apps_smmu 0x1963 0x0000>,
+				 <&apps_smmu 0x0C03 0x0020>,
+				 <&apps_smmu 0x19C3 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@4 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <4>;
+			iommus = <&apps_smmu 0x1964 0x0000>,
+				 <&apps_smmu 0x0C04 0x0020>,
+				 <&apps_smmu 0x19C4 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@5 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <5>;
+			iommus = <&apps_smmu 0x1965 0x0000>,
+				 <&apps_smmu 0x0C05 0x0020>,
+				 <&apps_smmu 0x19C5 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@6 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <6>;
+			iommus = <&apps_smmu 0x1966 0x0000>,
+				 <&apps_smmu 0x0C06 0x0020>,
+				 <&apps_smmu 0x19C6 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@7 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <7>;
+			iommus = <&apps_smmu 0x1967 0x0000>,
+				 <&apps_smmu 0x0C07 0x0020>,
+				 <&apps_smmu 0x19C7 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@8 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <8>;
+			iommus = <&apps_smmu 0x1968 0x0000>,
+				 <&apps_smmu 0x0C08 0x0020>,
+				 <&apps_smmu 0x19C8 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@9 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <9>;
+			qcom,secure-context-bank;
+			iommus = <&apps_smmu 0x1969 0x0000>,
+				 <&apps_smmu 0x0C09 0x0020>,
+				 <&apps_smmu 0x19C9 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			qcom,iommu-vmid = <0xA>;	/* VMID_CP_PIXEL */
+			qcom,nsessions = <3>;
+			dma-coherent;
+			pd-type = <6>;	/* CPZ_USERPD */
+		};
+
+		compute-cb@10 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <12>;
+			iommus = <&apps_smmu 0x196C 0x0000>,
+				 <&apps_smmu 0x0C0C 0x0020>,
+				 <&apps_smmu 0x19CC 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@11 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <13>;
+			iommus = <&apps_smmu 0x196D 0x0000>,
+				 <&apps_smmu 0x0C0D 0x0020>,
+				 <&apps_smmu 0x19CD 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+
+		compute-cb@12 {
+			compatible = "qcom,fastrpc-compute-cb";
+			reg = <14>;
+			iommus = <&apps_smmu 0x196E 0x0000>,
+				 <&apps_smmu 0x0C0E 0x0020>,
+				 <&apps_smmu 0x19CE 0x0000>;
+			qcom,iommu-dma-addr-pool = <0x10000000 0xF0000000>;
+			qcom,iommu-faults = "stall-disable", "HUPCF";
+			dma-coherent;
+			pd-type = <7>;	/* USERPD */
+		};
+	};
+};

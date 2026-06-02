@@ -47,6 +47,17 @@ parrot-dtb-$(CONFIG_ARCH_PARROT) += \
 parrot-overlays-dtb-$(CONFIG_ARCH_PARROT) += $(PARROT_BOARDS) $(PARROT_BASE_DTB)
 dtb-y += $(parrot-dtb-y)
 
+# SoC Pineapple
+PINEAPPLE_BASE_DTB += pineapple.dtb pineapple-v2.dtb
+
+PINEAPPLE_BOARDS += \
+	pineapple-qrd-overlay.dtbo
+
+pineapple-dtb-$(CONFIG_ARCH_PINEAPPLE) += \
+	$(call add-overlays, $(PINEAPPLE_BOARDS),$(PINEAPPLE_BASE_DTB))
+pineapple-overlays-dtb-$(CONFIG_ARCH_PINEAPPLE) += $(PINEAPPLE_BOARDS) $(PINEAPPLE_BASE_DTB)
+dtb-y += $(pineapple-dtb-y)
+
 always-y    := $(dtb-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

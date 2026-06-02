@@ -1,0 +1,259 @@
+#include "pineapple-sde.dtsi"
+#include "pineapple-sde-display-common.dtsi"
+#include <dt-bindings/clock/qcom,dispcc-pineapple.h>
+
+&pm8550_gpios {
+	display_panel_avdd_default: display_panel_avdd_default {
+		pins = "gpio11";
+		function = "normal";
+		input-disable;
+		output-enable;
+		bias-disable;
+		power-source = <1>;
+		qcom,drive-strength = <3>;
+	};
+};
+
+&soc {
+	sde_wb1: qcom,wb-display@1 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display1";
+		clocks = <&dispcc DISP_CC_MDSS_MDP_CLK>;
+		clock-names = "mdp_core_clk";
+	};
+
+	sde_wb2: qcom,wb-display@2 {
+		compatible = "qcom,wb-display";
+		cell-index = <1>;
+		label = "wb_display2";
+		clocks = <&dispcc DISP_CC_MDSS_MDP_CLK>;
+		clock-names = "mdp_core_clk";
+	};
+
+	display_panel_avdd: display_gpio_regulator@1 {
+		compatible = "qti-regulator-fixed";
+		regulator-name = "display_panel_avdd";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-enable-ramp-delay = <233>;
+		gpio = <&pm8550_gpios 11 0>;
+		enable-active-high;
+		regulator-boot-on;
+		proxy-supply = <&display_panel_avdd>;
+		qcom,proxy-consumer-enable;
+		pinctrl-names = "default";
+		pinctrl-0 = <&display_panel_avdd_default>;
+	};
+
+	disp_rdump_memory: disp_rdump_region@d5100000 {
+		reg = <0xd5100000 0x00800000>;
+		label = "disp_rdump_region";
+	};
+};
+
+&reserved_memory {
+	splash_memory: splash_region {
+		reg = <0x0 0xd5100000 0x0 0x02b00000>;
+		label = "cont_splash_region";
+	};
+	/*
+	 * Demura memory regions are to be commented out if
+	 * feature not in use.
+	 */
+	demura_memory_0: demura_region_0 {
+		reg = <0x0 0x0 0x0 0x0>;
+		label = "demura hfc region 0";
+	};
+
+	demura_memory_1: demura_region_1 {
+		reg = <0x0 0x0 0x0 0x0>;
+		label = "demura hfc region 1";
+	};
+};
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 0>,
+		 <&mdss_dsi_phy0 1>,
+		 <&mdss_dsi_phy1 2>,
+		 <&mdss_dsi_phy1 3>,
+		 /*
+		  * Currently the dsi clock handles are under the dsi
+		  * controller DT node. As soon as the controller probe
+		  * finishes, the dispcc sync state can get called before
+		  * the dsi_display probe potentially disturbing the clock
+		  * votes for cont_splash use case. Hence we are no longer
+		  * protected by the component model in this case against the
+		  * disp cc sync state getting triggered after the dsi_ctrl
+		  * probe. To protect against this incorrect sync state trigger
+		  * add this dummy MDP clk vote handle to the dsi_display
+		  * DT node. Since the dsi_display driver does not parse
+		  * MDP clock nodes, no actual vote shall be added and this
+		  * change is done just to satisfy sync state requirements.
+		  */
+		 <&dispcc DISP_CC_MDSS_MDP_CLK>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+		      "pll_byte_clk1", "pll_dsi_clk1",
+		      "mdp_core_clk";
+	vddio-supply = <&L12B>;
+	vci-supply = <&L13B>;
+	vdd-supply = <&L11B>;
+};
+
+&sde_dsi1 {
+	clocks = <&mdss_dsi_phy0 0>,
+		 <&mdss_dsi_phy0 1>,
+		 <&mdss_dsi_phy1 2>,
+		 <&mdss_dsi_phy1 3>,
+		 /*
+		  * Currently the dsi clock handles are under the dsi
+		  * controller DT node. As soon as the controller probe
+		  * finishes, the dispcc sync state can get called before
+		  * the dsi_display probe potentially disturbing the clock
+		  * votes for cont_splash use case. Hence we are no longer
+		  * protected by the component model in this case against the
+		  * disp cc sync state getting triggered after the dsi_ctrl
+		  * probe. To protect against this incorrect sync state trigger
+		  * add this dummy MDP clk vote handle to the dsi_display
+		  * DT node. Since the dsi_display driver does not parse
+		  * MDP clock nodes, no actual vote shall be added and this
+		  * change is done just to satisfy sync state requirements.
+		  */
+		 <&dispcc DISP_CC_MDSS_MDP_CLK>;
+	clock-names = "pll_byte_clk0", "pll_dsi_clk0",
+		      "pll_byte_clk1", "pll_dsi_clk1",
+		      "mdp_core_clk";
+	vddio-supply = <&L12B>;
+	vci-supply = <&L13B>;
+	vdd-supply = <&L11B>;
+};
+
+&mdss_mdp {
+	connectors = <&sde_dsi &sde_dsi1 &smmu_sde_unsec &sde_wb1 &sde_wb2 &sde_rscc &sde_dp>;
+};
+
+&dsi_vtdr6130_amoled_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 40 40 40 1080 40>;
+		};
+
+		timing@1 {
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 40 40 40 1080 40>;
+		};
+
+		timing@2 {
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 40 40 40 1080 40>;
+		};
+
+		timing@3 {
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 40 40 40 1080 40>;
+		};
+	};
+};
+
+&dsi_vtdr6130_amoled_qsync_144hz_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sharp_qsync_wqhd_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@1 { /* FHD 60FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+
+		timing@2 { /* WQHD 90FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@3 { /* WQHD 120FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+
+		timing@4 { /* FHD 120FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+
+		timing@5 { /* FHD 90FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_144hz_cmd_cphy {
+	qcom,ulps-enabled;
+};
+
+&dsi_dual_nt35597_truly_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_nt35695b_truly_fhd_sl_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS cmd vid mode*/
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+
+		timing@2 { /* FHD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <540 20 540 20 540 20>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+
+		timing@3 { /* HD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <360 40 360 40 360 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+	};
+};
+
+&dsi_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_dsc_10b_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_dual_sim_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_dual_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_sec_hd_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+	};
+};

@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include "pineapple-audio-overlay.dtsi"
+
+&tx_swr_clk_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data0_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data1_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data2_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&wsa_macro {
+	qcom,wsa-bat-cfgs = <2>, <2>;
+};
+
+&wsa2_macro {
+	qcom,wsa-bat-cfgs = <2>, <2>;
+};
+
+&wcd939x_codec {
+	cdc-vdd-px-supply = <&L15B>;
+	qcom,cdc-vdd-px-voltage = <1800000 1800000>;
+	qcom,cdc-vdd-px-current = <650000>;
+	qcom,cdc-vdd-px-lpm-supported = <1>;
+	/* 0 for digital crosstalk disabled,
+	 * 1 for digital crosstalk with local sensed a-xtalk enabled, and
+	 * 2 for digital crosstalk with remote sensed a-xtalk enabled.
+	 */
+	qcom,usbcss-hs-xtalk-config = <2>;
+	qcom,usbcss-hs-rdson = <600>;
+	qcom,usbcss-hs-r2 = <7550>;
+	qcom,usbcss-hs-r3 = <1>;
+	qcom,usbcss-hs-r4 = <330>;
+	qcom,usbcss-hs-r5 = <5>;
+	qcom,usbcss-hs-r6 = <1>;
+	qcom,usbcss-hs-r7 = <5>;
+	qcom,usbcss-hs-lin-k-aud = <13>;
+	qcom,usbcss-hs-lin-k-gnd = <13>;
+};
+
+&pineapple_snd {
+	qcom,model = "pineapple-qrd-snd-card";
+
+	qcom,audio-routing =
+		"AMIC1", "Analog Mic1",
+		"AMIC1", "MIC BIAS1",
+		"AMIC2", "Analog Mic2",
+		"AMIC2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"AMIC3", "MIC BIAS3",
+		"AMIC4", "Analog Mic4",
+		"AMIC4", "MIC BIAS3",
+		"AMIC5", "Analog Mic5",
+		"AMIC5", "MIC BIAS4",
+		"VA AMIC1", "Analog Mic1",
+		"VA AMIC1", "VA MIC BIAS1",
+		"VA AMIC2", "Analog Mic2",
+		"VA AMIC2", "VA MIC BIAS2",
+		"VA AMIC3", "Analog Mic3",
+		"VA AMIC3", "VA MIC BIAS3",
+		"VA AMIC4", "Analog Mic4",
+		"VA AMIC4", "VA MIC BIAS3",
+		"VA AMIC5", "Analog Mic5",
+		"VA AMIC5", "VA MIC BIAS4",
+		"IN1_HPHL", "HPHL_OUT",
+		"IN2_HPHR", "HPHR_OUT",
+		"IN3_EAR", "AUX_OUT",
+		"WSA SRC0_INP", "SRC0",
+		"WSA_TX DEC0_INP", "TX DEC0 MUX",
+		"WSA_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"SpkrLeft IN", "WSA_SPK1 OUT",
+		"SpkrRight IN", "WSA_SPK2 OUT",
+		"TX SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK";
+
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
+	qcom,wcd-disable-legacy-surge;
+};

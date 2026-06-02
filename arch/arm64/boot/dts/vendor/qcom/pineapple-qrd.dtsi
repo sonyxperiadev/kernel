@@ -1,0 +1,497 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/clock/qcom,gcc-pineapple.h>
+#include "pineapple-pmic-overlay.dtsi"
+#include "pineapple-thermal-overlay.dtsi"
+
+&sdhc_2 {
+	status = "ok";
+	vdd-supply = <&pm_humu_l9>;
+	qcom,vdd-voltage-level = <2950000 2960000>;
+	qcom,vdd-current-level = <0 800000>;
+
+	vdd-io-supply = <&pm_humu_l8>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 10000>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>, <&sd_card_det_default>;
+	pinctrl-1 = <&sdc2_off>, <&sd_card_det_default>;
+
+	cd-gpios = <&pm8550_gpios 12 GPIO_ACTIVE_LOW>;
+
+	resets = <&gcc GCC_SDCC2_BCR>;
+	reset-names = "core_reset";
+
+	qcom,iommu-dma = "fastmap";
+};
+
+&soc {
+	gpio_keys {
+		compatible = "gpio-keys";
+		label = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default>;
+
+		vol_up {
+			label = "volume_up";
+			gpios = <&pm8550_gpios 6 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEUP>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+&ufsphy_mem {
+	compatible = "qcom,ufs-phy-qmp-v4-pineapple";
+
+	/* VDDA_UFS_CORE */
+	vdda-phy-supply = <&pm_v6d_l1>;
+	vdda-phy-max-microamp = <211000>;
+
+	/* VDDA_UFS_0_1P2 */
+	vdda-pll-supply = <&pm_v8_l3>;
+	vdda-pll-max-microamp = <18300>;
+
+	/* Phy GDSC for VDD_MX, always on */
+	vdd-phy-gdsc-supply = <&gcc_ufs_mem_phy_gdsc>;
+
+	/* Qref power supply, Refer Qref diagram */
+	vdda-qref-supply = <&pm_v8_l1>;
+	vdda-qref-max-microamp = <64500>;
+
+	status = "ok";
+};
+
+&ufshc_mem {
+	vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+
+	vcc-supply = <&pm_humu_l17>;
+	vcc-max-microamp = <1300000>;
+
+	vccq-supply = <&pm_v6c_l1>;
+	vccq-max-microamp = <1200000>;
+
+	/* VDD_PX10 is voted for the ufs_reset_n */
+	qcom,vddp-ref-clk-supply = <&pm_v6c_l3>;
+	qcom,vddp-ref-clk-max-microamp = <100>;
+
+	qcom,vccq-parent-supply = <&pm_v6c_s1>;
+	qcom,vccq-parent-max-microamp = <210000>;
+
+	reset-gpios = <&tlmm 210 GPIO_ACTIVE_LOW>;
+	resets = <&gcc GCC_UFS_PHY_BCR>;
+	reset-names = "rst";
+
+	status = "ok";
+};
+
+&pm8550_switch0 {
+	qcom,led-mask = <9>; /* Channels 1 & 4 */
+	qcom,symmetry-en;
+};
+
+&pm8550_switch1 {
+	qcom,led-mask = <6>; /* Channels 2 & 3 */
+	qcom,symmetry-en;
+};
+
+&pm8550_switch2 {
+	qcom,led-mask = <15>; /* All Channels */
+	qcom,symmetry-en;
+};
+
+&pm8550_flash {
+	status = "ok";
+};
+
+&pmic_glink_debug {
+	i2c@107 {
+		reg = <0x107>; /* I2C instance 7 in ADSP for SE6 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,bus-type = "i2c";
+
+		qcom,smb1396@34 {
+			compatible = "qcom,i2c-pmic";
+			reg = <0x34>;
+			qcom,can-sleep;
+		};
+
+		qcom,smb1396@35 {
+			compatible = "qcom,i2c-pmic";
+			reg = <0x35>;
+			qcom,can-sleep;
+		};
+
+		qcom,idt9418@3b {
+			compatible = "qcom,i2c-pmic";
+			reg = <0x3b>;
+			qcom,can-sleep;
+		};
+	};
+
+	/* SPMI bridge bus 0 with SMB1510 device */
+	spmi@200 {
+		reg = <0x200>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		qcom,bus-type = "spmi";
+
+		qcom,smb1510@d {
+			compatible = "qcom,spmi-pmic";
+			reg = <0xd SPMI_USID>;
+			qcom,can-sleep;
+		};
+	};
+};
+
+&pmic_glink_adc {
+	status = "ok";
+
+	smb1396_1_iin {
+		reg = <0x1073401>;
+		label = "smb1396_1_iin";
+	};
+
+	smb1396_1_ichg {
+		reg = <0x1073402>;
+		label = "smb1396_1_ichg";
+	};
+
+	smb1396_1_die_temp {
+		reg = <0x1073403>;
+		label = "smb1396_1_die_temp";
+	};
+
+	smb1396_2_iin {
+		reg = <0x1073501>;
+		label = "smb1396_2_iin";
+	};
+
+	smb1396_2_ichg {
+		reg = <0x1073502>;
+		label = "smb1396_2_ichg";
+	};
+
+	smb1396_2_die_temp {
+		reg = <0x1073503>;
+		label = "smb1396_2_die_temp";
+	};
+};
+
+&qupv3_se4_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	qcom,touch-active = "goodix,gt9916S";
+	qcom,la-vm;
+
+	goodix-berlin@0 {
+		compatible = "goodix,gt9916S";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+
+		goodix,avdd-name = "avdd";
+		avdd-supply = <&L14B>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <162 0x2008>;
+		goodix,reset-gpio = <&tlmm 161 0x00>;
+		goodix,irq-gpio = <&tlmm 162 0x2008>;
+		goodix,irq-flags = <2>;
+		goodix,panel-max-x = <1080>;
+		goodix,panel-max-y = <2400>;
+		goodix,panel-max-w = <255>;
+		goodix,panel-max-p = <4096>;
+		goodix,firmware-name = "goodix_firmware_spi.bin";
+		goodix,config-name = "goodix_cfg_group_spi.bin";
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		goodix,touch-type = "primary";
+		goodix,qts_en;
+		qts,trusted-touch-mode = "vm_mode";
+		qts,touch-environment = "pvm";
+		qts,trusted-touch-type = "primary";
+		qts,trusted-touch-spi-irq = <598>;
+		qts,trusted-touch-io-bases = <0xa90000>;
+		qts,trusted-touch-io-sizes = <0x1000>;
+		qts,trusted-touch-vm-gpio-list = <&tlmm 48 0 &tlmm 49 0 &tlmm 50 0
+						&tlmm 51 0 &tlmm 161 0 &tlmm 162 0x2008>;
+	};
+};
+
+&pm8550b_haptics {
+	qcom,vmax-mv = <1700>;
+	qcom,lra-period-us = <5880>;
+
+	effect_0 {
+		/* CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_1 {
+		/* DOUBLE_CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_2 {
+		/* TICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_3 {
+		/* THUD */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_4 {
+		/* POP */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	effect_5 {
+		/* HEAVY CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_0 {
+		/* NOOP */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_1 {
+		/* CLICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_2 {
+		/* THUD */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_3 {
+		/* SPIN */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_4 {
+		/* QUICK_RISE */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_5 {
+		/* SLOW_RISE */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_6 {
+		/* QUICK_FALL */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_7 {
+		/* LIGHT_TICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+
+	primitive_8 {
+		/* LOW_TICK */
+		qcom,wf-vmax-mv = <1800>;
+		qcom,wf-pattern-period-us = <5880>;
+	};
+};
+
+&battery_charger {
+	qcom,wireless-fw-name = "idt9418.bin";
+	qcom,thermal-mitigation-step = <500000>;
+	#cooling-cells = <2>;
+};
+
+&eusb2_phy0 {
+	dummy-supply = <&pm8550b_eusb2_repeater>;
+	usb-repeater = <&pm8550b_eusb2_repeater>;
+};
+
+&pm8550b_eusb2_repeater {
+	qcom,param-override-seq =
+		/* <value reg_offset> */
+		/* Adjust HS trasmit amplitude */
+		<0xd 0x51
+		/* Squelch detection threshold */
+		 0x3 0x54
+		/* Tx pre-emphasis tuning */
+		 0x7 0x57
+		/* HS disconnect threshold */
+		 0x6 0x53
+		/* slew rate */
+		 0x00 0x59>;
+};
+
+&qupv3_se6_i2c {
+	status = "ok";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	redriver: redriver@1c {
+		compatible = "onnn,redriver";
+		reg = <0x1c>;
+
+		vdd-supply = <&L15B>;
+
+		lane-channel-swap;
+
+		eq = /bits/ 8 <
+				/* Parameters for USB */
+				0x4 0x4 0x4 0x4
+				/* Parameters for DP */
+				0x4 0x6 0x6 0x4>;
+		flat-gain = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x1 0x1 0x3
+				/* Parameters for DP */
+				0x0 0x3 0x3 0x0>;
+		output-comp = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x3 0x3 0x3
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+				/* Parameters for USB */
+				0x1 0x3 0x3 0x1
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+	};
+};
+
+&usb_qmp_dp_phy {
+	pinctrl-names = "unused";
+};
+
+&usb0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb3phy_portselect_gpio>;
+	gpios = <&tlmm 29 0>;
+
+	ssusb_redriver = <&redriver>;
+
+	qcom,wcd_usbss = <&wcd_usbss>;
+
+	usb-role-switch;
+	port {
+		usb_port0: endpoint {
+			remote-endpoint = <&usb_port0_connector>;
+		};
+	};
+};
+
+&ucsi {
+	connector {
+		port {
+			usb_port0_connector: endpoint {
+				remote-endpoint = <&usb_port0>;
+			};
+		};
+	};
+};
+
+&regulator_ocp_notifier {
+	periph-1c1-supply = <&L1B>;
+	periph-1c2-supply = <&L2B>;
+	periph-1c5-supply = <&L5B>;
+	periph-1c6-supply = <&L6B>;
+	periph-1c7-supply = <&L7B>;
+	periph-1c8-supply = <&L8B>;
+	periph-1c9-supply = <&L9B>;
+	periph-1ca-supply = <&L10B>;
+	periph-1cb-supply = <&L11B>;
+	periph-1cc-supply = <&L12B>;
+	periph-1cd-supply = <&L13B>;
+	periph-1ce-supply = <&L14B>;
+	periph-1cf-supply = <&L15B>;
+	periph-1d0-supply = <&L16B>;
+	periph-1d1-supply = <&L17B>;
+	periph-1e4-supply = <&BOB1>;
+	periph-1e6-supply = <&BOB2>;
+	periph-29b-supply = <&S1C>;
+	periph-29e-supply = <&S2C>;
+	periph-2a1-supply = <&S3C>;
+	periph-2a4-supply = <&S4C>;
+	periph-2a7-supply = <&S5C>;
+	periph-2aa-supply = <&S6C>;
+	periph-2c1-supply = <&L1C>;
+	periph-2c2-supply = <&L2C>;
+	periph-2c3-supply = <&L3C>;
+	periph-3a1-supply = <&S3D_LEVEL>;
+	periph-3a4-supply = <&S4D_LEVEL>;
+	periph-3a7-supply = <&S5D_LEVEL>;
+	periph-3c1-supply = <&L1D>;
+	periph-3c2-supply = <&L2D_LEVEL>;
+	periph-3c3-supply = <&L3D>;
+	periph-4c2-supply = <&L2E>;
+	periph-4c3-supply = <&L3E>;
+	periph-69b-supply = <&S1G_LEVEL>;
+	periph-6a1-supply = <&S3G>;
+	periph-6a4-supply = <&S4G_LEVEL>;
+	periph-6a7-supply = <&S5G_LEVEL>;
+	periph-6c1-supply = <&L1G>;
+	periph-6c2-supply = <&L2G>;
+	periph-6c3-supply = <&L3G>;
+	periph-89b-supply = <&S1I_LEVEL>;
+	periph-8a1-supply = <&S3I_LEVEL>;
+	periph-8a4-supply = <&S4I>;
+	periph-8a7-supply = <&S5I>;
+	periph-8aa-supply = <&S6I_LEVEL>;
+	periph-8b0-supply = <&S8I_LEVEL>;
+	periph-8c1-supply = <&L1I>;
+	periph-8c2-supply = <&L2I>;
+	periph-8c3-supply = <&L3I>;
+	periph-ac1-supply = <&L1K>;
+	periph-ac2-supply = <&L2K>;
+	periph-ac3-supply = <&L3K>;
+	periph-ac4-supply = <&L4K>;
+	periph-ac5-supply = <&L5K>;
+	periph-ac6-supply = <&L6K>;
+	periph-ac7-supply = <&L7K>;
+	periph-c40-supply = <&L1M>;
+	periph-c41-supply = <&L2M>;
+	periph-c42-supply = <&L3M>;
+	periph-c43-supply = <&L4M>;
+	periph-c44-supply = <&L5M>;
+	periph-c45-supply = <&L6M>;
+	periph-c46-supply = <&L7M>;
+	periph-d40-supply = <&L1N>;
+	periph-d41-supply = <&L2N>;
+	periph-d42-supply = <&L3N>;
+	periph-d43-supply = <&L4N>;
+	periph-d44-supply = <&L5N>;
+	periph-d45-supply = <&L6N>;
+	periph-d46-supply = <&L7N>;
+};

@@ -12,6 +12,11 @@ dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-camera.dtbo \
 	parrot-camera-sensor-qrd.dtbo
 
+dtbo-$(CONFIG_ARCH_PINEAPPLE) := \
+	pineapple-camera.dtbo \
+	pineapple-camera-v2.dtbo \
+	pineapple-camera-sensor-qrd.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

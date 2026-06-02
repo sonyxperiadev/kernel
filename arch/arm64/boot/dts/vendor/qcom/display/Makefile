@@ -12,6 +12,10 @@ dtbo-$(CONFIG_ARCH_PARROT) += \
 	parrot-sde.dtbo \
 	parrot-sde-display-qrd-overlay.dtbo
 
+dtbo-$(CONFIG_ARCH_PINEAPPLE) += \
+	pineapple-sde.dtbo \
+	pineapple-sde-display-qrd-overlay.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

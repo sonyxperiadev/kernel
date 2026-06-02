@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include <dt-bindings/interconnect/qcom,pineapple.h>
+
+&tlmm {
+	bt_en_sleep: bt_en_sleep {
+		mux {
+			pins = "gpio17";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio17";
+			drive-strength = <2>;
+			output-low;
+			bias-pull-down;
+		};
+	};
+};
+
+&soc {
+	bluetooth: bt_kiwi {
+			compatible = "qcom,kiwi";
+			pinctrl-names = "bt_en_sleep";
+			pinctrl-0 = <&bt_en_sleep>;
+			/* List of GPIOs to be setup for interrupt wakeup capable*/
+			mpm_wake_set_gpios = <18>;
+			qcom,bt-reset-gpio = <&tlmm 17 0>; /* BT_EN */
+			qcom,wl-reset-gpio = <&tlmm 16 0>; /* WL_EN */
+			qcom,bt-sw-ctrl-gpio = <&tlmm 18 0>; /* SW_CTRL */
+			mboxes = <&qmp_aop 0>;
+
+			qcom,bt-vdd18-aon-supply  = <&L15B>; /* BT VDD1.8 AON */
+			qcom,bt-vdd12-io-supply   = <&L3C>;  /* BT VDD1.2V IO */
+			qcom,bt-ant-ldo-supply    = <&L6K>;  /* BT ANT */
+			qcom,bt-vdd-dig-supply    = <&S3C>;  /* BT LDO*/
+			qcom,bt-vdd-aon-supply    = <&S3C>;  /* BT AON LDO*/
+			qcom,bt-vdd-rfaOp8-supply = <&S3C>;  /* BT RFAOp8 CMN LDO*/
+			qcom,bt-vdd-rfa1-supply   = <&S1C>;  /* BT RFA1.2 LDO */
+			qcom,bt-vdd-rfa2-supply   = <&S6C>;  /* BT RFA1.8 LDO */
+
+			qcom,bt-vdd18-aon-config  = <1800000 1800000 0 1>;
+			qcom,bt-vdd12-io-config   = <1200000 1200000 0 1>;
+			qcom,bt-ant-ldo-config    = <1800000 1800000 0 1>;
+			qcom,bt-vdd-aon-config    = <916000 916000 0 1>;
+			qcom,bt-vdd-dig-config    = <916000 916000 0 1>;
+			qcom,bt-vdd-rfaOp8-config = <916000 916000 0 1>;
+			qcom,bt-vdd-rfa1-config   = <1316000 1316000 0 1>;
+			qcom,bt-vdd-rfa2-config   = <1864000 1864000 0 1>;
+			qcom,pdc_init_table=
+				"{class: wlan_pdc, ss: rf, res: s3c.v, upval: 916}",
+				"{class: wlan_pdc, ss: rf, res: s3c.v, dwnval: 612}",
+				"{class: wlan_pdc, ss: rf, res: s1c.v, upval: 1316}",
+				"{class: wlan_pdc, ss: rf, res: s1c.v, dwnval: 944}",
+				"{class: wlan_pdc, ss: rf, res: s6c.v, upval: 1864}",
+				"{class: wlan_pdc, ss: rf, res: s6c.v, dwnval: 1820}";
+	};
+
+	slim_msm: slim@6C40000 {
+		status =  "ok";
+		ngd@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//slimbus child nodes
+			slimbus: btfmslim-driver {
+				compatible = "slim217,221";
+				reg = <1 0>;
+				qcom,btslim-address  = <0x0>; /* BT SLIM EP address*/
+				qcom,btslimtx-channels = <159 160>; /* slimbus FM_Tx, SCO_Tx channels */
+				qcom,btslimrx-channels = <157 158>; /* slimbus SCO_A2DP_Rx A2DP_Rx */
+			};
+		};
+	};
+};
+
+// FM changes
+&qupv3_se6_i2c {
+	status = "ok";
+	nq@64 {
+		compatible = "rtc6226";
+		reg = <0x64>;
+		fmint-gpio = <&tlmm 85 0>;
+		vdd-supply = <&L16B>;
+		rtc6226,vdd-supply-voltage = <2800000 2800000>;
+		rtc6226,vdd-load = <15000>;
+		vio-supply = <&L15B>;
+		rtc6226,vio-supply-voltage = <1800000 1800000>;
+	};
+};
+
+//uart instance
+&qupv3_se14_4uart {
+	status = "ok";
+};

@@ -1,0 +1,140 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+&soc {
+	msm_cvp: qcom,cvp@ab00000 {
+		compatible = "qcom,msm-cvp", "qcom,pineapple-cvp";
+		status = "ok";
+		reg = <0xab00000 0x100000>;
+		interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
+
+		/* LLCC Cache */
+		cache-slice-names = "cvp";
+
+		/* Supply */
+		cvp-supply = <&video_cc_mvs1c_gdsc>;
+		cvp-core-supply = <&video_cc_mvs1_gdsc>;
+
+		/* Clocks */
+		clock-names = "gcc_video_axi1", "sleep_clk", "cvp_clk", "core_clk",
+				"video_cc_mvs1_clk_src";
+		clock-ids = <GCC_VIDEO_AXI1_CLK VIDEO_CC_SLEEP_CLK VIDEO_CC_MVS1C_CLK
+			VIDEO_CC_MVS1_CLK VIDEO_CC_MVS1_CLK_SRC>;
+		clocks = <&gcc GCC_VIDEO_AXI1_CLK>,
+			<&videocc VIDEO_CC_SLEEP_CLK>,
+			<&videocc VIDEO_CC_MVS1C_CLK>,
+			<&videocc VIDEO_CC_MVS1_CLK>,
+			<&videocc VIDEO_CC_MVS1_CLK_SRC>;
+		qcom,proxy-clock-names = "gcc_video_axi1", "sleep_clk",
+			"cvp_clk", "core_clk", "video_cc_mvs1_clk_src";
+
+		qcom,clock-configs = <0x0 0x0 0x0 0x0 0x1>;
+		qcom,allowed-clock-rates = <350000000 450000000 500000000 550000000>;
+
+		resets = <&gcc GCC_VIDEO_AXI1_CLK_ARES>,
+		    <&videocc VIDEO_CC_XO_CLK_ARES>,
+			<&videocc VIDEO_CC_MVS1C_CLK_ARES>;
+		reset-names = "cvp_axi_reset", "cvp_xo_reset","cvp_core_reset";
+		reset-power-status = <0x0 0x1 0x0>;
+
+		qcom,reg-presets = <0xB0088 0x0>;
+		qcom,ipcc-reg = <0x400000 0x100000>;
+		qcom,gcc-reg = <0x110000 0x40000>;
+
+		pas-id = <26>;
+		memory-region = <&cvp_mem>;
+
+		/* UC region mapping */
+		ipclite_mappings = <0xFE500000 0x100000 0x82600000>;
+		/* DEVICE mapping */
+		aon_timer_mappings = <0xFFA00000 0x1000 0xc220000>;
+		/* DEVICE mapping */
+		hwmutex_mappings = <0xFFB00000 0x2000 0x1f4a000>;
+		/* DEVICE mapping */
+		aon_mappings = <0xFF80F000 0x1000 0x0ABE0000>;
+
+		/* CVP Firmware ELF image name */
+		cvp,firmware-name = "evass";
+
+		/* Buses */
+		cvp_cnoc {
+			compatible = "qcom,msm-cvp,bus";
+			qcom,bus-governor = "performance";
+			qcom,bus-range-kbps = <1000 1000>;
+			interconnects = <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_VENUS_CFG>;
+			interconnect-names = "eva-cfg";
+		};
+
+		cvp_bus_ddr {
+			compatible = "qcom,msm-cvp,bus";
+			qcom,bus-governor = "performance";
+			qcom,bus-range-kbps = <1000 6533000>;
+			interconnects = <&mmss_noc MASTER_VIDEO_PROC &mc_virt SLAVE_EBI1>;
+			interconnect-names = "eva-ddr";
+		};
+
+		/* MMUs */
+		/* Camera cb is used to get secure camera buffer IPA */
+		cvp_camera_cb {
+			compatible = "qcom,msm-cvp,context-bank";
+			label = "cvp_camera";
+			buffer-types = <0xfff>;
+			qti,smmu-proxy-cb-id = <QTI_SMMU_PROXY_EVA_CB>;
+		};
+
+		non_secure_cb_group: cvp_non_secure_cb_group {
+			qcom,iommu-dma-addr-pool = <0x4b000000 0x90000000>;
+			qcom,iommu-faults = "non-fatal";
+		};
+
+		cvp_non_secure_cb {
+			compatible = "qcom,msm-cvp,context-bank";
+			label = "cvp_hlos";
+			iommus =
+				<&apps_smmu 0x1920 0x0000>;
+			buffer-types = <0xfff>;
+			dma-coherent;
+			qcom,iommu-group = <&non_secure_cb_group>;
+		};
+
+
+		cvp_secure_nonpixel_cb {
+			compatible = "qcom,msm-cvp,context-bank";
+			label = "cvp_sec_nonpixel";
+			iommus =
+				<&apps_smmu 0x1924 0x0000>;
+			buffer-types = <0x741>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-dma-addr-pool = <0x01000000 0x25800000>;
+			qcom,iommu-vmid = <0xB>;
+		};
+
+		cvp_secure_pixel_cb {
+			compatible = "qcom,msm-cvp,context-bank";
+			label = "cvp_sec_pixel";
+			iommus =
+				<&apps_smmu 0x1923 0x0000>;
+			buffer-types = <0x106>;
+			qcom,iommu-faults = "non-fatal";
+			qcom,iommu-dma-addr-pool = <0x26800000 0x24800000>;
+			qcom,iommu-vmid = <0xA>;
+		};
+
+		cvp_dsp_cb {
+			compatible = "qcom,msm-cvp,context-bank";
+			label = "cvp_dsp";
+			iommus =
+				<&apps_smmu 0x1920 0x0000>;
+			buffer-types = <0xfff>;
+			qcom,iommu-group = <&non_secure_cb_group>;
+		};
+
+		/* Memory Heaps */
+		qcom,msm-cvp,mem_cdsp {
+			compatible = "qcom,msm-cvp,mem-cdsp";
+			memory-region = <&cdsp_eva_mem>;
+		};
+	};
+};
