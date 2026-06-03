@@ -21,7 +21,7 @@
 		compatible = "qcom,msm-hdcp";
 	};
 
-	sde_dp_pll: qcom,dp_pll@88eb000 {
+	sde_dp_pll: qcom,dp_pll@88ea000 {
 		compatible = "qcom,dp-pll-5nm-v1";
 		#clock-cells = <1>;
 	};
