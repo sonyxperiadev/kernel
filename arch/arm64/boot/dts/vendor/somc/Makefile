@@ -18,6 +18,10 @@ dtbo-$(CONFIG_ARCH_SONY_COLUMBIA) += \
 dtbo-$(CONFIG_ARCH_SONY_ELBE) += \
 	parrot-elbe-pdx257_generic-overlay.dtbo
 
+# SoMC Asahi
+dtbo-$(CONFIG_ARCH_SONY_ASAHI) += \
+	pineapple-asahi-pdx245_generic-overlay.dtbo
+
 always-y    := $(dtb-y) $(dtbo-y)
 subdir-y    := $(dts-dirs)
 clean-files := *.dtb *.dtbo

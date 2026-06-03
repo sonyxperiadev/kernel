@@ -1,0 +1,82 @@
+#include "pineapple-asahi-common.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_100 &sm_gpio_126 &sm_gpio_127 &sm_gpio_129>;
+};
+
+/* GPIO_100 : CAM_MCLK0 */
+&sm_gpio_100 {
+	mux {
+		pins = "gpio100";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio100";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_126 : NC */
+&sm_gpio_126 {
+	mux {
+		pins = "gpio126";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio126";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+/* GPIO_127 : NC */
+&sm_gpio_127 {
+	mux {
+		pins = "gpio127";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio127";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+/* GPIO_129 : NC */
+&sm_gpio_129 {
+	mux {
+		pins = "gpio129";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio129";
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+#include "somc-charger-asahi-common.dtsi"
+#include "somc-charger-asahi-pdx245.dtsi"
+#include "somc-asahi-display.dtsi"
+#include "somc-asahi-display-pdx245.dtsi"
+#include "somc-asahi-audio-common.dtsi"
+#include "somc-asahi-audio-pdx245.dtsi"
+#include "somc-asahi-touchscreen-pdx245.dtsi"

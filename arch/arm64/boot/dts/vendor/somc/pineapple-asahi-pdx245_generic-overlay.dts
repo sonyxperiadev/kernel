@@ -1,0 +1,12 @@
+/dts-v1/;
+/plugin/;
+
+#include "../qcom/pineapple-qrd.dtsi"
+#include "pineapple-asahi-pdx245_generic.dtsi"
+
+/ {
+	model = "Sony Corporation. PDX-245(Pineapple QRD)";
+	compatible = "somc,pdx245-generic", "qcom,pineapple", "qcom,qrd";
+	qcom,msm-id = <557 0x10000>, <557 0x20000>, <577 0x10000>, <577 0x20000>;
+	qcom,board-id = <0x1000B 0>, <0xB 0>;
+};
