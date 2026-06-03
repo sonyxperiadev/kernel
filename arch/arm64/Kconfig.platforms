@@ -524,4 +524,13 @@ config ARCH_SONY_YODO
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_SONY_ASAHI
+	bool "Sony Mobile Asahi platform"
+	depends on ARCH_PINEAPPLE
+	help
+	  Support for the SONY Mobile Asahi platform
+	  which is based on QCOM Pineapple chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 endmenu # "Platform selection"

@@ -1,0 +1,4 @@
+#include "pineapple-asahi-pdx245_common.dtsi"
+
+&soc {
+};
