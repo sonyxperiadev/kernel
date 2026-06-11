@@ -147,6 +147,9 @@
 #define INT_EP_GPIO_1			(1)
 #define INT_EP_GPIO_0			(0)
 
+#define USB_CTRL_GET_TIMEOUT_LOCAL 250
+#define USB_CTRL_SET_TIMEOUT_LOCAL 250
+
 static const char lan78xx_gstrings[][ETH_GSTRING_LEN] = {
 	"RX FCS Errors",
 	"RX Alignment Errors",
@@ -411,6 +414,7 @@ struct lan78xx_net {
 
 	struct mutex		dev_mutex; /* serialise open/stop wrt suspend/resume */
 	struct mutex		mdiobus_mutex; /* for MDIO bus access */
+	struct mutex		ctrl_mutex; /* serialize all EP0 vendor register ops */
 	unsigned int		pipe_in, pipe_out, pipe_intr;
 
 	u32			hard_mtu;	/* count any extra framing */
@@ -454,54 +458,70 @@ MODULE_PARM_DESC(msg_level, "Override default message level");
 
 /* Maximum number of retries for register operations that timeout */
 #define LAN78XX_USB_RETRIES 5
+#define LAN78XX_MDIO_TIMEOUT		HZ
+#define LAN78XX_MDIO_STALL_MS		USB_CTRL_GET_TIMEOUT
 
 static int lan78xx_read_reg(struct lan78xx_net *dev, u32 index, u32 *data)
 {
 	u32 *buf;
 	int ret;
 	int retries;
+	int attempts;
 
-	pr_debug(" SOFTING  %d", __LINE__);
 	if (test_bit(EVENT_DEV_DISCONNECT, &dev->flags))
 		return -ENODEV;
 
-	pr_debug(" SOFTING  %d", __LINE__);
 	buf = kmalloc(sizeof(u32), GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
 	/* Retry on timeout to handle transient USB issues */
 	for (retries = 0; retries < LAN78XX_USB_RETRIES; retries++) {
-		pr_debug(" SOFTING  %d", __LINE__);
+		unsigned long attempt_start = jiffies;
+		unsigned int elapsed_ms;
+
+		mutex_lock(&dev->ctrl_mutex);
 		ret = usb_control_msg(dev->udev, usb_rcvctrlpipe(dev->udev, 0),
 				      USB_VENDOR_REQUEST_READ_REGISTER,
 				      USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-				      0, index, buf, 4, USB_CTRL_GET_TIMEOUT);
+				      0, index, buf, 4, USB_CTRL_GET_TIMEOUT_LOCAL);
+		mutex_unlock(&dev->ctrl_mutex);
+		elapsed_ms = jiffies_to_msecs(jiffies - attempt_start);
 		if (likely(ret >= 0)) {
-			pr_debug(" SOFTING  %d", __LINE__);
 			le32_to_cpus(buf);
 			*data = *buf;
+			if (retries)
+				netdev_dbg(dev->net,
+					   "register read 0x%08x recovered after %d retries, value 0x%08x\n",
+					   index, retries, *data);
 			break;
 		} else if (ret == -ENODEV) {
-			pr_debug(" Breaking loop because of -ENODEV");
+			netdev_dbg(dev->net,
+				   "register read 0x%08x stopped because the USB device disappeared\n",
+				   index);
 			break;
 		}
+		if (ret == -ETIMEDOUT && net_ratelimit())
+			netdev_warn(dev->net,
+				    "register read 0x%08x timed out after %u ms on attempt %d/%d\n",
+				    index, elapsed_ms, retries + 1,
+				    LAN78XX_USB_RETRIES);
+		netdev_dbg(dev->net,
+			   "register read 0x%08x attempt %d/%d failed after %u ms: %pe\n",
+			   index, retries + 1, LAN78XX_USB_RETRIES,
+			   elapsed_ms, ERR_PTR(ret));
 		/* Brief delay before retry (exponential backoff) */
 		if (retries < LAN78XX_USB_RETRIES - 1)
 			usleep_range(100 << retries, 200 << retries);
 	}
 
+	attempts = min(retries + 1, LAN78XX_USB_RETRIES);
 	if (unlikely(ret < 0) && net_ratelimit()) {
-		pr_debug(" SOFTING  %d", __LINE__);
 		netdev_warn(dev->net,
 			    "Failed to read register index 0x%08x after %d attempts. ret = %pe",
-			    index, retries + 1, ERR_PTR(ret));
+			    index, attempts, ERR_PTR(ret));
 	}
-
-	pr_debug(" SOFTING  %d", __LINE__);
 	kfree(buf);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret < 0 ? ret : 0;
 }
 
@@ -510,47 +530,63 @@ static int lan78xx_write_reg(struct lan78xx_net *dev, u32 index, u32 data)
 	u32 *buf;
 	int ret = 0;
 	int retries;
+	int attempts;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (test_bit(EVENT_DEV_DISCONNECT, &dev->flags))
 		return -ENODEV;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	buf = kmalloc(sizeof(u32), GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	*buf = data;
 	cpu_to_le32s(buf);
 
 	/* Retry on timeout to handle transient USB issues */
 	for (retries = 0; retries < LAN78XX_USB_RETRIES; retries++) {
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
+		unsigned long attempt_start = jiffies;
+		unsigned int elapsed_ms;
+
+		mutex_lock(&dev->ctrl_mutex);
 		ret = usb_control_msg(dev->udev, usb_sndctrlpipe(dev->udev, 0),
 				      USB_VENDOR_REQUEST_WRITE_REGISTER,
 				      USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-				      0, index, buf, 4, USB_CTRL_SET_TIMEOUT);
+				      0, index, buf, 4, USB_CTRL_SET_TIMEOUT_LOCAL);
+		mutex_unlock(&dev->ctrl_mutex);
+		elapsed_ms = jiffies_to_msecs(jiffies - attempt_start);
 
 		if (likely(ret >= 0)) {
+			if (retries)
+				netdev_dbg(dev->net,
+					   "register write 0x%08x=0x%08x recovered after %d retries\n",
+					   index, data, retries);
 			break;
 		} else if (ret == -ENODEV) {
+			netdev_dbg(dev->net,
+				   "register write 0x%08x stopped because the USB device disappeared\n",
+				   index);
 			break;
 		}
+		if (ret == -ETIMEDOUT && net_ratelimit())
+			netdev_warn(dev->net,
+				    "register write 0x%08x=0x%08x timed out after %u ms on attempt %d/%d\n",
+				    index, data, elapsed_ms, retries + 1,
+				    LAN78XX_USB_RETRIES);
+		netdev_dbg(dev->net,
+			   "register write 0x%08x=0x%08x attempt %d/%d failed after %u ms: %pe\n",
+			   index, data, retries + 1, LAN78XX_USB_RETRIES,
+			   elapsed_ms, ERR_PTR(ret));
 		/* Brief delay before retry (exponential backoff) */
 		if (retries < LAN78XX_USB_RETRIES - 1)
 			usleep_range(100 << retries, 200 << retries);
 	}
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	attempts = min(retries + 1, LAN78XX_USB_RETRIES);
 	if (unlikely(ret < 0) && net_ratelimit()) {
 		netdev_warn(dev->net,
 			    "Failed to write register index 0x%08x after %d attempts. ret = %pe",
-			    index, retries + 1, ERR_PTR(ret));
+			    index, attempts, ERR_PTR(ret));
 	}
 
 	kfree(buf);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 	return ret < 0 ? ret : 0;
 }
@@ -584,13 +620,12 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 	u32 *src;
 	u32 *dst;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	netdev_dbg(dev->net, "reading hardware statistics block\n");
+
 	stats = kmalloc(sizeof(*stats), GFP_KERNEL);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (!stats)
 		return -ENOMEM;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	mutex_lock(&dev->ctrl_mutex);
 	ret = usb_control_msg(dev->udev,
 			      usb_rcvctrlpipe(dev->udev, 0),
 			      USB_VENDOR_REQUEST_GET_STATS,
@@ -599,10 +634,9 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 			      0,
 			      (void *)stats,
 			      sizeof(*stats),
-			      USB_CTRL_SET_TIMEOUT);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+			      USB_CTRL_GET_TIMEOUT_LOCAL);
+	mutex_unlock(&dev->ctrl_mutex);
 	if (likely(ret >= 0)) {
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		src = (u32 *)stats;
 		dst = (u32 *)data;
 		for (i = 0; i < sizeof(*stats) / sizeof(u32); i++) {
@@ -610,14 +644,11 @@ static int lan78xx_read_stats(struct lan78xx_net *dev,
 			dst[i] = src[i];
 		}
 	} else {
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		netdev_warn(dev->net,
 			    "Failed to read stat ret = %d", ret);
 	}
 
 	kfree(stats);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -725,18 +756,21 @@ static int lan78xx_mdiobus_wait_not_busy(struct lan78xx_net *dev)
 	int ret = 0;
 
 	do {
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, MII_ACC, &val);
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
-		if (unlikely(ret < 0))
+		if (unlikely(ret < 0)) {
+			netdev_info(dev->net,
+				    "MII_ACC busy check failed after %u ms: %pe\n",
+				    jiffies_to_msecs(jiffies - start_time),
+				    ERR_PTR(ret));
 			return -EIO;
-
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
+		}
 		if (!(val & MII_ACC_MII_BUSY_))
 			return 0;
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
-	} while (!time_after(jiffies, start_time + HZ));
+	} while (!time_after(jiffies, start_time + LAN78XX_MDIO_TIMEOUT));
 
+	netdev_warn(dev->net,
+		    "MII_ACC stayed busy for %u ms, last value 0x%08x\n",
+		    jiffies_to_msecs(jiffies - start_time), val);
 	return -EIO;
 }
 
@@ -1145,29 +1179,39 @@ static int lan78xx_read_otp(struct lan78xx_net *dev, u32 offset,
 
 static int lan78xx_dataport_wait_not_busy(struct lan78xx_net *dev)
 {
-	int i, ret=0;
+	unsigned long start_time = jiffies;
+	u32 last_dp_sel = 0;
+	int i, ret = 0;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	for (i = 0; i < 100; i++) {
 		u32 dp_sel;
-
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_read_reg(dev, DP_SEL, &dp_sel);
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
-		if (unlikely(ret < 0))
+		if (unlikely(ret < 0)) {
+			netdev_warn(dev->net,
+				    "dataport RAM readiness poll failed after %d poll(s), %u ms: %pe\n",
+				    i + 1,
+				    jiffies_to_msecs(jiffies - start_time),
+				    ERR_PTR(ret));
 			return -EIO;
+		}
 
-		if (dp_sel & DP_SEL_DPRDY_)
+		last_dp_sel = dp_sel;
+
+		if (dp_sel & DP_SEL_DPRDY_) {
+			if (i)
+				netdev_dbg(dev->net,
+					   "dataport RAM window became ready after %d poll(s), %u ms, DP_SEL 0x%08x\n",
+					   i + 1,
+					   jiffies_to_msecs(jiffies - start_time),
+					   dp_sel);
 			return 0;
-
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
+		}
 		usleep_range(40, 100);
 	}
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
-	netdev_warn(dev->net, "%s timed out", __func__);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	netdev_warn(dev->net,
+		    "%s timed out after %d poll(s), %u ms, last DP_SEL 0x%08x\n",
+		    __func__, i, jiffies_to_msecs(jiffies - start_time),
+		    last_dp_sel);
 	return -EIO;
 }
 
@@ -1176,51 +1220,70 @@ static int lan78xx_dataport_write(struct lan78xx_net *dev, u32 ram_select,
 {
 	struct lan78xx_priv *pdata = (struct lan78xx_priv *)(dev->data[0]);
 	u32 dp_sel;
-	int i, ret=0;
+	int i, ret = 0;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
-	if (usb_autopm_get_interface(dev->intf) < 0)
+	netdev_dbg(dev->net,
+		   "writing dataport RAM select 0x%08x, start 0x%08x, %u word(s)\n",
+		   ram_select, addr, length);
+
+	if (usb_autopm_get_interface(dev->intf) < 0) {
+		netdev_dbg(dev->net,
+			   "skipping dataport write because USB runtime PM did not resume the interface\n");
 		return 0;
+	}
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&pdata->dataport_mutex);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_dataport_wait_not_busy(dev);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = lan78xx_read_reg(dev, DP_SEL, &dp_sel);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (ret < 0) {
+		netdev_warn(dev->net,
+			    "failed to read DP_SEL before dataport write: %pe\n",
+			    ERR_PTR(ret));
+		goto done;
+	}
 	dp_sel &= ~DP_SEL_RSEL_MASK_;
 	dp_sel |= ram_select;
 	ret = lan78xx_write_reg(dev, DP_SEL, dp_sel);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (ret < 0) {
+		netdev_warn(dev->net,
+			    "failed to select dataport RAM 0x%08x: %pe\n",
+			    ram_select, ERR_PTR(ret));
+		goto done;
+	}
 	for (i = 0; i < length; i++) {
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		ret = lan78xx_write_reg(dev, DP_ADDR, addr + i);
+		if (ret < 0) {
+			netdev_warn(dev->net,
+				    "failed to write dataport address 0x%08x at word %d/%u: %pe\n",
+				    addr + i, i + 1, length, ERR_PTR(ret));
+			goto done;
+		}
 
 		ret = lan78xx_write_reg(dev, DP_DATA, buf[i]);
+		if (ret < 0) {
+			netdev_warn(dev->net,
+				    "failed to write dataport data at word %d/%u: %pe\n",
+				    i + 1, length, ERR_PTR(ret));
+			goto done;
+		}
 
 		ret = lan78xx_write_reg(dev, DP_CMD, DP_CMD_WRITE_);
+		if (ret < 0) {
+			netdev_warn(dev->net,
+				    "failed to issue dataport write command at word %d/%u: %pe\n",
+				    i + 1, length, ERR_PTR(ret));
+			goto done;
+		}
 
 		ret = lan78xx_dataport_wait_not_busy(dev);
-		pr_debug(" SOFTING  %d %d", __LINE__, ret);
 		if (ret < 0)
 			goto done;
 	}
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 done:
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_unlock(&pdata->dataport_mutex);
 	usb_autopm_put_interface(dev->intf);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -2275,51 +2338,74 @@ static void lan78xx_init_mac_address(struct lan78xx_net *dev)
 static int lan78xx_mdiobus_read(struct mii_bus *bus, int phy_id, int idx)
 {
 	struct lan78xx_net *dev = bus->priv;
+	unsigned long start_time = jiffies;
+	unsigned long phase_start;
+	unsigned int prewait_ms = 0;
+	unsigned int issue_ms = 0;
+	unsigned int complete_ms = 0;
+	unsigned int data_ms = 0;
 	u32 val, addr;
-	int ret=0;
+	int ret = 0;
 
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	ret = usb_autopm_get_interface(dev->intf);
 	if (ret < 0)
 		return ret;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	mutex_lock(&dev->mdiobus_mutex);
 
 	/* confirm MII not busy */
+	phase_start = jiffies;
 	ret = lan78xx_mdiobus_wait_not_busy(dev);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	prewait_ms = jiffies_to_msecs(jiffies - phase_start);
 	if (ret < 0)
 		goto done;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	/* set the address, index & direction (read from PHY) */
 	addr = mii_access(phy_id, idx, MII_READ);
+	phase_start = jiffies;
 	ret = lan78xx_write_reg(dev, MII_ACC, addr);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	issue_ms = jiffies_to_msecs(jiffies - phase_start);
 	if (ret < 0)
 		goto done;
 
+	phase_start = jiffies;
 	ret = lan78xx_mdiobus_wait_not_busy(dev);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	complete_ms = jiffies_to_msecs(jiffies - phase_start);
 	if (ret < 0)
 		goto done;
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	phase_start = jiffies;
 	ret = lan78xx_read_reg(dev, MII_DATA, &val);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	data_ms = jiffies_to_msecs(jiffies - phase_start);
 	if (ret < 0)
 		goto done;
 
 	ret = (int)(val & 0xFFFF);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 
 done:
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (time_after(jiffies,
+		       start_time + msecs_to_jiffies(LAN78XX_MDIO_STALL_MS)) ||
+	    ret < 0) {
+		unsigned int elapsed_ms = jiffies_to_msecs(jiffies - start_time);
+
+		if (ret < 0)
+			netdev_warn(dev->net,
+				    "MDIO read phy %d reg 0x%02x failed after %u ms: %pe\n",
+				    phy_id, idx, elapsed_ms, ERR_PTR(ret));
+		else
+			netdev_warn(dev->net,
+				    "MDIO read phy %d reg 0x%02x took %u ms, value 0x%04x\n",
+				    phy_id, idx, elapsed_ms, ret);
+		netdev_info(dev->net,
+			    "MDIO read phy %d reg 0x%02x phase times: prewait %u ms, issue %u ms, completion %u ms, data %u ms\n",
+			    phy_id, idx, prewait_ms, issue_ms, complete_ms,
+			    data_ms);
+	} else {
+		netdev_dbg(dev->net,
+			   "MDIO read phy %d reg 0x%02x returned 0x%04x in %u ms\n",
+			   phy_id, idx, ret,
+			   jiffies_to_msecs(jiffies - start_time));
+	}
+
 	mutex_unlock(&dev->mdiobus_mutex);
 	usb_autopm_put_interface(dev->intf);
-
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	return ret;
 }
 
@@ -2327,11 +2413,11 @@ static int lan78xx_mdiobus_write(struct mii_bus *bus, int phy_id, int idx,
 				 u16 regval)
 {
 	struct lan78xx_net *dev = bus->priv;
+	unsigned long start_time = jiffies;
 	u32 val, addr;
 	int ret;
 
 	ret = usb_autopm_get_interface(dev->intf);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		return ret;
 
@@ -2339,7 +2425,6 @@ static int lan78xx_mdiobus_write(struct mii_bus *bus, int phy_id, int idx,
 
 	/* confirm MII not busy */
 	ret = lan78xx_mdiobus_wait_not_busy(dev);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
@@ -2351,17 +2436,35 @@ static int lan78xx_mdiobus_write(struct mii_bus *bus, int phy_id, int idx,
 	/* set the address, index & direction (write to PHY) */
 	addr = mii_access(phy_id, idx, MII_WRITE);
 	ret = lan78xx_write_reg(dev, MII_ACC, addr);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 	ret = lan78xx_mdiobus_wait_not_busy(dev);
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
 	if (ret < 0)
 		goto done;
 
 done:
-	pr_debug(" SOFTING  %d %d", __LINE__, ret);
+	if (time_after(jiffies,
+		       start_time + msecs_to_jiffies(LAN78XX_MDIO_STALL_MS)) ||
+	    ret < 0) {
+		unsigned int elapsed_ms = jiffies_to_msecs(jiffies - start_time);
+
+		if (ret < 0)
+			netdev_warn(dev->net,
+				    "MDIO write phy %d reg 0x%02x value 0x%04x failed after %u ms: %pe\n",
+				    phy_id, idx, regval, elapsed_ms,
+				    ERR_PTR(ret));
+		else
+			netdev_warn(dev->net,
+				    "MDIO write phy %d reg 0x%02x value 0x%04x took %u ms\n",
+				    phy_id, idx, regval, elapsed_ms);
+	} else {
+		netdev_dbg(dev->net,
+			   "MDIO write phy %d reg 0x%02x value 0x%04x completed in %u ms\n",
+			   phy_id, idx, regval,
+			   jiffies_to_msecs(jiffies - start_time));
+	}
+
 	mutex_unlock(&dev->mdiobus_mutex);
 	usb_autopm_put_interface(dev->intf);
 	return ret;
@@ -4840,6 +4943,7 @@ static int lan78xx_probe(struct usb_interface *intf,
 	skb_queue_head_init(&dev->txq_pend);
 	mutex_init(&dev->mdiobus_mutex);
 	mutex_init(&dev->dev_mutex);
+	mutex_init(&dev->ctrl_mutex);
 
 	tasklet_setup(&dev->bh, lan78xx_bh);
 	INIT_DELAYED_WORK(&dev->wq, lan78xx_delayedwork);
