@@ -28,6 +28,7 @@
 
 #include "gh_private.h"
 #include "gh_secure_vm_virtio_backend.h"
+#include "gh_rm_drv_private.h"
 
 #define PAGE_ROUND_UP(x) ((((u64)(x) + (PAGE_SIZE - 1)) / PAGE_SIZE)  * PAGE_SIZE)
 
@@ -752,6 +753,11 @@ static int gh_secure_vm_loader_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	enum gh_vm_names vm_name;
 	int ret;
+
+	if (!rm) {
+		dev_info(dev, "Gunyah Resource Manager is not ready, deferring probe\n");
+		return -EPROBE_DEFER;
+	}
 
 	sec_vm_dev = devm_kzalloc(dev, sizeof(*sec_vm_dev), GFP_KERNEL);
 	if (!sec_vm_dev)
