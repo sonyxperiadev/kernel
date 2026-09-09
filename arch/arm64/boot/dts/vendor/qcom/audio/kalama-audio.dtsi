@@ -20,7 +20,7 @@
 	};
 };
 
-&glink_edge {
+&remoteproc_adsp_glink {
 	#address-cells = <1>;
 	#size-cells = <0>;
 
