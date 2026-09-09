@@ -71,7 +71,7 @@
 	};
 };
 
-&glink_edge {
+&remoteproc_adsp_glink {
 	qcom,pmic_glink_rpmsg {
 		qcom,glink-channels = "PMIC_RTR_ADSP_APPS";
 	};
