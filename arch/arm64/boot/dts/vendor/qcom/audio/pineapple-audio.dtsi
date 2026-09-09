@@ -25,7 +25,7 @@
 	};
 };
 
-&glink_edge {
+&remoteproc_adsp_glink {
 	audio_gpr: qcom,gpr {
 		compatible = "qcom,gpr";
 		qcom,glink-channels = "adsp_apps";
