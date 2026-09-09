@@ -17,6 +17,7 @@ struct qcom_ice {
 	struct clk *core_clk;
 	u8 hwkm_version;
 	bool use_hwkm;
+	bool use_hwkm_tme_broadcast;
 	bool hwkm_init_complete;
 	bool handle_clks;
 };

@@ -22,6 +22,8 @@
 #include <soc/qcom/ice.h>
 #include <linux/qtee_shmbridge.h>
 
+#include <linux/tme_hwkm_master.h>
+
 #define AES_256_XTS_KEY_SIZE			64
 
 /*
@@ -43,12 +45,16 @@
 #define QTI_HWKM_ICE_RG_IPCAT_VERSION			0x0000
 #define QCOM_ICE_REG_HWKM_TZ_KM_CTL			0x1000
 #define QCOM_ICE_REG_HWKM_TZ_KM_STATUS			0x1004
+#define QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL		0x101C
 #define QCOM_ICE_REG_HWKM_BANK0_BANKN_IRQ_STATUS	0x2008
 #define QCOM_ICE_REG_HWKM_BANK0_BBAC_0			0x5000
 #define QCOM_ICE_REG_HWKM_BANK0_BBAC_1			0x5004
 #define QCOM_ICE_REG_HWKM_BANK0_BBAC_2			0x5008
 #define QCOM_ICE_REG_HWKM_BANK0_BBAC_3			0x500C
 #define QCOM_ICE_REG_HWKM_BANK0_BBAC_4			0x5010
+
+#define QCOM_ICE_HWKM_TPKEY_EN_BIT		BIT(8)
+#define QCOM_ICE_HWKM_TPKEY_RECEIVE_VAL	0x18C
 
 /* QCOM ICE HWKM BIST vals */
 #define QCOM_ICE_HWKM_BIST_DONE_V1_VAL		0x14007
@@ -228,6 +234,54 @@ static void qcom_ice_enable_standard_mode(struct qcom_ice *ice)
 	}
 }
 
+#if IS_ENABLED(CONFIG_MSM_TMECOM_QMP)
+static void qcom_ice_hwkm_set_slave_receive_mode(struct qcom_ice *ice, bool enable)
+{
+	u32 regval = qcom_ice_readl(ice,
+			HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+
+	regval &= ~QCOM_ICE_HWKM_TPKEY_EN_BIT;
+	qcom_ice_writel(ice, regval,
+			HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+
+	if (enable)
+		qcom_ice_writel(ice, QCOM_ICE_HWKM_TPKEY_RECEIVE_VAL,
+				HWKM_OFFSET(QCOM_ICE_REG_HWKM_TZ_TPKEY_RECEIVE_CTL));
+}
+
+static int qcom_ice_hwkm_broadcast_tpkey(struct qcom_ice *ice)
+{
+	struct tme_ext_err_info errinfo;
+	int err, retries;
+
+	qcom_ice_hwkm_set_slave_receive_mode(ice, true);
+
+	for (retries = 0; retries < 100; retries++) {
+		err = tme_hwkm_master_broadcast_transportkey(&errinfo);
+		if (!err || (err != -ENODEV && err != -EAGAIN))
+			break;
+
+		usleep_range(8000, 12000);
+	}
+
+	if (err)
+		dev_err(ice->dev,
+			"TME HWKM broadcast transport key failed: %d (tme=%d, seq=%d, kp0=%d, kp1=%d, rsp=%d)\n",
+			err, errinfo.tme_err_status, errinfo.seq_err_status,
+			errinfo.seq_kp_err_status0, errinfo.seq_kp_err_status1,
+			errinfo.seq_rsp_status);
+
+	qcom_ice_hwkm_set_slave_receive_mode(ice, false);
+
+	return err;
+}
+#else
+static int qcom_ice_hwkm_broadcast_tpkey(struct qcom_ice *ice)
+{
+	return 0;
+}
+#endif
+
 static void qcom_ice_hwkm_init(struct qcom_ice *ice)
 {
 	if (!ice->use_hwkm)
@@ -256,6 +310,13 @@ static void qcom_ice_hwkm_init(struct qcom_ice *ice)
 	/* Clear HWKM response FIFO before doing anything */
 	qcom_ice_writel(ice, 0x8,
 			HWKM_OFFSET(QCOM_ICE_REG_HWKM_BANK0_BANKN_IRQ_STATUS));
+
+	if (ice->use_hwkm_tme_broadcast && qcom_ice_hwkm_broadcast_tpkey(ice)) {
+		dev_warn(ice->dev,
+				"HWKM transport key broadcast failed; disabling HWKM\n");
+		ice->use_hwkm = false;
+		return;
+	}
 
 	ice->hwkm_init_complete = true;
 }
@@ -563,6 +624,9 @@ static struct qcom_ice *qcom_ice_create(struct device *dev,
 
 	engine->use_hwkm = of_property_read_bool(dev->of_node,
 						 "qcom,ice-use-hwkm");
+
+	engine->use_hwkm_tme_broadcast = of_property_read_bool(dev->of_node,
+						 "qcom,ice-use-hwkm-tme-broadcast");
 
 	if (!qcom_ice_check_supported(engine))
 		return ERR_PTR(-EOPNOTSUPP);
