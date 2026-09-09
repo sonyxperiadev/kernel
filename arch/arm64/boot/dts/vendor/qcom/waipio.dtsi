@@ -1016,7 +1016,7 @@
 		qcom,smem-states = <&adsp_smp2p_out 0>;
 		qcom,smem-state-names = "stop";
 
-		glink_edge: glink-edge {
+		remoteproc_adsp_glink: glink-edge {
 			qcom,remote-pid = <2>;
 			transport = "smem";
 			mboxes = <&ipcc_mproc IPCC_CLIENT_LPASS
@@ -1099,7 +1099,7 @@
 		qcom,smem-states = <&cdsp_smp2p_out 0>;
 		qcom,smem-state-names = "stop";
 
-		glink-edge {
+		remoteproc_cdsp_glink: glink-edge {
 			qcom,remote-pid = <5>;
 			transport = "smem";
 			mboxes = <&ipcc_mproc IPCC_CLIENT_CDSP
@@ -1179,7 +1179,7 @@
 		qcom,smem-states = <&dsps_smp2p_out 0>;
 		qcom,smem-state-names = "stop";
 
-		glink-edge {
+		remoteproc_slpi_glink: glink-edge {
 			qcom,remote-pid = <3>;
 			transport = "smem";
 			mboxes = <&ipcc_mproc IPCC_CLIENT_SLPI
