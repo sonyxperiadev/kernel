@@ -1,4 +1,4 @@
-&glink_edge {
+&remoteproc_adsp_glink {
 	qcom,fastrpc {
 		compatible = "qcom,fastrpc";
 		qcom,glink-channels = "fastrpcglink-apps-dsp";
