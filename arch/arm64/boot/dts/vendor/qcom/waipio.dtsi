@@ -1933,6 +1933,7 @@
 		#reset-cells = <1>;
 
 		qcom,ice-use-hwkm;
+		qcom,ice-use-hwkm-tme-broadcast;
 
 		lanes-per-direction = <2>;
 		dev-ref-clk-freq = <0>; /* 19.2 MHz */
