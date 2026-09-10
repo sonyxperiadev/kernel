@@ -2720,212 +2720,6 @@
 		restrict-access;
 	};
 
-	msm_fastrpc: qcom,msm_fastrpc {
-		compatible = "qcom,msm-fastrpc-compute";
-		qcom,adsp-remoteheap-vmid = <22 37>;
-		qcom,fastrpc-adsp-audio-pdr;
-		qcom,fastrpc-adsp-sensors-pdr;
-		qcom,rpc-latency-us = <235>;
-		qcom,fastrpc-gids = <2908>;
-		qcom,qos-cores = <0 1 2 3>;
-
-		qcom,msm_fastrpc_compute_cb1 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1961 0x0000>,
-				 <&apps_smmu 0x0C01 0x0020>,
-				 <&apps_smmu 0x19C1 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb2 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1962 0x0000>,
-				 <&apps_smmu 0x0C02 0x0020>,
-				 <&apps_smmu 0x19C2 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb3 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1963 0x0000>,
-				 <&apps_smmu 0x0C03 0x0020>,
-				 <&apps_smmu 0x19C3 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb4 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1964 0x0000>,
-				 <&apps_smmu 0x0C04 0x0020>,
-				 <&apps_smmu 0x19C4 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb5 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1965 0x0000>,
-				 <&apps_smmu 0x0C05 0x0020>,
-				 <&apps_smmu 0x19C5 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb6 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1966 0x0000>,
-				 <&apps_smmu 0x0C06 0x0020>,
-				 <&apps_smmu 0x19C6 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb7 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1967 0x0000>,
-				 <&apps_smmu 0x0C07 0x0020>,
-				 <&apps_smmu 0x19C7 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb8 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x1968 0x0000>,
-				 <&apps_smmu 0x0C08 0x0020>,
-				 <&apps_smmu 0x19C8 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb9 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			qcom,secure-context-bank;
-			iommus = <&apps_smmu 0x1969 0x0000>,
-				 <&apps_smmu 0x0C09 0x0020>,
-				 <&apps_smmu 0x19C9 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x40000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			qcom,iommu-vmid = <0xA>;	/* VMID_CP_PIXEL */
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb10 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 0x1003 0x0080>,
-				 <&apps_smmu 0x1063 0x0000>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb11 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 0x1004 0x0080>,
-				 <&apps_smmu 0x1064 0x0000>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb12 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 0x1005 0x0080>,
-				 <&apps_smmu 0x1065 0x0000>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			shared-cb = <8>;
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb13 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 0x1006 0x0080>,
-				 <&apps_smmu 0x1066 0x0000>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb14 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 0x1007 0x0080>,
-				 <&apps_smmu 0x1067 0x0000>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb15 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x196C 0x0000>,
-				 <&apps_smmu 0x0C0C 0x0020>,
-				 <&apps_smmu 0x19CC 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb16 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x196D 0x0000>,
-				 <&apps_smmu 0x0C0D 0x0020>,
-				 <&apps_smmu 0x19CD 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb17 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x196E 0x0000>,
-				 <&apps_smmu 0x0C0E 0x0020>,
-				 <&apps_smmu 0x19CE 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-
-		qcom,msm_fastrpc_compute_cb18 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
-			label = "cdsprpc-smd";
-			iommus = <&apps_smmu 0x196F 0x0000>,
-				 <&apps_smmu 0x0C0F 0x0020>,
-				 <&apps_smmu 0x19CF 0x0010>;
-			qcom,iommu-dma-addr-pool = <0x60000000 0x98000000>;
-			qcom,iommu-faults = "stall-disable", "HUPCF";
-			dma-coherent;
-		};
-	};
-
 	adsp_pas: remoteproc-adsp@03000000 {
 		compatible = "qcom,kalama-adsp-pas";
 		reg = <0x03000000 0x10000>;
@@ -2988,12 +2782,6 @@
 						0x2000 3
 						0x4400 2>;
 				qcom,no-wake-svc = <0x190>;
-			};
-
-			qcom,msm_fastrpc_rpmsg {
-				compatible = "qcom,msm-fastrpc-rpmsg";
-				qcom,glink-channels = "fastrpcglink-apps-dsp";
-				qcom,intents = <0x64 64>;
 			};
 
 			qcom,msm_adspsleepmon_rpmsg {
@@ -3079,12 +2867,6 @@
 				qcom,intents = <0x800  5
 						0x2000 3
 						0x4400 2>;
-			};
-
-			qcom,msm_fastrpc_rpmsg {
-				compatible = "qcom,msm-fastrpc-rpmsg";
-				qcom,glink-channels = "fastrpcglink-apps-dsp";
-				qcom,intents = <0x64 64>;
 			};
 
 			qcom,msm_cdsprm_rpmsg {
@@ -3892,6 +3674,7 @@
 #include "camera/kalama-camera.dtsi"
 #include "data/kalama-ipa.dtsi"
 #include "display/kalama-sde.dtsi"
+#include "dsp/kalama-dsp.dtsi"
 #include "eSE/kalama-ese-common.dtsi"
 #include "eva/kalama-eva.dtsi"
 #include "graphics/kalama-gpu.dtsi"
