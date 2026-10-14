@@ -377,6 +377,10 @@
 		compatible = "qcom,smcinvoke";
 	};
 
+	qcom_mem_object {
+		compatible = "qcom,mem-object";
+	};
+
 };
 
 #include "parrot-usb.dtsi"
