@@ -3675,6 +3675,7 @@
 #include "kalama-pcie.dtsi"
 #include "msm-rdbg.dtsi"
 #include "kalama-thermal.dtsi"
+#include "kalama-walt.dtsi"
 #include "audio/kalama-audio.dtsi"
 #include "bt/kalama-bt.dtsi"
 #include "camera/kalama-camera.dtsi"
