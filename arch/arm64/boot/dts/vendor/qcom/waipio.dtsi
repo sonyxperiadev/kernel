@@ -2794,6 +2794,7 @@
 #include "waipio-pcie.dtsi"
 #include "msm-rdbg.dtsi"
 #include "waipio-thermal.dtsi"
+#include "waipio-walt.dtsi"
 #include "audio/waipio-audio.dtsi"
 #include "bt/waipio-qca6490-bt.dtsi"
 #include "camera/waipio-camera.dtsi"

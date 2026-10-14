@@ -1,0 +1,17 @@
+&soc {
+	walt {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		qcom,cycle-cntr {
+			compatible = "qcom,epss";
+			reg = <0x17d91000 0x1000>,
+				<0x17d92000 0x1000>,
+				<0x17d93000 0x1000>;
+			reg-names = "freq-domain0",
+				"freq-domain1",
+				"freq-domain2";
+		};
+	};
+};
