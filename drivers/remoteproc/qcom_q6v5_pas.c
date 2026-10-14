@@ -2589,6 +2589,9 @@ static const struct adsp_data kalama_mpss_resource = {
 	.ssr_name = "mpss",
 	.sysmon_name = "modem",
 	.ssctl_id = 0x12,
+	.region_assign_idx = 3,
+	.region_assign_count = 1,
+	.region_assign_vmid = QCOM_SCM_VMID_MSS_MSA,
 	.dma_phys_below_32b = true,
 };
 
