@@ -1230,6 +1230,7 @@
 		qcom,hyplog-enabled;
 		hyplog-address-offset = <0x410>;
 		hyplog-size-offset = <0x414>;
+		tmecrashdump-address-offset = <0x808a0000>;
 	};
 
 	qcom_cedev: qcedev@1de0000 {
