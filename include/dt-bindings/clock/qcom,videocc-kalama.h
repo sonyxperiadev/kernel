@@ -26,6 +26,12 @@
 #define VIDEO_CC_XO_CLK						16
 #define VIDEO_CC_XO_CLK_SRC					17
 
+/* VIDEO_CC power domains */
+#define VIDEO_CC_MVS0_GDSC					0
+#define VIDEO_CC_MVS0C_GDSC					1
+#define VIDEO_CC_MVS1_GDSC					2
+#define VIDEO_CC_MVS1C_GDSC					3
+
 /* VIDEO_CC resets */
 #define CVP_VIDEO_CC_INTERFACE_BCR				0
 #define CVP_VIDEO_CC_MVS0_BCR					1
