@@ -4,60 +4,49 @@
 	#size-cells = <1>;
 
 	msm_vidc: qcom,vidc@aa00000 {
-		compatible = "qcom,msm-vidc", "qcom,msm-vidc-kalama", "qcom,msm-vidc-iris3";
+		compatible = "qcom,sm8550-vidc";
 		status = "okay";
-		reg = <0x0aa00000 0xF0000>;
-		interrupts = <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
-
-		memory-region = <&video_mem>;
-		pas-id = <9>;
 
 		/* IOMMU Config */
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		/* LLCC Cache */
-		cache-slice-names = "vidsc0", "vidvsp";
+		reg = <0x0aa00000 0xF0000>;
+		interrupts = <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
 
-		/* Supply */
-		iris-ctl-supply = <&video_cc_mvs0c_gdsc>;
-		vcodec-supply = <&video_cc_mvs0_gdsc>;
+		/* Power Domains */
+		power-domains = <&videocc VIDEO_CC_MVS0C_GDSC>,
+				<&videocc VIDEO_CC_MVS0_GDSC>;
+		power-domain-names = "iris-ctl", "vcodec";
 
 		/* Clocks */
-		clock-names = "gcc_video_axi0",
-			"core_clk", "vcodec_clk", "video_cc_mvs0_clk_src";
-		clock-ids = <GCC_VIDEO_AXI0_CLK VIDEO_CC_MVS0C_CLK
-			VIDEO_CC_MVS0_CLK VIDEO_CC_MVS0_CLK_SRC>;
-		clocks = <&gcc GCC_VIDEO_AXI0_CLK>,
-			<&videocc VIDEO_CC_MVS0C_CLK>,
-			<&videocc VIDEO_CC_MVS0_CLK>,
-			<&videocc VIDEO_CC_MVS0_CLK_SRC>;
-		qcom,proxy-clock-names = "gcc_video_axi0",
-			"core_clk", "vcodec_clk", "video_cc_mvs0_clk_src";
-		/* Mask: Bit0: Clock Scaling, Bit1: Mem Retention*/
-		qcom,clock-configs = <0x0 0x0 0x0 0x1>;
-		qcom,allowed-clock-rates = <240000000 338000000
-			366000000 444000000 481000000>;
-		resets = <&gcc GCC_VIDEO_AXI0_CLK_ARES>;
-		reset-names = "video_axi_reset";
-
-		qcom,reg-presets = <0xB0088 0x0 0x11>;
-
-		/* Video Firmware ELF image name */
-		vidc,firmware-name = "vpu30_4v";
+		clocks =
+			 <&gcc GCC_VIDEO_AXI0_CLK>,
+			 <&videocc VIDEO_CC_MVS0C_CLK>,
+			 <&videocc VIDEO_CC_MVS0_CLK>,
+			 <&videocc VIDEO_CC_MVS0_CLK_SRC>;
+		clock-names =
+			 "gcc_video_axi0",
+			 "video_cc_mvs0c_clk",
+			 "video_cc_mvs0_clk",
+			 "video_cc_mvs0_clk_src";
 
 		/* Bus Interconnects */
-		interconnect-names = "venus-cnoc", "venus-ddr", "venus-llcc";
-		interconnects = <&gem_noc MASTER_APPSS_PROC
-					&config_noc SLAVE_VENUS_CFG>,
-				<&mc_virt MASTER_LLCC
-					&mc_virt SLAVE_EBI1>,
-				<&mmss_noc MASTER_VIDEO
-					&gem_noc SLAVE_LLCC>;
-		/* Bus BW range (low, high) for each bus */
-		qcom,bus-range-kbps = <1000 1000
-					1000 15000000
-					1000 15000000>;
+		interconnects =
+			 <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_VENUS_CFG>,
+			 <&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
+			 <&mmss_noc MASTER_VIDEO &gem_noc SLAVE_LLCC>;
+		interconnect-names =
+			 "venus-cnoc",
+			 "venus-ddr",
+			 "venus-llcc";
+
+		/* FW load region */
+		memory-region = <&video_mem>;
+
+		/* Clock Resets */
+		resets = <&gcc GCC_VIDEO_AXI0_CLK_ARES>;
+		reset-names = "video_axi_reset";
 
 		/* MMUs */
 		iommu_region_partition: iommu_region_partition {
@@ -76,50 +65,56 @@
 		};
 
 		non_secure_pixel_cb: non_secure_pixel_cb {
-			compatible = "qcom,msm-vidc,context-bank";
-			label = "venus_ns_pixel";
+			compatible = "qcom,vidc,cb-ns-pxl";
 			iommus = <&apps_smmu 0x1947 0x0000>;
 			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
+			qcom,iova-best-fit;
+			/* log2 of desired alignment (1MB) - log2 of PAGE_SIZE; (8 = 20 - 12) */
+			qcom,iova-max-align-shift = <8>;
 			dma-coherent;
 		};
 
 		non_secure_cb: non_secure_cb {
-			compatible = "qcom,msm-vidc,context-bank";
-			label = "venus_ns";
+			compatible = "qcom,vidc,cb-ns";
 			iommus = <&apps_smmu 0x1940 0x0000>;
 			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
+			qcom,iova-best-fit;
+			qcom,iova-max-align-shift = <8>; /* 1 MB */
 			dma-coherent;
 		};
 
 		secure_non_pixel_cb: secure_non_pixel_cb {
-			compatible = "qcom,msm-vidc,context-bank";
-			label = "venus_sec_non_pixel";
+			compatible = "qcom,vidc,cb-sec-non-pxl";
 			iommus = <&apps_smmu 0x1944 0x0000>;
 			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0xB>; /* VMID_CP_NON_PIXEL */
+			qcom,iova-best-fit;
+			qcom,iova-max-align-shift = <8>; /* 1 MB */
 			qcom,secure-context-bank;
 		};
 
 		secure_bitstream_cb: secure_bitstream_cb {
-			compatible = "qcom,msm-vidc,context-bank";
-			label = "venus_sec_bitstream";
+			compatible = "qcom,vidc,cb-sec-bitstream";
 			iommus = <&apps_smmu 0x1941 0x0004>;
 			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0x9>; /* VMID_CP_BITSTREAM */
+			qcom,iova-best-fit;
+			qcom,iova-max-align-shift = <8>; /* 1 MB */
 			qcom,secure-context-bank;
 		};
 
 		secure_pixel_cb: secure_pixel_cb {
-			compatible = "qcom,msm-vidc,context-bank";
-			label = "venus_sec_pixel";
+			compatible = "qcom,vidc,cb-sec-pxl";
 			iommus = <&apps_smmu 0x1943 0x0000>;
 			memory-region = <&iommu_region_partition>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-vmid = <0xA>; /* VMID_CP_PIXEL */
+			qcom,iova-best-fit;
+			qcom,iova-max-align-shift = <8>; /* 1 MB */
 			qcom,secure-context-bank;
 		};
 	};
