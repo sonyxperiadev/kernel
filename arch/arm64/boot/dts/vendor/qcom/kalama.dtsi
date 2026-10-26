@@ -1577,6 +1577,7 @@
 		vdd_mm-supply = <&VDD_MM_LEVEL>;
 		vdd_mxa-supply = <&VDD_MXA_LEVEL>;
 		vdd_mxc-supply = <&VDD_MXC_LEVEL>;
+		vdd_mm_mxc_voter-supply = <&VDD_MM_MXC_VOTER_LEVEL>;
 		clocks = <&rpmhcc RPMH_CXO_CLK>,
 			 <&rpmhcc RPMH_CXO_CLK_A>,
 			 <&sleep_clk>,
@@ -1687,6 +1688,7 @@
 			      "sleep_clk",
 			      "iface";
 		#clock-cells = <1>;
+		#power-domain-cells = <1>;
 		#reset-cells = <1>;
 	};
 
@@ -2068,6 +2070,7 @@
 		qcom,support-hw-trigger;
 		qcom,retain-regs;
 		qcom,support-cfg-gdscr;
+		status = "disabled";
 	};
 
 	video_cc_mvs0c_gdsc: qcom,gdsc@abf804c {
@@ -2080,6 +2083,7 @@
 		qcom,gds-timeout = <1500>;
 		qcom,retain-regs;
 		qcom,support-cfg-gdscr;
+		status = "disabled";
 	};
 
 	video_cc_mvs1_gdsc: qcom,gdsc@abf80cc {
