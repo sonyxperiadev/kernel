@@ -26,7 +26,7 @@
 			 <&videocc VIDEO_CC_MVS0_CLK>,
 			 <&videocc VIDEO_CC_MVS0_CLK_SRC>;
 		clock-names =
-			 "gcc_video_axi0",
+			 "gcc_video_axi0_clk",
 			 "video_cc_mvs0c_clk",
 			 "video_cc_mvs0_clk",
 			 "video_cc_mvs0_clk_src";
