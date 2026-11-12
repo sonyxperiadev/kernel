@@ -113,10 +113,10 @@
 	};
 };
 
-#include "somc-charger-yodo-common.dtsi"
-#include "somc-charger-yodo-pdx234.dtsi"
-#include "somc-yodo-display.dtsi"
-#include "somc-yodo-display-pdx234.dtsi"
 #include "somc-yodo-audio-common.dtsi"
 #include "somc-yodo-audio-pdx234.dtsi"
+#include "somc-yodo-charger-common.dtsi"
+#include "somc-yodo-charger-pdx234.dtsi"
+#include "somc-yodo-display.dtsi"
+#include "somc-yodo-display-pdx234.dtsi"
 #include "somc-yodo-touchscreen-pdx234.dtsi"
