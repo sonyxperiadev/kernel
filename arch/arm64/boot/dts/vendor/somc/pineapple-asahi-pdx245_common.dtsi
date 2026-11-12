@@ -73,10 +73,10 @@
 	};
 };
 
-#include "somc-charger-asahi-common.dtsi"
-#include "somc-charger-asahi-pdx245.dtsi"
-#include "somc-asahi-display.dtsi"
-#include "somc-asahi-display-pdx245.dtsi"
 #include "somc-asahi-audio-common.dtsi"
 #include "somc-asahi-audio-pdx245.dtsi"
+#include "somc-asahi-charger-common.dtsi"
+#include "somc-asahi-charger-pdx245.dtsi"
+#include "somc-asahi-display.dtsi"
+#include "somc-asahi-display-pdx245.dtsi"
 #include "somc-asahi-touchscreen-pdx245.dtsi"
